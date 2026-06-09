@@ -1,0 +1,38 @@
+{
+  "login": {
+    "title": "लॉग इन करें",
+    "phone": "फ़ोन नंबर",
+    "password": "पासवर्ड",
+    "button": "साइन इन करें",
+    "error": "अमान्य क्रेडेंशियल्स"
+  },
+  "dashboard": {
+    "welcome": "स्वागत है",
+    "checkIn": "उपस्थिति दर्ज करें (चेक इन)",
+    "checkOut": "चेक आउट",
+    "checkedIn": "चेक इन किया हुआ",
+    "salesman": "सेल्समैन",
+    "distributor": "वितरक",
+    "admin": "व्यवस्थापक"
+  },
+  "orders": {
+    "newOrder": "नया आर्डर",
+    "myOrders": "मेरे आर्डर",
+    "placeOrder": "आर्डर करें",
+    "status": "स्थिति",
+    "total": "कुल राशि",
+    "backordered": "बैकआर्डर",
+    "processing": "प्रसंस्करण",
+    "dispatched": "डिस्पैच किया गया",
+    "delivered": "पहुंचा दिया गया"
+  },
+  "common": {
+    "save": "सेव करें",
+    "cancel": "रद्द करें",
+    "back": "वापस",
+    "search": "खोजें",
+    "language": "भाषा",
+    "english": "अंग्रेज़ी",
+    "hindi": "हिन्दी"
+  }
+}

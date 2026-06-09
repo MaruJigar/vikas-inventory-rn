@@ -1,0 +1,38 @@
+{
+  "login": {
+    "title": "Login",
+    "phone": "Phone Number",
+    "password": "Password",
+    "button": "Sign In",
+    "error": "Invalid credentials"
+  },
+  "dashboard": {
+    "welcome": "Welcome",
+    "checkIn": "Check In",
+    "checkOut": "Check Out",
+    "checkedIn": "Checked In",
+    "salesman": "Salesman",
+    "distributor": "Distributor",
+    "admin": "Admin"
+  },
+  "orders": {
+    "newOrder": "New Order",
+    "myOrders": "My Orders",
+    "placeOrder": "Place Order",
+    "status": "Status",
+    "total": "Total Amount",
+    "backordered": "Backordered",
+    "processing": "Processing",
+    "dispatched": "Dispatched",
+    "delivered": "Delivered"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "search": "Search",
+    "language": "Language",
+    "english": "English",
+    "hindi": "Hindi"
+  }
+}

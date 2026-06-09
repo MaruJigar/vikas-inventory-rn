@@ -1,0 +1,48 @@
+node_modules/
+.expo/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# iOS
+ios/
+Pods/
+*.pbxproj
+*.pbxproj.bak
+
+# Android
+android/
+.gradle/
+build/
+.android/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Backend specific
+generated/prisma
+/vikas-backend/node_modules
+/vikas-backend/.env

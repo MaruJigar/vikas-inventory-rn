@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vikas Marketing - Design Document (Part 2)</title>
+<link rel="stylesheet" href="design-doc.css">
+</head>
+<body>
+
+<!-- PAGE 1: COVER -->
+<div class="page">
+<div class="cover-content">
+<span class="tagline">Technical Design Document</span>
+<h1 class="cover-title">Direct Sales & Inventory<br>Management System</h1>
+<p class="cover-subtitle">API Specifications · Screens · Timeline</p>
+<div class="client-info">
+<div class="info-block">
+<h4>Prepared For</h4>
+<p>Vikas Marketing</p>
+<p class="small">Budhishivanagara, Jamnagar</p>
+</div>
+<div class="info-block" style="text-align:right">
+<h4>Prepared By</h4>
+<p>Param Buddh & Jigar Maru</p>
+</div>
+</div>
+<div class="client-info" style="margin-top:30px;border-top:1px solid var(--border);padding-top:30px">
+<div class="info-block"><h4>Document</h4><p>Part 2 of 2</p><p class="small">APIs · Screens · Backend Structure · Timeline</p></div>
+<div class="info-block" style="text-align:right"><h4>Date</h4><p>May 10, 2026</p><p class="small">Version 2.0</p></div>
+</div>
+</div>
+<div class="page-footer"><span>VM-DESIGN-2026-002</span><span>Page 1 of 7</span></div>
+</div>
+
+<!-- PAGE 2: API - AUTH, USERS, CUSTOMERS, PRODUCTS -->
+<div class="page">
+<h2>API Endpoints (35+ Total)</h2>
+
+<h4>Auth — /api/auth</h4>
+<table>
+<thead><tr><th>Method</th><th>Endpoint</th><th>Who</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>POST</td><td>/login</td><td>All</td><td>Login → returns JWT access + refresh token</td></tr>
+<tr><td>POST</td><td>/refresh-token</td><td>All</td><td>Refresh expired JWT</td></tr>
+<tr><td>GET</td><td>/me</td><td>All</td><td>Get current user profile</td></tr>
+<tr><td>PUT</td><td>/change-password</td><td>All</td><td>Change own password</td></tr>
+</tbody>
+</table>
+
+<h4>Users — /api/users (Admin Only)</h4>
+<table>
+<thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>GET</td><td>/</td><td>List all salesmen with status</td></tr>
+<tr><td>POST</td><td>/</td><td>Create new salesman account</td></tr>
+<tr><td>PUT</td><td>/{id}</td><td>Update salesman details</td></tr>
+<tr><td>PUT</td><td>/{id}/toggle-active</td><td>Enable/disable salesman login</td></tr>
+</tbody>
+</table>
+
+<h4>Customers — /api/customers</h4>
+<table>
+<thead><tr><th>Method</th><th>Endpoint</th><th>Who</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>GET</td><td>/</td><td>All</td><td>List customers (search, paginate)</td></tr>
+<tr><td>GET</td><td>/{id}</td><td>All</td><td>Customer details with order history</td></tr>
+<tr><td>POST</td><td>/</td><td>All</td><td>Create customer (salesman in field or admin)</td></tr>
+<tr><td>PUT</td><td>/{id}</td><td>Admin</td><td>Update customer details</td></tr>
+</tbody>
+</table>
+
+<h4>Products — /api/products</h4>
+<table>
+<thead><tr><th>Method</th><th>Endpoint</th><th>Who</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>GET</td><td>/</td><td>All</td><td>List products (filter: category, stock, search)</td></tr>
+<tr><td>GET</td><td>/{id}</td><td>All</td><td>Product details with stock info</td></tr>
+<tr><td>POST</td><td>/</td><td>Admin</td><td>Create product (name, SKU, HSN, price, GST rate)</td></tr>
+<tr><td>PUT</td><td>/{id}</td><td>Admin</td><td>Update product details</td></tr>
+<tr><td>PUT</td><td>/{id}/stock</td><td>Admin</td><td>Update stock level</td></tr>
+</tbody>
+</table>
+
+<h4>States — /api/states</h4>
+<table>
+<thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>GET</td><td>/</td><td>List all 36 Indian states + UTs (for customer state dropdown)</td></tr>
+</tbody>
+</table>
+
+<div class="page-footer"><span>Vikas Marketing | Confidential</span><span>Page 2 of 7</span></div>
+</div>
+
+<!-- PAGE 3: API - ORDERS, INVOICES -->
+<div class="page">
+<h4>Orders — /api/orders</h4>
+<table>
+<thead><tr><th>Method</th><th>Endpoint</th><th>Who</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>GET</td><td>/</td><td>All</td><td>List orders (filter: status, date, salesman, customer)</td></tr>
+<tr><td>GET</td><td>/{id}</td><td>All</td><td>Order detail with items + full tax breakdown</td></tr>
+<tr><td>POST</td><td>/</td><td>Salesman</td><td>Create order + GPS → triggers SignalR + FCM to Admins</td></tr>
+<tr><td>PUT</td><td>/{id}/status</td><td>Admin</td><td>pending → confirmed → dispatched → delivered / cancelled</td></tr>
+</tbody>
+</table>
+
+<h4>Invoices — /api/invoices</h4>
+<table>
+<thead><tr><th>Method</th><th>Endpoint</th><th>Who</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>POST</td><td>/{orderId}/generate</td><td>Admin</td><td>Generate GST invoice (auto-calc CGST/SGST or IGST)</td></tr>
+<tr><td>GET</td><td>/{id}</td><td>All</td><td>Get invoice details with line-item tax breakdown</td></tr>
+<tr><td>GET</td><td>/{id}/pdf</td><td>All</td><td>Download invoice as PDF</td></tr>
+</tbody>
+</table>
+
+<h4>Location — /api/location</h4>
+<table>
+<thead><tr><th>Method</th><th>Endpoint</th><th>Who</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>POST</td><td>/check-in</td><td>Salesman</td><td>Log customer visit: {customerId, lat, lng, timestamp}</td></tr>
+<tr><td>POST</td><td>/order-location</td><td>Salesman</td><td>Log GPS at order time: {orderId, lat, lng}</td></tr>
+<tr><td>GET</td><td>/salesman/{id}/logs</td><td>Admin</td><td>Full location history for a salesman</td></tr>
+<tr><td>GET</td><td>/salesmen/latest</td><td>Admin</td><td>Last known location of all active salesmen</td></tr>
+</tbody>
+</table>
+
+<h4>Sync — /api/sync (Offline Support)</h4>
+<table>
+<thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>POST</td><td>/push</td><td>Push batch of queued offline ops (customers, orders, locations)</td></tr>
+<tr><td>GET</td><td>/pull?since={timestamp}</td><td>Pull all changes since last sync</td></tr>
+<tr><td>GET</td><td>/full</td><td>Full data dump for first login or reset</td></tr>
+</tbody>
+</table>
+
+<h4>Notifications — /api/notifications</h4>
+<table>
+<thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>GET</td><td>/</td><td>Get all notifications for current user</td></tr>
+<tr><td>PUT</td><td>/{id}/read</td><td>Mark single notification as read</td></tr>
+<tr><td>PUT</td><td>/read-all</td><td>Mark all notifications as read</td></tr>
+</tbody>
+</table>
+
+<h4>SignalR Hub — /hubs/orders</h4>
+<table>
+<thead><tr><th>Event</th><th>Direction</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>NewOrderPlaced</td><td>Server → Admins</td><td>Instant alert when salesman places order</td></tr>
+<tr><td>OrderStatusChanged</td><td>Server → Salesman</td><td>When admin confirms/dispatches/delivers</td></tr>
+<tr><td>StockAlert</td><td>Server → Admins</td><td>Product stock falls below threshold</td></tr>
+<tr><td>SalesmanOnline</td><td>Server → Admins</td><td>Salesman comes online and syncs</td></tr>
+</tbody>
+</table>
+
+<div class="page-footer"><span>Vikas Marketing | Confidential</span><span>Page 3 of 7</span></div>
+</div>
+
+<!-- PAGE 4: SCREEN INVENTORY -->
+<div class="page">
+<h2>App Screens (16 Total)</h2>
+
+<h3>Screens to Refine (11 Existing)</h3>
+<table>
+<thead><tr><th>#</th><th>Screen</th><th>Key Changes</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><strong>LoginScreen</strong></td><td>Remove demo buttons, connect API, error handling</td></tr>
+<tr><td>2</td><td><strong>SalesmanDashboard</strong></td><td>Add "📍 Check-in" button, sync indicator, offline banner</td></tr>
+<tr><td>3</td><td><strong>CustomerSelect</strong></td><td>"➕ New Customer" with state dropdown, offline-capable</td></tr>
+<tr><td>4</td><td><strong>ProductListing</strong></td><td>Stock from local cache, category chips, stock badges</td></tr>
+<tr><td>5</td><td><strong>OrderConfirmation</strong></td><td>Mandatory GPS, CGST/SGST or IGST breakdown, offline queue</td></tr>
+<tr><td>6</td><td><strong>OrderHistory</strong></td><td>Status filter tabs, sync status per order, pull-to-refresh</td></tr>
+<tr><td>7</td><td><strong>OrderDetails</strong></td><td>Location pin on map, status timeline, tax breakdown</td></tr>
+<tr><td>8</td><td><strong>AdminDashboard</strong></td><td>Replace Tasks → <strong>Live Order Feed</strong>, salesman tracker link</td></tr>
+<tr><td>9</td><td><strong>InventoryMgmt</strong></td><td>Add/edit product form with HSN code + GST rate fields</td></tr>
+<tr><td>10</td><td><strong>Notifications</strong></td><td>Real-time via SignalR, FCM integration, mark read</td></tr>
+<tr><td>11</td><td><strong>Invoice</strong></td><td>Full GST format, CGST/SGST vs IGST, PDF download</td></tr>
+</tbody>
+</table>
+
+<h3>New Screens (5)</h3>
+<table>
+<thead><tr><th>#</th><th>Screen</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>12</td><td><strong>LocationCheckinScreen</strong></td><td>GPS capture + map preview when visiting a customer</td></tr>
+<tr><td>13</td><td><strong>AdminSalesmanTrackerScreen</strong></td><td>Interactive map — all salesmen's last known locations</td></tr>
+<tr><td>14</td><td><strong>AdminCreateSalesmanScreen</strong></td><td>Form: name, phone, username, password for new salesman</td></tr>
+<tr><td>15</td><td><strong>ProfileScreen</strong></td><td>View profile, change password, logout</td></tr>
+<tr><td>16</td><td><strong>SyncStatusScreen</strong></td><td>View pending/failed sync items, manual retry</td></tr>
+</tbody>
+</table>
+
+<h3>Removed</h3>
+<table>
+<thead><tr><th>Screen</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td><s>TasksScreen</s></td><td>Replaced by real-time order notifications on Admin dashboard</td></tr>
+</tbody>
+</table>
+
+<h3>Navigation Structure</h3>
+<div class="grid-2">
+<div class="card">
+<h3>👤 Salesman Navigation</h3>
+<p><strong>Tabs:</strong> Home | Orders | New Order | Profile<br>
+<strong>Stack:</strong> CustomerSelect → Products → OrderConfirm<br>
+<strong>Modal:</strong> LocationCheckin, SyncStatus</p>
+</div>
+<div class="card" style="border-left-color:#8b5cf6">
+<h3>👨‍💼 Admin Navigation</h3>
+<p><strong>Tabs:</strong> Dashboard | Orders | Inventory | More<br>
+<strong>Stack:</strong> OrderDetails → Invoice<br>
+<strong>More:</strong> Notifications, CreateSalesman, Tracker, Profile</p>
+</div>
+</div>
+
+<div class="page-footer"><span>Vikas Marketing | Confidential</span><span>Page 4 of 7</span></div>
+</div>
+
+<!-- PAGE 5: BACKEND STRUCTURE -->
+<div class="page">
+<h2>Backend Project Structure</h2>
+<div class="mono">VikasMarketing.API/
+├── Controllers/
+│   ├── AuthController.cs          — Login, refresh, change password
+│   ├── UsersController.cs         — CRUD salesmen (Admin only)
+│   ├── CustomersController.cs     — Customer management
+│   ├── ProductsController.cs      — Product & stock management
+│   ├── OrdersController.cs        — Order CRUD + status workflow
+│   ├── InvoicesController.cs      — GST invoice generation + PDF
+│   ├── LocationController.cs      — GPS check-in & tracking
+│   ├── NotificationsController.cs — In-app notifications
+│   ├── SyncController.cs          — Offline sync push/pull
+│   └── StatesController.cs        — Indian states list
+├── Hubs/
+│   └── OrderHub.cs                — SignalR real-time hub
+├── Models/                        — EF Core entity classes (11 models)
+├── DTOs/                          — Request/Response shapes
+│   ├── Auth/    (LoginReq, AuthResponse)
+│   ├── Orders/  (CreateOrderReq, OrderResponse)
+│   ├── Sync/    (SyncPushReq, SyncPullResponse)
+│   └── Invoices/(InvoiceResponse, InvoiceItemDto)
+├── Services/
+│   ├── AuthService.cs             — JWT creation, password hashing
+│   ├── OrderService.cs            — Order business logic
+│   ├── GstCalculatorService.cs    — Tax computation engine
+│   ├── InvoiceService.cs          — Invoice creation logic
+│   ├── PdfGeneratorService.cs     — QuestPDF invoice rendering
+│   ├── SyncService.cs             — Offline sync processing
+│   ├── NotificationService.cs     — Create & dispatch notifications
+│   ├── FcmService.cs              — Firebase push sender
+│   └── LocationService.cs         — GPS log management
+├── Data/
+│   ├── AppDbContext.cs            — EF Core DbContext
+│   ├── Migrations/
+│   └── Seeds/StateSeeder.cs       — 36 Indian states + UTs
+├── Middleware/JwtMiddleware.cs     — Token validation
+├── appsettings.json               — Config & connection strings
+└── Program.cs                     — Startup & DI registration</div>
+
+<h3>Backend NuGet Packages</h3>
+<table>
+<thead><tr><th>Package</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>Microsoft.EntityFrameworkCore.SqlServer</td><td>Database ORM</td></tr>
+<tr><td>Microsoft.AspNetCore.Authentication.JwtBearer</td><td>JWT auth middleware</td></tr>
+<tr><td>Microsoft.AspNetCore.SignalR</td><td>Real-time WebSocket hub</td></tr>
+<tr><td>BCrypt.Net-Next</td><td>Secure password hashing</td></tr>
+<tr><td>QuestPDF</td><td>Invoice PDF generation</td></tr>
+<tr><td>FirebaseAdmin</td><td>FCM push notifications</td></tr>
+</tbody>
+</table>
+
+<h3>React Native New Dependencies</h3>
+<table>
+<thead><tr><th>Package</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>expo-location</td><td>GPS capture</td></tr>
+<tr><td>expo-sqlite</td><td>Local offline database</td></tr>
+<tr><td>expo-notifications, expo-network</td><td>Push handling, online/offline detection</td></tr>
+<tr><td>@microsoft/signalr</td><td>Real-time SignalR client</td></tr>
+<tr><td>react-native-maps, uuid</td><td>Map display, offline UUID dedup</td></tr>
+</tbody>
+</table>
+
+<div class="page-footer"><span>Vikas Marketing | Confidential</span><span>Page 5 of 7</span></div>
+</div>
+
+<!-- PAGE 6: TIMELINE -->
+<div class="page">
+<h2>Implementation Timeline (6 Weeks)</h2>
+
+<div class="phase" style="border-left-color:#3b82f6">
+<h3>Phase 1: Backend Core — Week 1–2</h3>
+<p>ASP.NET project setup · EF Core + SQL Server · JWT Auth · CRUD APIs (Users, Customers, Products, States) · Orders API with SignalR trigger · GST Calculator Service · Seed 36 Indian states</p>
+</div>
+
+<div class="phase" style="border-left-color:#8b5cf6">
+<h3>Phase 2: Offline & Sync Engine — Week 2–3</h3>
+<p>Local SQLite schema (expo-sqlite) · Sync engine: queue → push → pull · Network detection + auto-sync · UUID dedup & conflict resolution · Sync status UI indicators</p>
+</div>
+
+<div class="phase" style="border-left-color:#10b981">
+<h3>Phase 3: Frontend Integration — Week 3–4</h3>
+<p>API service layer with JWT interceptor · Connect 11 existing screens to API · Build 5 new screens · GPS capture flow (visit + order) · SignalR client on Admin dashboard</p>
+</div>
+
+<div class="phase" style="border-left-color:#f59e0b">
+<h3>Phase 4: GST Billing & Notifications — Week 4–5</h3>
+<p>Full GST invoice generation (CGST/SGST vs IGST) · Per-item HSN + tax rates · QuestPDF rendering · Amount in words · FCM push setup · Dual notification system</p>
+</div>
+
+<div class="phase" style="border-left-color:#ef4444">
+<h3>Phase 5: Polish & Deploy — Week 5–6</h3>
+<p>UI polish & animations · Offline + online testing · Deploy API to VPS · Production DB + backups · EAS Build → APK · Client UAT · Play Store (optional, $25)</p>
+</div>
+
+<h2 style="margin-top:16px">Testing Scenarios</h2>
+<div class="grid-2">
+<div class="card">
+<h3>🔌 Offline Flow</h3>
+<p>Login → offline → browse → add customer → place order → online → verify sync</p>
+</div>
+<div class="card" style="border-left-color:var(--success)">
+<h3>⚡ Real-Time</h3>
+<p>Salesman places order → Admin sees instantly via SignalR + FCM push</p>
+</div>
+<div class="card" style="border-left-color:var(--warning)">
+<h3>🧾 GST Intra-State</h3>
+<p>Gujarat customer → verify CGST + SGST split with multiple GST rates</p>
+</div>
+<div class="card" style="border-left-color:#8b5cf6">
+<h3>🧾 GST Inter-State</h3>
+<p>Maharashtra customer → verify IGST. Mix 5% + 18% products → correct</p>
+</div>
+</div>
+
+<div class="page-footer"><span>Vikas Marketing | Confidential</span><span>Page 6 of 7</span></div>
+</div>
+
+<!-- PAGE 7: SUMMARY -->
+<div class="page">
+<h2>Project Summary</h2>
+
+<div class="grid-2" style="margin-bottom:16px">
+<div class="card"><h3>📱 16 App Screens</h3><p>11 refined + 5 new (1 removed)</p></div>
+<div class="card" style="border-left-color:var(--success)"><h3>🖥️ 35+ API Endpoints</h3><p>10 Controllers + SignalR Hub</p></div>
+<div class="card" style="border-left-color:#8b5cf6"><h3>🗄️ 11 Database Tables</h3><p>SQL Server on VPS</p></div>
+<div class="card" style="border-left-color:var(--warning)"><h3>📅 6 Week Timeline</h3><p>5 phases from backend to deployment</p></div>
+</div>
+
+<h3>Key Differentiators</h3>
+<table>
+<thead><tr><th>Feature</th><th>What It Means</th></tr></thead>
+<tbody>
+<tr><td>Offline-First</td><td>Salesmen can work without internet in remote areas</td></tr>
+<tr><td>Real-Time Alerts</td><td>Admin knows instantly when any order is placed</td></tr>
+<tr><td>Full GST Compliance</td><td>CGST/SGST, IGST, per-product rates, HSN codes — all India ready</td></tr>
+<tr><td>GPS Tracking</td><td>Know exactly where salesmen visit and place orders</td></tr>
+<tr><td>Auto-Sync</td><td>Zero manual effort — app syncs automatically on reconnect</td></tr>
+<tr><td>Scalable</td><td>Architected for 100 concurrent users from day one</td></tr>
+</tbody>
+</table>
+
+<h3>Deliverables</h3>
+<table>
+<thead><tr><th>#</th><th>Deliverable</th><th>Format</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Android APK (Enterprise App)</td><td>.apk file + Play Store (optional)</td></tr>
+<tr><td>2</td><td>Backend API deployed on VPS</td><td>ASP.NET Core on IIS/Kestrel</td></tr>
+<tr><td>3</td><td>SQL Server Database</td><td>Production DB with automated backups</td></tr>
+<tr><td>4</td><td>Admin & Salesman Accounts</td><td>3 Admin + ~10 Salesman created</td></tr>
+<tr><td>5</td><td>Training Session</td><td>Remote/on-site for staff & salesmen</td></tr>
+</tbody>
+</table>
+
+<div style="margin-top:24px;background:var(--primary);color:#fff;padding:18px;border-radius:8px;text-align:center">
+<p style="color:#94a3b8;margin-bottom:6px;font-size:11px">FOR REVIEW BY</p>
+<h3 style="color:#fff;margin:0;font-size:18px">Param Buddh & Jigar Maru</h3>
+<p style="color:#94a3b8;margin-top:6px;font-size:11px">Please review and confirm before development begins</p>
+</div>
+
+<div class="page-footer"><span>Vikas Marketing | Confidential</span><span>Page 7 of 7</span></div>
+</div>
+
+</body>
+</html>
