@@ -40,7 +40,7 @@ These blueprints describe a **completely different product** from what was origi
 
 ### Backend Architecture (from blueprint)
 ```
-Mobile App → REST API (Node.js) → PostgreSQL (Neon DB)
+Mobile App / PWA → REST API (Node.js) → PostgreSQL (VPS Hosted)
                                 → Redis (Cache/Queue)
                                 → Queue Workers (Notifications, Sync, Analytics)
                                 → Cloudinary (Images)
@@ -96,9 +96,10 @@ audit_logs, analytics_snapshots
 
 | Layer | Technology | Notes |
 | :--- | :--- | :--- |
-| Mobile App | React Native (Expo) | Single app, role-based navigation |
-| Backend API | Node.js (Express or Fastify) | Blueprint recommends NestJS — need to decide |
-| Database | Neon DB (PostgreSQL) | Free tier = 0.5GB, may need upgrade |
+| Mobile App (Android) | React Native (Expo) APK | Distributed via sideloading or Play Store for Android |
+| Mobile App (iOS) | Progressive Web App (PWA) | Hosted via Static IP/Domain for iOS users to Add to Home Screen |
+| Backend API | Node.js (Express or Fastify) | **Handled entirely by Jigar** |
+| Database | PostgreSQL (Self-Hosted VPS) | **Handled entirely by Jigar** |
 | Image Storage | Cloudinary | Product images, shop photos |
 | Cache/Queue | TBD | Blueprint recommends Redis + BullMQ |
 | Offline Storage | TBD | Blueprint recommends SQLite/WatermelonDB/Realm |
@@ -184,4 +185,4 @@ The blueprint treats manufacturer as the top-level entity who owns products and 
 | Date | Change | Details |
 | :--- | :--- | :--- |
 | June 9, 2026 | Blueprint review completed | Both backend and frontend blueprints analyzed. Scope expansion identified. |
-| | | Awaiting user clarification on critical decisions before proceeding. |
+| June 13, 2026 | Hand-off & Architecture finalized | NeonDB removed in favor of VPS PostgreSQL. Jigar handles Backend/DB. Param handles Frontend. iOS uses PWA, Android uses APK. Mono-repo structure confirmed with only main & develop branches. |

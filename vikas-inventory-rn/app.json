@@ -23,7 +23,12 @@
       ]
     },
     "web": {
-      "bundler": "webpack"
+      "bundler": "webpack",
+      "shortName": "Vikas PWA",
+      "name": "Vikas Marketing Field Sales",
+      "themeColor": "#4F46E5",
+      "backgroundColor": "#ffffff",
+      "display": "standalone"
     },
     "extra": {
       "eas": {
