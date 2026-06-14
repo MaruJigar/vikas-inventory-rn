@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary, 
     width: 56, height: 56, borderRadius: 28,
     justifyContent: 'center', alignItems: 'center',
-    ...SHADOWS.lg,
+Start an ap    ...SHADOWS.lg,
   },
   fabText: { color: COLORS.white, fontSize: TYPOGRAPHY.sizes.sm, fontWeight: '700' },
 });
