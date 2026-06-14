@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { ApprovalRequest } from './approval-request.entity';
@@ -126,18 +128,53 @@ export class ApprovalService {
     }
   }
 
-  async getPendingRequests(currentUser: { userId: string, role: string }) {
+  async getPendingRequests(currentUser: { userId: string, role: string }, queryDto: ListQueryDto): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC', startDate, endDate, status = 'PENDING_APPROVAL' } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.reqRepo.createQueryBuilder('req');
+
     if (currentUser.role === 'SUPER_ADMIN') {
-      return this.reqRepo.find({ where: { status: 'PENDING_APPROVAL' } });
+      // Global
     } else if (currentUser.role === 'MANUFACTURER_ADMIN') {
       const mfg = await this.dataSource.getRepository(Manufacturer).findOne({ where: { user_id: currentUser.userId } });
-      if (!mfg) return [];
-      return this.reqRepo.find({ where: { status: 'PENDING_APPROVAL', manufacturer_id: mfg.id } });
+      if (!mfg) throw new ForbiddenException('Manufacturer not found');
+      qb.andWhere('req.manufacturer_id = :mfgId', { mfgId: mfg.id });
     } else if (currentUser.role === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.dataSource.getRepository(Distributor).findOne({ where: { user_id: currentUser.userId } });
-      if (!dist) return [];
-      return this.reqRepo.find({ where: { status: 'PENDING_APPROVAL', distributor_id: dist.id } });
+      if (!dist) throw new ForbiddenException('Distributor not found');
+      qb.andWhere('req.distributor_id = :distId', { distId: dist.id });
+    } else {
+      throw new ForbiddenException('Unauthorized role');
     }
-    return [];
+
+    if (status) {
+      qb.andWhere('req.status = :status', { status });
+    }
+
+    if (startDate) qb.andWhere('req.created_at >= :startDate', { startDate: new Date(startDate) });
+    if (endDate) qb.andWhere('req.created_at <= :endDate', { endDate: new Date(endDate) });
+
+    const allowedSortFields = ['created_at', 'updated_at', 'status', 'request_type'];
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+      qb.orderBy(`req.${sortBy}`, sortOrder);
+    } else {
+      qb.orderBy('req.created_at', 'DESC');
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 }

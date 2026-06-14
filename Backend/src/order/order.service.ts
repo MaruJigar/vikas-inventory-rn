@@ -23,6 +23,8 @@ import { DistributorInventory } from '../inventory/distributor-inventory.entity'
 import { InventoryMovement } from '../inventory/inventory-movement.entity';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AppSocketGateway } from '../socket-gateway/socket.gateway';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto, CancelOrderDto } from './dto/update-order.dto';
 
@@ -568,31 +570,66 @@ export class OrderService {
 
   // ─── getOrders ────────────────────────────────────────────────────────────
 
-  async getOrders(userId: string, role: string) {
+  async getOrders(userId: string, role: string, queryDto: ListQueryDto): Promise<PaginatedResponse<Order>> {
+    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC', ...filters } = queryDto as any;
+    const skip = (page - 1) * limit;
+
+    const qb = this.orderRepo.createQueryBuilder('order');
+
     if (role === 'SUPER_ADMIN') {
-      return this.orderRepo.find({ order: { created_at: 'DESC' } });
-    }
-    if (role === 'DISTRIBUTOR_ADMIN') {
+      // no-op, sees all
+    } else if (role === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.getDistributorOrFail(userId);
-      return this.orderRepo.find({ where: { distributor_id: dist.id }, order: { created_at: 'DESC' } });
-    }
-    if (role === 'MANUFACTURER_ADMIN') {
+      qb.andWhere('order.distributor_id = :distId', { distId: dist.id });
+    } else if (role === 'MANUFACTURER_ADMIN') {
       const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
       if (!mfr) throw new ForbiddenException('Manufacturer not found');
       const links = await this.mfrDistRepo.find({ where: { manufacturer_id: mfr.id } });
       const distIds = links.map(l => l.distributor_id);
-      if (distIds.length === 0) return [];
-      const qb = this.orderRepo.createQueryBuilder('order');
-      qb.where('order.distributor_id IN (:...distIds)', { distIds });
-      qb.orderBy('order.created_at', 'DESC');
-      return qb.getMany();
-    }
-    if (role === 'SALESMAN') {
+      if (distIds.length === 0) {
+        return { data: [], meta: { page: Number(page), limit: Number(limit), total: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
+      }
+      qb.andWhere('order.distributor_id IN (:...distIds)', { distIds });
+    } else if (role === 'SALESMAN') {
       const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
       if (!salesman) throw new ForbiddenException('Salesman not found');
-      return this.orderRepo.find({ where: { salesman_id: salesman.id }, order: { created_at: 'DESC' } });
+      qb.andWhere('order.salesman_id = :salesmanId', { salesmanId: salesman.id });
+    } else {
+      throw new ForbiddenException('Unauthorized role');
     }
-    throw new ForbiddenException('Unauthorized role');
+
+    if (search) {
+      qb.andWhere('order.order_number ILIKE :search', { search: `%${search}%` });
+    }
+
+    if (filters.status) qb.andWhere('order.status = :status', { status: filters.status });
+    if (filters.salesman_id) qb.andWhere('order.salesman_id = :sId', { sId: filters.salesman_id });
+    if (filters.shop_id) qb.andWhere('order.shop_id = :shId', { shId: filters.shop_id });
+
+    if (filters.startDate) qb.andWhere('order.created_at >= :startDate', { startDate: new Date(filters.startDate) });
+    if (filters.endDate) qb.andWhere('order.created_at <= :endDate', { endDate: new Date(filters.endDate) });
+
+    const allowedSortFields = ['created_at', 'updated_at', 'total_amount', 'order_number'];
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+      qb.orderBy(`order.${sortBy}`, sortOrder);
+    } else {
+      qb.orderBy('order.created_at', 'DESC');
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   // ─── getOrderById ─────────────────────────────────────────────────────────

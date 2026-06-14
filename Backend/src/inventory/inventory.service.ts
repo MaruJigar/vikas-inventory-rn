@@ -1,4 +1,6 @@
 import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { DistributorInventory } from './distributor-inventory.entity';
@@ -18,17 +20,56 @@ export class InventoryService {
     private dataSource: DataSource, private readonly notificationService: NotificationService
   ) {}
 
-  async getInventory(userRole: string, userId: string) {
+  async getInventory(userRole: string, userId: string, queryDto: ListQueryDto): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC', startDate, endDate } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.invRepo.createQueryBuilder('inv');
+
     if (userRole === 'SUPER_ADMIN') {
-      return this.invRepo.find();
+      // Global
     } else if (userRole === 'MANUFACTURER_ADMIN') {
-      return this.invRepo.find();
+      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
+      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      
+      qb.innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = inv.distributor_id AND md.manufacturer_id = :mfrId',
+        { mfrId: mfrResult[0].id }
+      );
     } else if (userRole === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
       if (!dist) throw new ForbiddenException('Distributor not found');
-      return this.invRepo.find({ where: { distributor_id: dist.id } });
+      qb.andWhere('inv.distributor_id = :distId', { distId: dist.id });
+    } else {
+      throw new ForbiddenException('Cannot view inventory');
     }
-    throw new ForbiddenException('Cannot view inventory');
+
+    if (startDate) qb.andWhere('inv.created_at >= :startDate', { startDate: new Date(startDate) });
+    if (endDate) qb.andWhere('inv.created_at <= :endDate', { endDate: new Date(endDate) });
+
+    const allowedSortFields = ['created_at', 'updated_at', 'available_quantity', 'reserved_quantity', 'backordered_quantity'];
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+      qb.orderBy(`inv.${sortBy}`, sortOrder);
+    } else {
+      qb.orderBy('inv.updated_at', 'DESC');
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async adjustManualStock(dto: AdjustInventoryDto, userId: string, userRole: string) {
@@ -96,20 +137,54 @@ export class InventoryService {
     }
   }
 
-  async getMovements(inventoryId: string, userRole: string, userId: string) {
+  async getMovements(inventoryId: string, userRole: string, userId: string, queryDto: ListQueryDto): Promise<PaginatedResponse<any>> {
     const inv = await this.invRepo.findOne({ where: { id: inventoryId } });
     if (!inv) throw new NotFoundException('Inventory not found');
 
-    if (userRole === 'DISTRIBUTOR_ADMIN') {
+    if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
+      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      
+      const link = await this.dataSource.query(`SELECT 1 FROM manufacturer_distributors WHERE manufacturer_id = $1 AND distributor_id = $2`, [mfrResult[0].id, inv.distributor_id]);
+      if (!link.length) throw new ForbiddenException('Cannot view movements for another distributor');
+    } else if (userRole === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
       if (!dist || dist.id !== inv.distributor_id) {
         throw new ForbiddenException('Cannot view movements for another distributor');
       }
     }
 
-    return this.movementRepo.find({
-      where: { distributor_id: inv.distributor_id, product_id: inv.product_id },
-      order: { created_at: 'DESC' }
-    });
+    const { page = 1, limit = 20, sortBy, sortOrder = 'DESC', startDate, endDate, status } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.movementRepo.createQueryBuilder('movement')
+      .where('movement.distributor_id = :dId', { dId: inv.distributor_id })
+      .andWhere('movement.product_id = :pId', { pId: inv.product_id });
+
+    if (status) qb.andWhere('movement.movement_type = :status', { status });
+    if (startDate) qb.andWhere('movement.created_at >= :startDate', { startDate: new Date(startDate) });
+    if (endDate) qb.andWhere('movement.created_at <= :endDate', { endDate: new Date(endDate) });
+
+    const allowedSortFields = ['created_at'];
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+      qb.orderBy(`movement.${sortBy}`, sortOrder);
+    } else {
+      qb.orderBy('movement.created_at', 'DESC');
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 }

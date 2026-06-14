@@ -7,6 +7,8 @@ import { Salesman } from '../salesman/salesman.entity';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { ShopDuplicateDetectionService } from '../shop-duplicate-detection/shop-duplicate-detection.service';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 
 @Injectable()
 export class ShopService {
@@ -90,55 +92,108 @@ export class ShopService {
     }
   }
 
-  async getShops(userId: string, userRole: string, manufacturerDistributors?: string[]) {
+  async getShops(userId: string, userRole: string, queryDto: ListQueryDto): Promise<PaginatedResponse<Shop>> {
+    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC', startDate, endDate, status } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.shopRepo.createQueryBuilder('shop');
+
     if (userRole === 'SUPER_ADMIN') {
-      return this.shopRepo.find();
+      // Global
     } else if (userRole === 'MANUFACTURER_ADMIN') {
-      if (!manufacturerDistributors || manufacturerDistributors.length === 0) return [];
-      return this.shopRepo.createQueryBuilder('shop')
-        .where('shop.distributor_id IN (:...distIds)', { distIds: manufacturerDistributors })
-        .getMany();
+      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
+      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      
+      qb.innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = shop.distributor_id AND md.manufacturer_id = :mfrId',
+        { mfrId: mfrResult[0].id }
+      );
     } else if (userRole === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
-      if (!dist) return [];
-      return this.shopRepo.find({ where: { distributor_id: dist.id } });
+      if (!dist) throw new ForbiddenException('Distributor profile not found');
+      qb.andWhere('shop.distributor_id = :distId', { distId: dist.id });
     } else if (userRole === 'SALESMAN') {
       const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
-      if (!salesman) return [];
-      return this.shopRepo.find({ where: { distributor_id: salesman.distributor_id } });
+      if (!salesman) throw new ForbiddenException('Salesman profile not found');
+      qb.andWhere('shop.distributor_id = :distId', { distId: salesman.distributor_id });
+    } else {
+      throw new ForbiddenException('Unauthorized role');
     }
-    return [];
+
+    if (search) {
+      qb.andWhere('(shop.name ILIKE :search OR shop.phone ILIKE :search OR shop.owner_name ILIKE :search)', { search: `%${search}%` });
+    }
+
+    if (status) {
+      qb.andWhere('shop.verification_status = :status', { status });
+    }
+
+    if (startDate) qb.andWhere('shop.created_at >= :startDate', { startDate: new Date(startDate) });
+    if (endDate) qb.andWhere('shop.created_at <= :endDate', { endDate: new Date(endDate) });
+
+    const allowedSortFields = ['created_at', 'updated_at', 'name'];
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+      qb.orderBy(`shop.${sortBy}`, sortOrder);
+    } else {
+      qb.orderBy('shop.created_at', 'DESC');
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
-  async getShopById(id: string, userId: string, userRole: string, manufacturerDistributors?: string[]) {
-    const shop = await this.shopRepo.findOne({ where: { id } });
-    if (!shop) throw new NotFoundException('Shop not found');
+  async getShopById(id: string, userId: string, userRole: string) {
+    const qb = this.shopRepo.createQueryBuilder('shop').where('shop.id = :id', { id });
 
-    if (userRole === 'MANUFACTURER_ADMIN') {
-      if (!manufacturerDistributors || !manufacturerDistributors.includes(shop.distributor_id)) {
-        throw new ForbiddenException('Unauthorized');
-      }
+    if (userRole === 'SUPER_ADMIN') {
+      // Global
+    } else if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
+      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      
+      qb.innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = shop.distributor_id AND md.manufacturer_id = :mfrId',
+        { mfrId: mfrResult[0].id }
+      );
     } else if (userRole === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
-      if (!dist || dist.id !== shop.distributor_id) throw new ForbiddenException('Unauthorized');
+      if (!dist) throw new ForbiddenException('Distributor profile not found');
+      qb.andWhere('shop.distributor_id = :distId', { distId: dist.id });
     } else if (userRole === 'SALESMAN') {
       const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
-      if (!salesman || salesman.distributor_id !== shop.distributor_id) throw new ForbiddenException('Unauthorized');
+      if (!salesman) throw new ForbiddenException('Salesman profile not found');
+      qb.andWhere('shop.distributor_id = :distId', { distId: salesman.distributor_id });
+    } else {
+      throw new ForbiddenException('Unauthorized role');
     }
+
+    const shop = await qb.getOne();
+    if (!shop) throw new NotFoundException('Shop not found or unauthorized');
 
     return shop;
   }
 
-  async updateShop(id: string, dto: UpdateShopDto, userId: string, userRole: string, manufacturerDistributors?: string[]) {
-    const shop = await this.getShopById(id, userId, userRole, manufacturerDistributors);
+  async updateShop(id: string, dto: UpdateShopDto, userId: string, userRole: string) {
+    const shop = await this.getShopById(id, userId, userRole);
 
     if (userRole === 'MANUFACTURER_ADMIN') {
       throw new ForbiddenException('Manufacturers cannot edit shops');
-    } else if (userRole === 'SALESMAN') {
-      const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
-      if (shop.distributor_id !== salesman?.distributor_id) {
-        throw new ForbiddenException('Salesmen can only edit shops in their distributor ecosystem');
-      }
     }
 
     if (dto.latitude !== undefined && dto.longitude !== undefined) {

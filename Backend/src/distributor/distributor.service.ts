@@ -1,13 +1,24 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { Distributor } from './distributor.entity';
+import { ManufacturerDistributor } from './manufacturer-distributor.entity';
+import { User } from '../user/user.entity';
+import { AuditLogService } from '../audit-log/audit-log.service';
 import { UpdateDistributorProfileDto } from './dto/update-distributor-profile.dto';
+import { CreateDistributorAdminDto } from './dto/create-distributor-admin.dto';
+import { UpdateDistributorAdminDto } from './dto/update-distributor-admin.dto';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 
 @Injectable()
 export class DistributorService {
   constructor(
     @InjectRepository(Distributor) private distributorRepo: Repository<Distributor>,
+    @InjectRepository(ManufacturerDistributor) private manufacturerDistributorRepo: Repository<ManufacturerDistributor>,
+    private dataSource: DataSource,
+    private auditLogService: AuditLogService,
   ) {}
 
   async getProfile(userId: string) {
@@ -20,5 +31,173 @@ export class DistributorService {
     const profile = await this.getProfile(userId);
     Object.assign(profile, dto);
     return this.distributorRepo.save(profile);
+  }
+
+  async getDistributors(actorUserId: string, role: string, queryDto: ListQueryDto): Promise<PaginatedResponse<Distributor>> {
+    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC' } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.distributorRepo.createQueryBuilder('distributor');
+
+    if (role === 'MANUFACTURER_ADMIN') {
+      const manufacturerResult = await this.dataSource.query(
+        `SELECT id FROM manufacturers WHERE user_id = $1`, [actorUserId]
+      );
+      if (!manufacturerResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      const manufacturerId = manufacturerResult[0].id;
+
+      qb.innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = distributor.id AND md.manufacturer_id = :manufacturerId',
+        { manufacturerId }
+      );
+    } else if (role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Unauthorized role');
+    }
+
+    if (search) {
+      qb.andWhere('(distributor.business_name ILIKE :search OR distributor.email ILIKE :search)', { search: `%${search}%` });
+    }
+
+    const allowedSortFields = ['created_at', 'updated_at', 'business_name'];
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+      qb.orderBy(`distributor.${sortBy}`, sortOrder);
+    } else {
+      qb.orderBy('distributor.created_at', 'DESC');
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+
+  async getDistributorById(actorUserId: string, role: string, id: string) {
+    const qb = this.distributorRepo.createQueryBuilder('distributor').where('distributor.id = :id', { id });
+
+    if (role === 'MANUFACTURER_ADMIN') {
+      const manufacturerResult = await this.dataSource.query(
+        `SELECT id FROM manufacturers WHERE user_id = $1`, [actorUserId]
+      );
+      if (!manufacturerResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      const manufacturerId = manufacturerResult[0].id;
+
+      qb.innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = distributor.id AND md.manufacturer_id = :manufacturerId',
+        { manufacturerId }
+      );
+    } else if (role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Unauthorized role');
+    }
+
+    const distributor = await qb.getOne();
+    if (!distributor) {
+      if (role === 'MANUFACTURER_ADMIN') throw new ForbiddenException('Unauthorized or Distributor not found');
+      throw new NotFoundException('Distributor not found');
+    }
+    return distributor;
+  }
+
+  async createDistributorAdmin(actorUserId: string, role: string, dto: CreateDistributorAdminDto) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const exists = await queryRunner.manager.findOne(User, { where: [{ email: dto.email }, { phone: dto.phone }] });
+      if (exists) throw new BadRequestException('User with email or phone already exists');
+
+      const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+      const user = queryRunner.manager.create(User, {
+        full_name: dto.contact_person || dto.business_name,
+        email: dto.email,
+        phone: dto.phone,
+        password_hash: hashedPassword,
+        role: 'DISTRIBUTOR_ADMIN',
+        approval_status: 'APPROVED',
+      });
+      await queryRunner.manager.save(user);
+
+      const distributor = queryRunner.manager.create(Distributor, {
+        user_id: user.id,
+        business_name: dto.business_name,
+        contact_person: dto.contact_person,
+        phone: dto.phone,
+        email: dto.email,
+        address: dto.address,
+        city: dto.city,
+        state: dto.state,
+        country: dto.country,
+        approval_status: 'APPROVED',
+        is_active: true,
+      });
+      await queryRunner.manager.save(distributor);
+
+      // Resolve Linkage
+      let manufacturerId: string | null = null;
+      if (role === 'MANUFACTURER_ADMIN') {
+        const mfr = await queryRunner.manager.findOne('Manufacturer', { where: { user_id: actorUserId } });
+        if (mfr) manufacturerId = (mfr as any).id;
+      } else if (role === 'SUPER_ADMIN' && dto.manufacturer_id) {
+        manufacturerId = dto.manufacturer_id;
+      }
+
+      if (manufacturerId) {
+        const link = queryRunner.manager.create(ManufacturerDistributor, {
+          manufacturer_id: manufacturerId,
+          distributor_id: distributor.id,
+          status: 'APPROVED',
+        });
+        await queryRunner.manager.save(link);
+      }
+
+      await queryRunner.commitTransaction();
+
+      await this.auditLogService.logAction(
+        'DISTRIBUTOR_CREATED',
+        'DISTRIBUTOR',
+        distributor.id,
+        actorUserId,
+        { new_values: distributor }
+      );
+
+      return { user, profile: distributor };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async updateDistributorAdmin(actorUserId: string, role: string, id: string, dto: UpdateDistributorAdminDto) {
+    const distributor = await this.getDistributorById(actorUserId, role, id);
+    const oldValues = { ...distributor };
+    Object.assign(distributor, dto);
+    const updated = await this.distributorRepo.save(distributor);
+
+    await this.auditLogService.logAction(
+      'DISTRIBUTOR_UPDATED',
+      'DISTRIBUTOR',
+      updated.id,
+      actorUserId,
+      { old_values: oldValues, new_values: updated }
+    );
+
+    return updated;
   }
 }

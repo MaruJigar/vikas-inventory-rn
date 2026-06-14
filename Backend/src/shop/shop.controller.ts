@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Patch, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, UseGuards, Request, Query } from '@nestjs/common';
 import { ShopService } from './shop.service';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
@@ -7,6 +7,7 @@ import { ShopDuplicateDetectionService } from '../shop-duplicate-detection/shop-
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
+import { ListQueryDto } from '../common/dto/list-query.dto';
 
 @Controller('shops')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -31,19 +32,19 @@ export class ShopController {
 
   @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
   @Get()
-  getShops(@Request() req) {
-    return this.shopService.getShops(req.user.userId, req.user.role, []);
+  getShops(@Request() req, @Query() query: ListQueryDto) {
+    return this.shopService.getShops(req.user.userId, req.user.role, query);
   }
 
   @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
   @Get(':id')
   getShopById(@Param('id') id: string, @Request() req) {
-    return this.shopService.getShopById(id, req.user.userId, req.user.role, []);
+    return this.shopService.getShopById(id, req.user.userId, req.user.role);
   }
 
   @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
   @Patch(':id')
   updateShop(@Param('id') id: string, @Body() dto: UpdateShopDto, @Request() req) {
-    return this.shopService.updateShop(id, dto, req.user.userId, req.user.role, []);
+    return this.shopService.updateShop(id, dto, req.user.userId, req.user.role);
   }
 }

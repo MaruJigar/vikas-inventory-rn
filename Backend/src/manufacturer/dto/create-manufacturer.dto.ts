@@ -20,4 +20,8 @@ export class CreateManufacturerDto {
   @IsOptional()
   @IsString()
   gst_number?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
 }

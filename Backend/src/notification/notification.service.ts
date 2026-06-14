@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './notification.entity';
@@ -33,11 +35,52 @@ export class NotificationService {
     return notif;
   }
 
-  async getNotifications(userId: string) {
-    return this.notifRepo.find({
-      where: { recipient_user_id: userId },
-      order: { created_at: 'DESC' }
-    });
+  async getNotifications(userId: string, queryDto: ListQueryDto): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC', startDate, endDate, status } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.notifRepo.createQueryBuilder('notif')
+      .where('notif.recipient_user_id = :userId', { userId });
+
+    if (search) {
+      qb.andWhere('(notif.title ILIKE :search OR notif.message ILIKE :search)', { search: `%${search}%` });
+    }
+
+    if (status !== undefined) {
+      // For notifications, 'status' could map to 'is_read'
+      if (status === 'UNREAD') {
+        qb.andWhere('notif.is_read = :isRead', { isRead: false });
+      } else if (status === 'READ') {
+        qb.andWhere('notif.is_read = :isRead', { isRead: true });
+      } else {
+        qb.andWhere('notif.type = :type', { type: status });
+      }
+    }
+
+    if (startDate) qb.andWhere('notif.created_at >= :startDate', { startDate: new Date(startDate) });
+    if (endDate) qb.andWhere('notif.created_at <= :endDate', { endDate: new Date(endDate) });
+
+    const allowedSortFields = ['created_at', 'is_read'];
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+      qb.orderBy(`notif.${sortBy}`, sortOrder);
+    } else {
+      qb.orderBy('notif.created_at', 'DESC');
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async getUnreadCount(userId: string) {

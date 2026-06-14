@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
 import { SalesmanService } from './salesman.service';
 import { RegisterSalesmanDto } from './dto/register-salesman.dto';
 import { UpdateSalesmanDto } from './dto/update-salesman.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
+import { ListQueryDto } from '../common/dto/list-query.dto';
 
 @Controller('salesmen')
 export class SalesmanController {
@@ -18,8 +19,8 @@ export class SalesmanController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Get()
-  getSalesmen(@Request() req) {
-    return this.salesmanService.getSalesmen(req.user.role, req.user.userId);
+  getSalesmen(@Request() req, @Query() query: ListQueryDto) {
+    return this.salesmanService.getSalesmen(req.user.role, req.user.userId, query);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

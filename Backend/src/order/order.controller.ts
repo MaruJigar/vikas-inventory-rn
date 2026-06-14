@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Get, Patch, Body, Param, UseGuards, Request,
+  Controller, Post, Get, Patch, Body, Param, UseGuards, Request, Query
 } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -7,6 +7,7 @@ import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto, CancelOrderDto } from './dto/update-order.dto';
+import { ListQueryDto } from '../common/dto/list-query.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('orders')
@@ -20,8 +21,8 @@ export class OrdersController {
   }
 
   @Get()
-  getOrders(@Request() req) {
-    return this.orderService.getOrders(req.user.userId, req.user.role);
+  getOrders(@Request() req, @Query() query: ListQueryDto) {
+    return this.orderService.getOrders(req.user.userId, req.user.role, query);
   }
 
   @Get(':id')

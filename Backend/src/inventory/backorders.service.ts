@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, IsNull, Not } from 'typeorm';
 import { Backorder } from '../order/backorder.entity';
@@ -21,7 +23,10 @@ export class BackordersService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  async listBackorders(userRole: string, userId: string, filters: any = {}) {
+  async listBackorders(userRole: string, userId: string, queryDto: ListQueryDto): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC', startDate, endDate, status } = queryDto;
+    const skip = (page - 1) * limit;
+
     const query = this.backorderRepo.createQueryBuilder('backorder')
       .leftJoinAndSelect('backorder.order', 'order')
       .leftJoinAndSelect('order.shop', 'shop')
@@ -29,20 +34,53 @@ export class BackordersService {
       .leftJoinAndSelect('backorder.product', 'product');
 
     if (userRole === 'DISTRIBUTOR_ADMIN') {
-      query.andWhere('backorder.distributor_id = :userId', { userId });
-    } else if (userRole === 'SUPER_ADMIN' || userRole === 'MANUFACTURER_ADMIN') {
-      if (filters.distributorId) {
-        query.andWhere('backorder.distributor_id = :distributorId', { distributorId: filters.distributorId });
-      }
+      const dist = await this.dataSource.query(`SELECT id FROM distributors WHERE user_id = $1`, [userId]);
+      if (!dist.length) throw new ForbiddenException('Distributor not found');
+      query.andWhere('backorder.distributor_id = :distId', { distId: dist[0].id });
+    } else if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
+      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      
+      query.innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = backorder.distributor_id AND md.manufacturer_id = :mfrId',
+        { mfrId: mfrResult[0].id }
+      );
+    } else if (userRole === 'SUPER_ADMIN') {
+      // Global
     } else {
       throw new ForbiddenException('Access denied');
     }
 
-    if (filters.status) {
-      query.andWhere('backorder.status = :status', { status: filters.status });
+    if (status) {
+      query.andWhere('backorder.status = :status', { status });
     }
 
-    return await query.orderBy('backorder.created_at', 'ASC').getMany();
+    if (startDate) query.andWhere('backorder.created_at >= :startDate', { startDate: new Date(startDate) });
+    if (endDate) query.andWhere('backorder.created_at <= :endDate', { endDate: new Date(endDate) });
+
+    const allowedSortFields = ['created_at', 'updated_at', 'status'];
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+      query.orderBy(`backorder.${sortBy}`, sortOrder);
+    } else {
+      query.orderBy('backorder.created_at', 'DESC');
+    }
+
+    const [data, total] = await query.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async getBackorder(id: string, userRole: string, userId: string) {
@@ -54,8 +92,22 @@ export class BackordersService {
       .where('backorder.id = :id', { id });
 
     if (userRole === 'DISTRIBUTOR_ADMIN') {
-      query.andWhere('backorder.distributor_id = :userId', { userId });
-    } else if (userRole !== 'SUPER_ADMIN' && userRole !== 'MANUFACTURER_ADMIN') {
+      const dist = await this.dataSource.query(`SELECT id FROM distributors WHERE user_id = $1`, [userId]);
+      if (!dist.length) throw new ForbiddenException('Distributor not found');
+      query.andWhere('backorder.distributor_id = :distId', { distId: dist[0].id });
+    } else if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
+      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      
+      query.innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = backorder.distributor_id AND md.manufacturer_id = :mfrId',
+        { mfrId: mfrResult[0].id }
+      );
+    } else if (userRole === 'SUPER_ADMIN') {
+      // Global
+    } else {
       throw new ForbiddenException('Access denied');
     }
 

@@ -8,6 +8,8 @@ import { ApprovalRequest } from '../approval/approval-request.entity';
 import { RegisterSalesmanDto } from './dto/register-salesman.dto';
 import { UpdateSalesmanDto } from './dto/update-salesman.dto';
 import * as bcrypt from 'bcrypt';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 
 @Injectable()
 export class SalesmanService {
@@ -80,41 +82,99 @@ export class SalesmanService {
     }
   }
 
-  async getSalesmen(userRole: string, userId: string) {
-    if (userRole === 'SUPER_ADMIN' || userRole === 'MANUFACTURER_ADMIN') {
-      return this.salesmanRepo.find();
+  async getSalesmen(userRole: string, userId: string, queryDto: ListQueryDto): Promise<PaginatedResponse<Salesman>> {
+    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC', startDate, endDate, status } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.salesmanRepo.createQueryBuilder('salesman');
+
+    if (userRole === 'SUPER_ADMIN') {
+      // Global
+    } else if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
+      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      
+      qb.innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = salesman.distributor_id AND md.manufacturer_id = :mfrId',
+        { mfrId: mfrResult[0].id }
+      );
     } else if (userRole === 'DISTRIBUTOR_ADMIN') {
-      const distributor = await this.distributorRepo.findOne({ where: { user_id: userId } });
-      if (!distributor) return [];
-      return this.salesmanRepo.find({ where: { distributor_id: distributor.id } });
+      const dist = await this.distributorRepo.findOne({ where: { user_id: userId } });
+      if (!dist) throw new ForbiddenException('Distributor profile not found');
+      qb.andWhere('salesman.distributor_id = :distId', { distId: dist.id });
+    } else {
+      throw new ForbiddenException('Unauthorized role');
     }
-    throw new ForbiddenException('Unauthorized to view salesmen');
+
+    if (search) {
+      qb.andWhere('(salesman.full_name ILIKE :search OR salesman.phone ILIKE :search OR salesman.email ILIKE :search)', { search: `%${search}%` });
+    }
+
+    if (status) {
+      qb.andWhere('salesman.approval_status = :status', { status });
+    }
+
+    if (startDate) qb.andWhere('salesman.created_at >= :startDate', { startDate: new Date(startDate) });
+    if (endDate) qb.andWhere('salesman.created_at <= :endDate', { endDate: new Date(endDate) });
+
+    const allowedSortFields = ['created_at', 'updated_at', 'full_name'];
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+      qb.orderBy(`salesman.${sortBy}`, sortOrder);
+    } else {
+      qb.orderBy('salesman.created_at', 'DESC');
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async getSalesmanById(id: string, userRole: string, userId: string) {
-    const salesman = await this.salesmanRepo.findOne({ where: { id } });
-    if (!salesman) throw new NotFoundException('Salesman not found');
+    const qb = this.salesmanRepo.createQueryBuilder('salesman').where('salesman.id = :id', { id });
 
-    if (userRole === 'DISTRIBUTOR_ADMIN') {
-      const distributor = await this.distributorRepo.findOne({ where: { user_id: userId } });
-      if (!distributor || distributor.id !== salesman.distributor_id) {
-        throw new ForbiddenException('Unauthorized to view this salesman');
-      }
+    if (userRole === 'SUPER_ADMIN') {
+      // Global
+    } else if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
+      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      
+      qb.innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = salesman.distributor_id AND md.manufacturer_id = :mfrId',
+        { mfrId: mfrResult[0].id }
+      );
+    } else if (userRole === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.distributorRepo.findOne({ where: { user_id: userId } });
+      if (!dist) throw new ForbiddenException('Distributor profile not found');
+      qb.andWhere('salesman.distributor_id = :distId', { distId: dist.id });
     } else if (userRole === 'SALESMAN') {
-      if (salesman.user_id !== userId) {
-        throw new ForbiddenException('Unauthorized to view this salesman');
-      }
+      qb.andWhere('salesman.user_id = :userId', { userId });
+    } else {
+      throw new ForbiddenException('Unauthorized role');
     }
     
+    const salesman = await qb.getOne();
+    if (!salesman) throw new NotFoundException('Salesman not found or unauthorized');
+
     return salesman;
   }
 
   async updateSalesman(id: string, dto: UpdateSalesmanDto, userRole: string, userId: string) {
     const salesman = await this.getSalesmanById(id, userRole, userId);
-    
-    if (userRole === 'SALESMAN' && salesman.user_id !== userId) {
-      throw new ForbiddenException('You can only update your own profile');
-    }
 
     Object.assign(salesman, dto);
     await this.salesmanRepo.save(salesman);

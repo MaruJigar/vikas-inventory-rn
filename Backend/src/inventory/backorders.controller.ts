@@ -3,6 +3,7 @@ import { BackordersService } from './backorders.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
+import { ListQueryDto } from '../common/dto/list-query.dto';
 
 @Controller('backorders')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -11,7 +12,7 @@ export class BackordersController {
 
   @Get()
   @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
-  async listBackorders(@Request() req, @Query() query) {
+  async listBackorders(@Request() req, @Query() query: ListQueryDto) {
     return this.backordersService.listBackorders(req.user.role, req.user.userId, query);
   }
 

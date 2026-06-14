@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { ListQueryDto } from '../common/dto/list-query.dto';
 
 @Controller('products')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -18,8 +19,8 @@ export class ProductController {
   }
 
   @Get()
-  getProducts() {
-    return this.productService.getProducts();
+  getProducts(@Request() req, @Query() query: ListQueryDto) {
+    return this.productService.getProducts(req.user.userId, req.user.role, query);
   }
 
   @Roles('MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')

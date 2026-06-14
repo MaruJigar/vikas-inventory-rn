@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, UseGuards, Request, Query } from '@nestjs/common';
 import { VisitService } from './visit.service';
 import { StartVisitDto } from './dto/start-visit.dto';
 import { EndVisitDto } from './dto/end-visit.dto';
@@ -6,6 +6,7 @@ import { NoOrderVisitDto } from './dto/no-order-visit.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
+import { ListQueryDto } from '../common/dto/list-query.dto';
 
 @Controller('visits')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,9 +31,10 @@ export class VisitController {
     return this.visitService.noOrderVisit(req.user.userId, dto);
   }
 
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
   @Get()
-  getVisits(@Request() req) {
-    return this.visitService.getVisits(req.user.userId, req.user.role);
+  getVisits(@Request() req, @Query() query: ListQueryDto) {
+    return this.visitService.getVisits(req.user.userId, req.user.role, query);
   }
 
   @Get(':id')

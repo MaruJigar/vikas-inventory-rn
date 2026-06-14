@@ -1,4 +1,6 @@
 import { Injectable, ForbiddenException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { ShopVisit } from './shop-visit.entity';
@@ -190,55 +192,99 @@ export class VisitService {
     return saved;
   }
 
-  async getVisits(userId: string, role: string) {
+  async getVisits(userId: string, role: string, queryDto: ListQueryDto): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC', startDate, endDate, status } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.visitRepo.createQueryBuilder('visit');
+
     if (role === 'SUPER_ADMIN') {
-      return this.visitRepo.find({ order: { created_at: 'DESC' } });
+      // Global
     } else if (role === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
       if (!dist) throw new ForbiddenException('Distributor not found');
-      return this.visitRepo.find({ where: { distributor_id: dist.id }, order: { created_at: 'DESC' } });
+      qb.andWhere('visit.distributor_id = :distId', { distId: dist.id });
     } else if (role === 'MANUFACTURER_ADMIN') {
       const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
       if (!mfr) throw new ForbiddenException('Manufacturer not found');
       
-      const linkages = await this.mfrDistRepo.find({ where: { manufacturer_id: mfr.id } });
-      const distIds = linkages.map(l => l.distributor_id);
-      
-      if (distIds.length === 0) return [];
-      
-      const qb = this.visitRepo.createQueryBuilder('visit');
-      qb.where('visit.distributor_id IN (:...distIds)', { distIds });
-      qb.orderBy('visit.created_at', 'DESC');
-      return qb.getMany();
+      qb.innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = visit.distributor_id AND md.manufacturer_id = :mfrId',
+        { mfrId: mfr.id }
+      );
     } else if (role === 'SALESMAN') {
       const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
       if (!salesman) throw new ForbiddenException('Salesman not found');
-      return this.visitRepo.find({ where: { salesman_id: salesman.id }, order: { created_at: 'DESC' } });
+      qb.andWhere('visit.salesman_id = :salesmanId', { salesmanId: salesman.id });
+    } else {
+      throw new ForbiddenException('Unauthorized role');
     }
-    throw new ForbiddenException('Unauthorized role');
+
+    if (search) {
+      // no sensible text search for visit except maybe idempotency_key or notes
+    }
+
+    if (status) {
+      qb.andWhere('visit.status = :status', { status });
+    }
+
+    if (startDate) qb.andWhere('visit.created_at >= :startDate', { startDate: new Date(startDate) });
+    if (endDate) qb.andWhere('visit.created_at <= :endDate', { endDate: new Date(endDate) });
+
+    const allowedSortFields = ['created_at', 'updated_at', 'started_at', 'ended_at'];
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+      qb.orderBy(`visit.${sortBy}`, sortOrder);
+    } else {
+      qb.orderBy('visit.created_at', 'DESC');
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async getVisitById(userId: string, role: string, id: string) {
-    const visit = await this.visitRepo.findOne({ where: { id } });
-    if (!visit) throw new NotFoundException('Visit not found');
+    const qb = this.visitRepo.createQueryBuilder('visit').where('visit.id = :id', { id });
 
     if (role === 'SUPER_ADMIN') {
-      return visit;
+      // Global
     } else if (role === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
-      if (!dist || dist.id !== visit.distributor_id) throw new ForbiddenException('Not your visit');
+      if (!dist) throw new ForbiddenException('Distributor not found');
+      qb.andWhere('visit.distributor_id = :distId', { distId: dist.id });
     } else if (role === 'MANUFACTURER_ADMIN') {
       const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
       if (!mfr) throw new ForbiddenException('Manufacturer not found');
       
-      const isLinked = await this.mfrDistRepo.findOne({
-        where: { manufacturer_id: mfr.id, distributor_id: visit.distributor_id }
-      });
-      if (!isLinked) throw new ForbiddenException('Not in your ecosystem');
+      qb.innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = visit.distributor_id AND md.manufacturer_id = :mfrId',
+        { mfrId: mfr.id }
+      );
     } else if (role === 'SALESMAN') {
       const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
-      if (!salesman || salesman.id !== visit.salesman_id) throw new ForbiddenException('Not your visit');
+      if (!salesman) throw new ForbiddenException('Salesman not found');
+      qb.andWhere('visit.salesman_id = :salesmanId', { salesmanId: salesman.id });
+    } else {
+      throw new ForbiddenException('Unauthorized role');
     }
+
+    const visit = await qb.getOne();
+    if (!visit) throw new NotFoundException('Visit not found or unauthorized');
 
     return visit;
   }
