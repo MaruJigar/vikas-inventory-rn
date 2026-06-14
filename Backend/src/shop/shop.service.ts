@@ -137,7 +137,7 @@ export class ShopService {
     } else if (userRole === 'SALESMAN') {
       const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
       if (shop.distributor_id !== salesman?.distributor_id) {
-        throw new ForbiddenException('Salesmen can only edit shops in their territory');
+        throw new ForbiddenException('Salesmen can only edit shops in their distributor ecosystem');
       }
     }
 
