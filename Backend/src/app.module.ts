@@ -42,6 +42,10 @@ import { VisitModule } from './visit/visit.module';
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join('/opt/storage/uploads'),
+      serveRoot: '/uploads',
+    }),
     McpModule.forRoot({
       name: 'Vikas Inventory MCP Server',
       version: '1.0.0',
