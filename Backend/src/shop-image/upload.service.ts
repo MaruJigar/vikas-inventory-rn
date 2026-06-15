@@ -6,6 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { join } from 'path';
 import { promises as fsPromises } from 'fs';
 
+import { getUploadRoot } from '../common/utils/upload-path.util';
+
 @Injectable()
 export class UploadService {
   constructor(
@@ -33,14 +35,21 @@ export class UploadService {
 
     // Generate unique file name
     const ext = this.mimeToExt(file.mimetype);
-    const filename = `product_${uuidv4()}.${ext}`;
-    const storageDir = '/opt/storage/uploads/products';
-    const filePath = join(storageDir, filename);
+    const prefix = (entityType || 'unknown').toLowerCase();
+    const folder = prefix + 's'; // e.g. 'products' or 'shops'
+    const filename = `${prefix}_${uuidv4()}.${ext}`;
+    
+    const relativePath = join(folder, filename);
+    const dirPath = join(getUploadRoot(), folder);
+    const filePath = join(getUploadRoot(), relativePath);
 
     // Ensure directory exists
-    await fsPromises.mkdir(storageDir, { recursive: true });
+    await fsPromises.mkdir(dirPath, { recursive: true });
     // Write file to disk
     await fsPromises.writeFile(filePath, file.buffer);
+
+    // Ensure POSIX-style URL separators even on Windows
+    const fileUrl = `/uploads/${relativePath.replace(/\\/g, '/')}`;
 
     // Mock compression: just reuse same file for now
     const uploaded = this.fileRepo.create({
@@ -49,8 +58,8 @@ export class UploadService {
       entity_id: entityId,
       file_type: 'IMAGE',
       original_file_name: file.originalname,
-      file_url: `/uploads/products/${filename}`,
-      compressed_file_url: `/uploads/products/${filename}`,
+      file_url: fileUrl,
+      compressed_file_url: fileUrl,
       mime_type: file.mimetype,
       original_size_bytes: file.size,
       compressed_size_bytes: file.size,
