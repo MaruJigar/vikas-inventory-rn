@@ -6,10 +6,17 @@ import { ProductPriceHistory } from './product-price-history.entity';
 @Injectable()
 export class ProductPricingService {
   constructor(
-    @InjectRepository(ProductPriceHistory) private historyRepo: Repository<ProductPriceHistory>,
+    @InjectRepository(ProductPriceHistory)
+    private historyRepo: Repository<ProductPriceHistory>,
   ) {}
 
-  async logPriceChange(productId: string, oldData: any, newData: any, userId: string, reason: string) {
+  async logPriceChange(
+    productId: string,
+    oldData: any,
+    newData: any,
+    userId: string,
+    reason: string,
+  ) {
     const log = this.historyRepo.create({
       product_id: productId,
       old_mrp: oldData.mrp,
@@ -27,6 +34,9 @@ export class ProductPricingService {
   }
 
   async getHistory(productId: string) {
-    return this.historyRepo.find({ where: { product_id: productId }, order: { created_at: 'DESC' } });
+    return this.historyRepo.find({
+      where: { product_id: productId },
+      order: { created_at: 'DESC' },
+    });
   }
 }

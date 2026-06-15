@@ -26,18 +26,18 @@ describe('AnalyticsController (e2e)', () => {
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       controllers: [AnalyticsController],
-      providers: [
-        { provide: AnalyticsService, useValue: mockService },
-      ],
+      providers: [{ provide: AnalyticsService, useValue: mockService }],
     })
-      .overrideGuard(JwtAuthGuard).useValue({
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
         canActivate: (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest();
           req.user = mockUser;
           return true;
         },
       })
-      .overrideGuard(RolesGuard).useValue({
+      .overrideGuard(RolesGuard)
+      .useValue({
         canActivate: (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest();
           const roles = Reflect.getMetadata('roles', context.getHandler());
@@ -66,8 +66,6 @@ describe('AnalyticsController (e2e)', () => {
 
   it('/analytics/inventory (GET) - Forbidden for SALESMAN', () => {
     mockUser = { userId: 'sales-1', role: 'SALESMAN' };
-    return request(app.getHttpServer())
-      .get('/analytics/inventory')
-      .expect(403);
+    return request(app.getHttpServer()).get('/analytics/inventory').expect(403);
   });
 });

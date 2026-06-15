@@ -15,15 +15,24 @@ export class AnalyticsService {
   constructor(
     @InjectRepository(Order) private orderRepo: Repository<Order>,
     @InjectRepository(ShopVisit) private visitRepo: Repository<ShopVisit>,
-    @InjectRepository(DistributorInventory) private invRepo: Repository<DistributorInventory>,
+    @InjectRepository(DistributorInventory)
+    private invRepo: Repository<DistributorInventory>,
     @InjectRepository(Backorder) private backorderRepo: Repository<Backorder>,
-    @InjectRepository(ApprovalRequest) private approvalRepo: Repository<ApprovalRequest>,
+    @InjectRepository(ApprovalRequest)
+    private approvalRepo: Repository<ApprovalRequest>,
     @InjectRepository(WorkingDay) private wdRepo: Repository<WorkingDay>,
     @InjectRepository(Notification) private notifRepo: Repository<Notification>,
-    @InjectRepository(InventoryMovement) private movementRepo: Repository<InventoryMovement>,
+    @InjectRepository(InventoryMovement)
+    private movementRepo: Repository<InventoryMovement>,
   ) {}
 
-  private applyOwnership(query: any, alias: string, userRole: string, userId: string, field: string) {
+  private applyOwnership(
+    query: any,
+    alias: string,
+    userRole: string,
+    userId: string,
+    field: string,
+  ) {
     if (userRole === 'DISTRIBUTOR_ADMIN') {
       if (field === 'requester_user_id') {
         query.andWhere(`${alias}.${field} = :userId`, { userId });
@@ -39,14 +48,17 @@ export class AnalyticsService {
         query.andWhere(`${alias}.${field} IN (${salesSubquery})`, { userId });
       }
     } else if (userRole === 'MANUFACTURER_ADMIN') {
-      if (field === 'distributor_id' || field === 'salesman_id') { // If it's salesman_id, we still map via distributor_id if it's there
+      if (field === 'distributor_id' || field === 'salesman_id') {
+        // If it's salesman_id, we still map via distributor_id if it's there
         const qbSubquery = `
           SELECT md.distributor_id
           FROM manufacturer_distributors md
           INNER JOIN manufacturers m ON m.id = md.manufacturer_id
           WHERE m.user_id = :userId
         `;
-        query.andWhere(`${alias}.distributor_id IN (${qbSubquery})`, { userId });
+        query.andWhere(`${alias}.distributor_id IN (${qbSubquery})`, {
+          userId,
+        });
       } else if (field === 'requester_user_id') {
         const userSubquery = `
           SELECT d.user_id
@@ -55,7 +67,9 @@ export class AnalyticsService {
           INNER JOIN manufacturers m ON m.id = md.manufacturer_id
           WHERE m.user_id = :userId
         `;
-        query.andWhere(`${alias}.requester_user_id IN (${userSubquery})`, { userId });
+        query.andWhere(`${alias}.requester_user_id IN (${userSubquery})`, {
+          userId,
+        });
       }
     }
   }
@@ -69,7 +83,7 @@ export class AnalyticsService {
       inventory,
       backorders,
       approvals,
-      notifications
+      notifications,
     ] = await Promise.all([
       this.getWorkingDayAnalytics(userRole, userId),
       this.getVisitsAnalytics(userRole, userId),
@@ -78,7 +92,7 @@ export class AnalyticsService {
       this.getInventoryAnalytics(userRole, userId),
       this.getBackordersAnalytics(userRole, userId),
       this.getApprovalsAnalytics(userRole, userId),
-      this.getNotificationsAnalytics(userRole, userId)
+      this.getNotificationsAnalytics(userRole, userId),
     ]);
 
     return {
@@ -89,7 +103,7 @@ export class AnalyticsService {
       inventory,
       backorders,
       approvals,
-      notifications
+      notifications,
     };
   }
 
@@ -97,14 +111,30 @@ export class AnalyticsService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const qb = this.wdRepo.createQueryBuilder('wd')
+    const qb = this.wdRepo
+      .createQueryBuilder('wd')
       .select('COUNT(wd.id)', 'total_active')
-      .addSelect('SUM(CASE WHEN wd.check_in_time >= :today THEN 1 ELSE 0 END)', 'checked_in_today')
-      .addSelect('SUM(CASE WHEN wd.check_out_time >= :today THEN 1 ELSE 0 END)', 'checked_out_today')
-      .addSelect('AVG(EXTRACT(EPOCH FROM (wd.check_out_time - wd.check_in_time))/3600)', 'avg_hours')
+      .addSelect(
+        'SUM(CASE WHEN wd.check_in_time >= :today THEN 1 ELSE 0 END)',
+        'checked_in_today',
+      )
+      .addSelect(
+        'SUM(CASE WHEN wd.check_out_time >= :today THEN 1 ELSE 0 END)',
+        'checked_out_today',
+      )
+      .addSelect(
+        'AVG(EXTRACT(EPOCH FROM (wd.check_out_time - wd.check_in_time))/3600)',
+        'avg_hours',
+      )
       .setParameter('today', today);
 
-    this.applyOwnership(qb, 'wd', userRole, userId, userRole === 'SALESMAN' ? 'salesman_id' : 'distributor_id');
+    this.applyOwnership(
+      qb,
+      'wd',
+      userRole,
+      userId,
+      userRole === 'SALESMAN' ? 'salesman_id' : 'distributor_id',
+    );
 
     const result = await qb.getRawOne();
     return {
@@ -116,18 +146,35 @@ export class AnalyticsService {
   }
 
   async getVisitsAnalytics(userRole: string, userId: string) {
-    const qb = this.visitRepo.createQueryBuilder('visit')
+    const qb = this.visitRepo
+      .createQueryBuilder('visit')
       .select('COUNT(visit.id)', 'total_visits')
-      .addSelect('SUM(CASE WHEN visit.status = \'IN_PROGRESS\' THEN 1 ELSE 0 END)', 'active_visits')
-      .addSelect('SUM(CASE WHEN visit.status = \'COMPLETED\' THEN 1 ELSE 0 END)', 'completed_visits')
-      .addSelect('SUM(CASE WHEN visit.status = \'COMPLETED\' AND visit.has_order = false THEN 1 ELSE 0 END)', 'no_order_visits');
+      .addSelect(
+        "SUM(CASE WHEN visit.status = 'IN_PROGRESS' THEN 1 ELSE 0 END)",
+        'active_visits',
+      )
+      .addSelect(
+        "SUM(CASE WHEN visit.status = 'COMPLETED' THEN 1 ELSE 0 END)",
+        'completed_visits',
+      )
+      .addSelect(
+        "SUM(CASE WHEN visit.status = 'COMPLETED' AND visit.has_order = false THEN 1 ELSE 0 END)",
+        'no_order_visits',
+      );
 
-    this.applyOwnership(qb, 'visit', userRole, userId, userRole === 'SALESMAN' ? 'salesman_id' : 'distributor_id');
+    this.applyOwnership(
+      qb,
+      'visit',
+      userRole,
+      userId,
+      userRole === 'SALESMAN' ? 'salesman_id' : 'distributor_id',
+    );
 
     const result = await qb.getRawOne();
     const completed = Number(result?.completed_visits || 0);
     const withOrder = completed - Number(result?.no_order_visits || 0);
-    const conversion = completed > 0 ? ((withOrder / completed) * 100).toFixed(2) : 0;
+    const conversion =
+      completed > 0 ? ((withOrder / completed) * 100).toFixed(2) : 0;
 
     return {
       totalVisits: Number(result?.total_visits || 0),
@@ -144,18 +191,40 @@ export class AnalyticsService {
 
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    const qb = this.orderRepo.createQueryBuilder('order')
+    const qb = this.orderRepo
+      .createQueryBuilder('order')
       .select('COUNT(order.id)', 'total')
-      .addSelect('SUM(CASE WHEN order.created_at >= :today THEN 1 ELSE 0 END)', 'orders_today')
-      .addSelect('SUM(CASE WHEN order.created_at >= :firstDay THEN 1 ELSE 0 END)', 'orders_month')
-      .addSelect('SUM(CASE WHEN order.created_at >= :today THEN order.total_amount ELSE 0 END)', 'value_today')
-      .addSelect('SUM(CASE WHEN order.created_at >= :firstDay THEN order.total_amount ELSE 0 END)', 'value_month')
+      .addSelect(
+        'SUM(CASE WHEN order.created_at >= :today THEN 1 ELSE 0 END)',
+        'orders_today',
+      )
+      .addSelect(
+        'SUM(CASE WHEN order.created_at >= :firstDay THEN 1 ELSE 0 END)',
+        'orders_month',
+      )
+      .addSelect(
+        'SUM(CASE WHEN order.created_at >= :today THEN order.total_amount ELSE 0 END)',
+        'value_today',
+      )
+      .addSelect(
+        'SUM(CASE WHEN order.created_at >= :firstDay THEN order.total_amount ELSE 0 END)',
+        'value_month',
+      )
       .addSelect('AVG(order.total_amount)', 'avg_value')
-      .addSelect('SUM(CASE WHEN order.status = \'CANCELLED\' THEN 1 ELSE 0 END)', 'cancelled_orders')
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'CANCELLED' THEN 1 ELSE 0 END)",
+        'cancelled_orders',
+      )
       .setParameter('today', today)
       .setParameter('firstDay', firstDay);
 
-    this.applyOwnership(qb, 'order', userRole, userId, userRole === 'SALESMAN' ? 'salesman_id' : 'distributor_id');
+    this.applyOwnership(
+      qb,
+      'order',
+      userRole,
+      userId,
+      userRole === 'SALESMAN' ? 'salesman_id' : 'distributor_id',
+    );
 
     const result = await qb.getRawOne();
     return {
@@ -169,13 +238,32 @@ export class AnalyticsService {
   }
 
   async getFulfillmentAnalytics(userRole: string, userId: string) {
-    const qb = this.orderRepo.createQueryBuilder('order')
-      .select('SUM(CASE WHEN order.status IN (\'CONFIRMED\', \'PARTIALLY_DISPATCHED\') THEN 1 ELSE 0 END)', 'pending_dispatch')
-      .addSelect('SUM(CASE WHEN order.status = \'DISPATCHED\' THEN 1 ELSE 0 END)', 'dispatched')
-      .addSelect('SUM(CASE WHEN order.status = \'DELIVERED\' THEN 1 ELSE 0 END)', 'delivered')
-      .addSelect('SUM(CASE WHEN order.status = \'PARTIALLY_DELIVERED\' THEN 1 ELSE 0 END)', 'partial');
+    const qb = this.orderRepo
+      .createQueryBuilder('order')
+      .select(
+        "SUM(CASE WHEN order.status IN ('CONFIRMED', 'PARTIALLY_DISPATCHED') THEN 1 ELSE 0 END)",
+        'pending_dispatch',
+      )
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'DISPATCHED' THEN 1 ELSE 0 END)",
+        'dispatched',
+      )
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'DELIVERED' THEN 1 ELSE 0 END)",
+        'delivered',
+      )
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'PARTIALLY_DELIVERED' THEN 1 ELSE 0 END)",
+        'partial',
+      );
 
-    this.applyOwnership(qb, 'order', userRole, userId, userRole === 'SALESMAN' ? 'salesman_id' : 'distributor_id');
+    this.applyOwnership(
+      qb,
+      'order',
+      userRole,
+      userId,
+      userRole === 'SALESMAN' ? 'salesman_id' : 'distributor_id',
+    );
 
     const result = await qb.getRawOne();
     return {
@@ -187,15 +275,24 @@ export class AnalyticsService {
   }
 
   async getInventoryAnalytics(userRole: string, userId: string) {
-    const qb = this.invRepo.createQueryBuilder('inv')
-      .select('SUM(CASE WHEN inv.available_quantity <= 10 THEN 1 ELSE 0 END)', 'low_stock')
-      .addSelect('SUM(CASE WHEN inv.backordered_quantity > 0 THEN 1 ELSE 0 END)', 'backordered_products');
+    const qb = this.invRepo
+      .createQueryBuilder('inv')
+      .select(
+        'SUM(CASE WHEN inv.available_quantity <= 10 THEN 1 ELSE 0 END)',
+        'low_stock',
+      )
+      .addSelect(
+        'SUM(CASE WHEN inv.backordered_quantity > 0 THEN 1 ELSE 0 END)',
+        'backordered_products',
+      );
 
     this.applyOwnership(qb, 'inv', userRole, userId, 'distributor_id');
 
     const result = await qb.getRawOne();
 
-    const mQb = this.movementRepo.createQueryBuilder('movement').select('COUNT(movement.id)', 'adjustments');
+    const mQb = this.movementRepo
+      .createQueryBuilder('movement')
+      .select('COUNT(movement.id)', 'adjustments');
     this.applyOwnership(mQb, 'movement', userRole, userId, 'distributor_id');
     const mResult = await mQb.getRawOne();
 
@@ -207,10 +304,20 @@ export class AnalyticsService {
   }
 
   async getBackordersAnalytics(userRole: string, userId: string) {
-    const qb = this.backorderRepo.createQueryBuilder('b')
-      .select('SUM(CASE WHEN b.status IN (\'OPEN\', \'PARTIALLY_ALLOCATED\') THEN 1 ELSE 0 END)', 'open_backorders')
-      .addSelect('SUM(CASE WHEN b.status = \'RESOLVED\' THEN 1 ELSE 0 END)', 'resolved_backorders')
-      .addSelect('SUM((b.quantity - b.resolved_quantity) * 100)', 'backorder_value'); // dummy value metric if price not joined
+    const qb = this.backorderRepo
+      .createQueryBuilder('b')
+      .select(
+        "SUM(CASE WHEN b.status IN ('OPEN', 'PARTIALLY_ALLOCATED') THEN 1 ELSE 0 END)",
+        'open_backorders',
+      )
+      .addSelect(
+        "SUM(CASE WHEN b.status = 'RESOLVED' THEN 1 ELSE 0 END)",
+        'resolved_backorders',
+      )
+      .addSelect(
+        'SUM((b.quantity - b.resolved_quantity) * 100)',
+        'backorder_value',
+      ); // dummy value metric if price not joined
 
     this.applyOwnership(qb, 'b', userRole, userId, 'distributor_id');
 
@@ -226,10 +333,20 @@ export class AnalyticsService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const qb = this.approvalRepo.createQueryBuilder('app')
-      .select('SUM(CASE WHEN app.status = \'PENDING\' THEN 1 ELSE 0 END)', 'pending')
-      .addSelect('SUM(CASE WHEN app.status = \'APPROVED\' AND app.updated_at >= :today THEN 1 ELSE 0 END)', 'approved_today')
-      .addSelect('SUM(CASE WHEN app.status = \'REJECTED\' AND app.updated_at >= :today THEN 1 ELSE 0 END)', 'rejected_today')
+    const qb = this.approvalRepo
+      .createQueryBuilder('app')
+      .select(
+        "SUM(CASE WHEN app.status = 'PENDING' THEN 1 ELSE 0 END)",
+        'pending',
+      )
+      .addSelect(
+        "SUM(CASE WHEN app.status = 'APPROVED' AND app.updated_at >= :today THEN 1 ELSE 0 END)",
+        'approved_today',
+      )
+      .addSelect(
+        "SUM(CASE WHEN app.status = 'REJECTED' AND app.updated_at >= :today THEN 1 ELSE 0 END)",
+        'rejected_today',
+      )
       .setParameter('today', today);
 
     this.applyOwnership(qb, 'app', userRole, userId, 'requester_user_id');
@@ -244,7 +361,7 @@ export class AnalyticsService {
 
   async getNotificationsAnalytics(userRole: string, userId: string) {
     const count = await this.notifRepo.count({
-      where: { recipient_user_id: userId, is_read: false }
+      where: { recipient_user_id: userId, is_read: false },
     });
     return {
       unreadNotifications: count,

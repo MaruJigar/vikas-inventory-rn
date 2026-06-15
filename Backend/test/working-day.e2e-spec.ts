@@ -29,34 +29,42 @@ describe('WorkingDayController (e2e)', () => {
         } catch {
           return false;
         }
-      }
+      },
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [JwtModule.register({ secret: 'test-secret' })],
       controllers: [WorkingDayController],
       providers: [
-        { 
-          provide: WorkingDayService, 
-          useValue: { 
+        {
+          provide: WorkingDayService,
+          useValue: {
             checkIn: jest.fn().mockResolvedValue({ id: 'wd1' }),
             checkOut: jest.fn().mockResolvedValue({ id: 'wd1' }),
-            getHistory: jest.fn().mockResolvedValue([])
-          } 
+            getHistory: jest.fn().mockResolvedValue([]),
+          },
         },
         RolesGuard,
       ],
     })
-    .overrideGuard(JwtAuthGuard)
-    .useValue(mockJwtGuard)
-    .compile();
+      .overrideGuard(JwtAuthGuard)
+      .useValue(mockJwtGuard)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
-    
+
     jwtService = moduleFixture.get<JwtService>(JwtService);
-    salesmanToken = jwtService.sign({ sub: 'u1', userId: 'u1', role: 'SALESMAN' });
-    distributorToken = jwtService.sign({ sub: 'du1', userId: 'du1', role: 'DISTRIBUTOR_ADMIN' });
+    salesmanToken = jwtService.sign({
+      sub: 'u1',
+      userId: 'u1',
+      role: 'SALESMAN',
+    });
+    distributorToken = jwtService.sign({
+      sub: 'du1',
+      userId: 'du1',
+      role: 'DISTRIBUTOR_ADMIN',
+    });
   });
 
   afterAll(async () => {

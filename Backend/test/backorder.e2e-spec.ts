@@ -13,7 +13,11 @@ describe('BackordersController (e2e)', () => {
   const mockBackordersService = {
     listBackorders: jest.fn().mockResolvedValue([{ id: 'b1' }]),
     getBackorder: jest.fn().mockResolvedValue({ id: 'b1' }),
-    allocateBackorder: jest.fn().mockResolvedValue({ id: 'b1', status: 'PARTIALLY_ALLOCATED', resolved_quantity: 4 }),
+    allocateBackorder: jest.fn().mockResolvedValue({
+      id: 'b1',
+      status: 'PARTIALLY_ALLOCATED',
+      resolved_quantity: 4,
+    }),
   };
 
   let mockUser = { userId: 'distributor-1', role: 'DISTRIBUTOR_ADMIN' };
@@ -25,14 +29,16 @@ describe('BackordersController (e2e)', () => {
         { provide: BackordersService, useValue: mockBackordersService },
       ],
     })
-      .overrideGuard(JwtAuthGuard).useValue({
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
         canActivate: (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest();
           req.user = mockUser;
           return true;
         },
       })
-      .overrideGuard(RolesGuard).useValue({
+      .overrideGuard(RolesGuard)
+      .useValue({
         canActivate: (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest();
           const roles = Reflect.getMetadata('roles', context.getHandler());
@@ -58,15 +64,17 @@ describe('BackordersController (e2e)', () => {
       .expect(200)
       .expect((res: any) => {
         expect(res.body).toEqual([{ id: 'b1' }]);
-        expect(mockBackordersService.listBackorders).toHaveBeenCalledWith('DISTRIBUTOR_ADMIN', 'distributor-1', { status: 'OPEN' });
+        expect(mockBackordersService.listBackorders).toHaveBeenCalledWith(
+          'DISTRIBUTOR_ADMIN',
+          'distributor-1',
+          { status: 'OPEN' },
+        );
       });
   });
 
   it('/backorders/:id (GET) - Forbidden for SALESMAN', () => {
     mockUser = { userId: 'salesman-1', role: 'SALESMAN' };
-    return request(app.getHttpServer())
-      .get('/backorders/b1')
-      .expect(403);
+    return request(app.getHttpServer()).get('/backorders/b1').expect(403);
   });
 
   it('/backorders/:id/allocate (POST) - Allowed for DISTRIBUTOR_ADMIN', () => {
@@ -77,7 +85,11 @@ describe('BackordersController (e2e)', () => {
       .expect(201)
       .expect((res: any) => {
         expect(res.body.id).toEqual('b1');
-        expect(mockBackordersService.allocateBackorder).toHaveBeenCalledWith('b1', 4, 'distributor-1');
+        expect(mockBackordersService.allocateBackorder).toHaveBeenCalledWith(
+          'b1',
+          4,
+          'distributor-1',
+        );
       });
   });
 

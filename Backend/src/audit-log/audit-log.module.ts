@@ -6,6 +6,6 @@ import { AuditLog } from './audit-log.entity';
 @Module({
   imports: [TypeOrmModule.forFeature([AuditLog])],
   providers: [AuditLogService],
-  exports: [AuditLogService]
+  exports: [AuditLogService],
 })
 export class AuditLogModule {}

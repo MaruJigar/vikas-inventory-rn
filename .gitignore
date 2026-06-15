@@ -46,3 +46,6 @@ logs/
 generated/prisma
 /vikas-backend/node_modules
 /vikas-backend/.env
+
+.skills
+.prompt

@@ -15,7 +15,8 @@ describe('NotificationService', () => {
     find: jest.fn().mockResolvedValue([{ id: 'n1' }]),
     count: jest.fn().mockResolvedValue(5),
     findOne: jest.fn().mockImplementation(async ({ where }) => {
-      if (where.id === 'n1') return { id: 'n1', recipient_user_id: where.recipient_user_id };
+      if (where.id === 'n1')
+        return { id: 'n1', recipient_user_id: where.recipient_user_id };
       return null;
     }),
     update: jest.fn().mockResolvedValue({ affected: 1 }),
@@ -40,10 +41,22 @@ describe('NotificationService', () => {
   });
 
   it('createNotification', async () => {
-    const res = await service.createNotification('u1', 'SALESMAN', 'Title', 'Msg', 'TYPE', 'Entity', 'e1');
+    const res = await service.createNotification(
+      'u1',
+      'SALESMAN',
+      'Title',
+      'Msg',
+      'TYPE',
+      'Entity',
+      'e1',
+    );
     expect(res.id).toEqual('n1');
     expect(mockAuditLogService.logAction).toHaveBeenCalled();
-    expect(mockSocketGateway.broadcastToRoom).toHaveBeenCalledWith('user:u1', 'NOTIFICATION_CREATED', expect.any(Object));
+    expect(mockSocketGateway.broadcastToRoom).toHaveBeenCalledWith(
+      'user:u1',
+      'NOTIFICATION_CREATED',
+      expect.any(Object),
+    );
   });
 
   it('getNotifications', async () => {
@@ -59,11 +72,17 @@ describe('NotificationService', () => {
   it('markAsRead', async () => {
     const res = await service.markAsRead('n1', 'u1');
     expect(res.is_read).toBe(true);
-    expect(mockSocketGateway.broadcastToRoom).toHaveBeenCalledWith('user:u1', 'NOTIFICATION_READ', { id: 'n1' });
+    expect(mockSocketGateway.broadcastToRoom).toHaveBeenCalledWith(
+      'user:u1',
+      'NOTIFICATION_READ',
+      { id: 'n1' },
+    );
   });
 
   it('markAsRead not found', async () => {
-    await expect(service.markAsRead('n2', 'u1')).rejects.toThrow(NotFoundException);
+    await expect(service.markAsRead('n2', 'u1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('markAllAsRead', async () => {
@@ -77,6 +96,8 @@ describe('NotificationService', () => {
   });
 
   it('deleteNotification not found', async () => {
-    await expect(service.deleteNotification('n2', 'u1')).rejects.toThrow(NotFoundException);
+    await expect(service.deleteNotification('n2', 'u1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });

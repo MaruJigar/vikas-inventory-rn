@@ -18,8 +18,13 @@ import { NotificationModule } from '../notification/notification.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      DistributorInventory, InventoryMovement, Distributor, Product,
-      Backorder, OrderItem, Order
+      DistributorInventory,
+      InventoryMovement,
+      Distributor,
+      Product,
+      Backorder,
+      OrderItem,
+      Order,
     ]),
     AuditLogModule,
     SocketGatewayModule,

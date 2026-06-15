@@ -12,7 +12,8 @@ describe('NotificationController (e2e)', () => {
 
   const mockService = {
     getNotifications: jest.fn().mockImplementation((userId) => {
-      if (userId === 'user-1') return [{ id: 'n1', recipient_user_id: 'user-1' }];
+      if (userId === 'user-1')
+        return [{ id: 'n1', recipient_user_id: 'user-1' }];
       return [];
     }),
     getUnreadCount: jest.fn().mockResolvedValue({ unread_count: 5 }),
@@ -26,18 +27,18 @@ describe('NotificationController (e2e)', () => {
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       controllers: [NotificationController],
-      providers: [
-        { provide: NotificationService, useValue: mockService },
-      ],
+      providers: [{ provide: NotificationService, useValue: mockService }],
     })
-      .overrideGuard(JwtAuthGuard).useValue({
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
         canActivate: (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest();
           req.user = mockUser;
           return true;
         },
       })
-      .overrideGuard(RolesGuard).useValue({
+      .overrideGuard(RolesGuard)
+      .useValue({
         canActivate: (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest();
           const roles = Reflect.getMetadata('roles', context.getHandler());

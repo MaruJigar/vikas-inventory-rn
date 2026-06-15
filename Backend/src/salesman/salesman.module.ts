@@ -8,7 +8,9 @@ import { Distributor } from '../distributor/distributor.entity';
 import { ApprovalRequest } from '../approval/approval-request.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Salesman, User, Distributor, ApprovalRequest])],
+  imports: [
+    TypeOrmModule.forFeature([Salesman, User, Distributor, ApprovalRequest]),
+  ],
   controllers: [SalesmanController],
   providers: [SalesmanService],
   exports: [SalesmanService],

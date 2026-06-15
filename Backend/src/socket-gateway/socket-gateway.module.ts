@@ -12,7 +12,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET', 'supersecret'),
       }),
-    })
+    }),
   ],
   providers: [AppSocketGateway],
   exports: [AppSocketGateway],

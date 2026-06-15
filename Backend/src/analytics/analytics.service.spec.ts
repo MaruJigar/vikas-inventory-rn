@@ -19,14 +19,34 @@ describe('AnalyticsService', () => {
     setParameter: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
     getRawOne: jest.fn().mockResolvedValue({
-      total_active: '5', checked_in_today: '3', checked_out_today: '2', avg_hours: '8.5',
-      total_visits: '10', active_visits: '2', completed_visits: '8', no_order_visits: '1',
-      total: '20', orders_today: '5', orders_month: '15', value_today: '500', value_month: '1500', avg_value: '100', cancelled_orders: '1',
-      pending_dispatch: '4', dispatched: '2', delivered: '1', partial: '1',
-      low_stock: '3', backordered_products: '2',
-      open_backorders: '2', resolved_backorders: '5', backorder_value: '200',
-      pending: '3', approved_today: '2', rejected_today: '1',
-      adjustments: '10'
+      total_active: '5',
+      checked_in_today: '3',
+      checked_out_today: '2',
+      avg_hours: '8.5',
+      total_visits: '10',
+      active_visits: '2',
+      completed_visits: '8',
+      no_order_visits: '1',
+      total: '20',
+      orders_today: '5',
+      orders_month: '15',
+      value_today: '500',
+      value_month: '1500',
+      avg_value: '100',
+      cancelled_orders: '1',
+      pending_dispatch: '4',
+      dispatched: '2',
+      delivered: '1',
+      partial: '1',
+      low_stock: '3',
+      backordered_products: '2',
+      open_backorders: '2',
+      resolved_backorders: '5',
+      backorder_value: '200',
+      pending: '3',
+      approved_today: '2',
+      rejected_today: '1',
+      adjustments: '10',
     }),
   };
 
@@ -41,7 +61,10 @@ describe('AnalyticsService', () => {
         AnalyticsService,
         { provide: getRepositoryToken(Order), useValue: mockRepo },
         { provide: getRepositoryToken(ShopVisit), useValue: mockRepo },
-        { provide: getRepositoryToken(DistributorInventory), useValue: mockRepo },
+        {
+          provide: getRepositoryToken(DistributorInventory),
+          useValue: mockRepo,
+        },
         { provide: getRepositoryToken(Backorder), useValue: mockRepo },
         { provide: getRepositoryToken(ApprovalRequest), useValue: mockRepo },
         { provide: getRepositoryToken(WorkingDay), useValue: mockRepo },
@@ -70,7 +93,12 @@ describe('AnalyticsService', () => {
     mockQueryBuilder.andWhere.mockClear();
     const res = await service.getWorkingDayAnalytics('SALESMAN', 'user-1');
     expect(res.activeSalesmen).toEqual(5);
-    expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(expect.stringContaining('wd.salesman_id IN (SELECT s.id FROM salesmen s WHERE s.user_id = :userId)'), { userId: 'user-1' });
+    expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'wd.salesman_id IN (SELECT s.id FROM salesmen s WHERE s.user_id = :userId)',
+      ),
+      { userId: 'user-1' },
+    );
   });
 
   it('getVisitsAnalytics - DISTRIBUTOR_ADMIN', async () => {
@@ -88,12 +116,18 @@ describe('AnalyticsService', () => {
   it('getOrdersAnalytics - MANUFACTURER_ADMIN', async () => {
     mockQueryBuilder.andWhere.mockClear();
     await service.getOrdersAnalytics('MANUFACTURER_ADMIN', 'user-1');
-    expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(expect.stringContaining('distributor_id IN'), { userId: 'user-1' });
+    expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+      expect.stringContaining('distributor_id IN'),
+      { userId: 'user-1' },
+    );
   });
 
   it('getApprovalsAnalytics - MANUFACTURER_ADMIN', async () => {
     mockQueryBuilder.andWhere.mockClear();
     await service.getApprovalsAnalytics('MANUFACTURER_ADMIN', 'user-1');
-    expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(expect.stringContaining('requester_user_id IN'), { userId: 'user-1' });
+    expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+      expect.stringContaining('requester_user_id IN'),
+      { userId: 'user-1' },
+    );
   });
 });

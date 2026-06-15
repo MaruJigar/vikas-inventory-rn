@@ -14,15 +14,15 @@ describe('ApprovalModule (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-    .overrideGuard(JwtAuthGuard)
-    .useValue({
-      canActivate: (context: ExecutionContext) => {
-        const req = context.switchToHttp().getRequest();
-        req.user = mockUser;
-        return true;
-      },
-    })
-    .compile();
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
+        canActivate: (context: ExecutionContext) => {
+          const req = context.switchToHttp().getRequest();
+          req.user = mockUser;
+          return true;
+        },
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();

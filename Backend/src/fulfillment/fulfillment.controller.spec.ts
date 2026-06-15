@@ -6,7 +6,13 @@ describe('FulfillmentController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [FulfillmentController], providers: [{ provide: require('./fulfillment.service').FulfillmentService, useValue: {} }],
+      controllers: [FulfillmentController],
+      providers: [
+        {
+          provide: require('./fulfillment.service').FulfillmentService,
+          useValue: {},
+        },
+      ],
     }).compile();
 
     controller = module.get<FulfillmentController>(FulfillmentController);

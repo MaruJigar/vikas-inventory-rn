@@ -29,42 +29,58 @@ describe('LocationController (e2e)', () => {
         } catch {
           return false;
         }
-      }
+      },
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [JwtModule.register({ secret: 'test-secret' })],
       controllers: [LocationController],
       providers: [
-        { 
-          provide: LocationService, 
-          useValue: { 
+        {
+          provide: LocationService,
+          useValue: {
             uploadLocation: jest.fn().mockResolvedValue({ id: 'loc1' }),
-            batchUploadLocations: jest.fn().mockResolvedValue({ synced_count: 1 }),
-            getLiveLocation: jest.fn().mockImplementation((userId, role, salesmanId) => {
-              if (role === 'MANUFACTURER_ADMIN' && salesmanId === 's2') {
-                const { ForbiddenException } = require('@nestjs/common');
-                throw new ForbiddenException();
-              }
-              return Promise.resolve({});
-            }),
-            getLocationHistory: jest.fn().mockResolvedValue([])
-          } 
+            batchUploadLocations: jest
+              .fn()
+              .mockResolvedValue({ synced_count: 1 }),
+            getLiveLocation: jest
+              .fn()
+              .mockImplementation((userId, role, salesmanId) => {
+                if (role === 'MANUFACTURER_ADMIN' && salesmanId === 's2') {
+                  const { ForbiddenException } = require('@nestjs/common');
+                  throw new ForbiddenException();
+                }
+                return Promise.resolve({});
+              }),
+            getLocationHistory: jest.fn().mockResolvedValue([]),
+          },
         },
         RolesGuard,
       ],
     })
-    .overrideGuard(JwtAuthGuard)
-    .useValue(mockJwtGuard)
-    .compile();
+      .overrideGuard(JwtAuthGuard)
+      .useValue(mockJwtGuard)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
-    
+
     jwtService = moduleFixture.get<JwtService>(JwtService);
-    salesmanToken = jwtService.sign({ sub: 'u1', userId: 'u1', role: 'SALESMAN' });
-    distributorToken = jwtService.sign({ sub: 'du1', userId: 'du1', role: 'DISTRIBUTOR_ADMIN' });
-    mfrToken = jwtService.sign({ sub: 'mfr1', userId: 'mfr1', role: 'MANUFACTURER_ADMIN' });
+    salesmanToken = jwtService.sign({
+      sub: 'u1',
+      userId: 'u1',
+      role: 'SALESMAN',
+    });
+    distributorToken = jwtService.sign({
+      sub: 'du1',
+      userId: 'du1',
+      role: 'DISTRIBUTOR_ADMIN',
+    });
+    mfrToken = jwtService.sign({
+      sub: 'mfr1',
+      userId: 'mfr1',
+      role: 'MANUFACTURER_ADMIN',
+    });
   });
 
   afterAll(async () => {
@@ -75,7 +91,11 @@ describe('LocationController (e2e)', () => {
     return request(app.getHttpServer())
       .post('/locations')
       .set('Authorization', `Bearer ${salesmanToken}`)
-      .send({ latitude: 10, longitude: 20, captured_at: new Date().toISOString() })
+      .send({
+        latitude: 10,
+        longitude: 20,
+        captured_at: new Date().toISOString(),
+      })
       .expect(201);
   });
 
@@ -83,7 +103,11 @@ describe('LocationController (e2e)', () => {
     return request(app.getHttpServer())
       .post('/locations')
       .set('Authorization', `Bearer ${distributorToken}`)
-      .send({ latitude: 10, longitude: 20, captured_at: new Date().toISOString() })
+      .send({
+        latitude: 10,
+        longitude: 20,
+        captured_at: new Date().toISOString(),
+      })
       .expect(403);
   });
 
@@ -91,7 +115,15 @@ describe('LocationController (e2e)', () => {
     return request(app.getHttpServer())
       .post('/locations/batch')
       .set('Authorization', `Bearer ${salesmanToken}`)
-      .send({ locations: [{ latitude: 10, longitude: 20, captured_at: new Date().toISOString() }] })
+      .send({
+        locations: [
+          {
+            latitude: 10,
+            longitude: 20,
+            captured_at: new Date().toISOString(),
+          },
+        ],
+      })
       .expect(201);
   });
 
@@ -108,10 +140,10 @@ describe('LocationController (e2e)', () => {
       .set('Authorization', `Bearer ${mfrToken}`)
       .expect(200);
   });
-  
+
   it('GET /locations/salesmen/:id/live - Forbidden for Manufacturer accessing unlinked Distributor', () => {
     // In our mock, if they access a salesman where they aren't linked, our mocked service could throw
-    // But since the service is mocked simply via `jest.fn()`, we need to simulate the ForbiddenException 
+    // But since the service is mocked simply via `jest.fn()`, we need to simulate the ForbiddenException
     // Wait, the e2e test uses a mocked LocationService. Let's update the mock to reject if mfrToken but salesman is 's2' (unlinked).
     return request(app.getHttpServer())
       .get('/locations/salesmen/s2/live')

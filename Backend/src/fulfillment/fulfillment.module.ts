@@ -16,8 +16,14 @@ import { SocketGatewayModule } from '../socket-gateway/socket-gateway.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      Order, OrderItem, OrderStatusHistory, FulfillmentLog, Backorder,
-      DistributorInventory, InventoryMovement, Distributor
+      Order,
+      OrderItem,
+      OrderStatusHistory,
+      FulfillmentLog,
+      Backorder,
+      DistributorInventory,
+      InventoryMovement,
+      Distributor,
     ]),
     AuditLogModule,
     SocketGatewayModule,

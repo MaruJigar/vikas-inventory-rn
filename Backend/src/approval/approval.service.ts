@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { ListQueryDto } from '../common/dto/list-query.dto';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { ApprovalRequest } from './approval-request.entity';
@@ -13,7 +20,8 @@ import { NotificationService } from '../notification/notification.service';
 @Injectable()
 export class ApprovalService {
   constructor(
-    @InjectRepository(ApprovalRequest) private reqRepo: Repository<ApprovalRequest>,
+    @InjectRepository(ApprovalRequest)
+    private reqRepo: Repository<ApprovalRequest>,
     @InjectRepository(ApprovalLog) private logRepo: Repository<ApprovalLog>,
     @InjectRepository(User) private userRepo: Repository<User>,
     private dataSource: DataSource,
@@ -32,28 +40,45 @@ export class ApprovalService {
     return this.reqRepo.save(request);
   }
 
-  async reviewRequest(requestId: string, currentUser: { userId: string, role: string }, status: string, reason?: string) {
-    if (status !== 'APPROVED' && status !== 'REJECTED') throw new BadRequestException('Invalid status');
+  async reviewRequest(
+    requestId: string,
+    currentUser: { userId: string; role: string },
+    status: string,
+    reason?: string,
+  ) {
+    if (status !== 'APPROVED' && status !== 'REJECTED')
+      throw new BadRequestException('Invalid status');
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      const request = await queryRunner.manager.findOne(ApprovalRequest, { where: { id: requestId } });
+      const request = await queryRunner.manager.findOne(ApprovalRequest, {
+        where: { id: requestId },
+      });
       if (!request) throw new NotFoundException('Approval request not found');
-      if (request.status !== 'PENDING_APPROVAL') throw new BadRequestException('Request is already processed');
+      if (request.status !== 'PENDING_APPROVAL')
+        throw new BadRequestException('Request is already processed');
 
       // Ecosystem Ownership Verification
       if (currentUser.role === 'MANUFACTURER_ADMIN') {
-        const mfg = await queryRunner.manager.findOne(Manufacturer, { where: { user_id: currentUser.userId } });
+        const mfg = await queryRunner.manager.findOne(Manufacturer, {
+          where: { user_id: currentUser.userId },
+        });
         if (!mfg || request.manufacturer_id !== mfg.id) {
-          throw new ForbiddenException('You do not have permission to approve this request');
+          throw new ForbiddenException(
+            'You do not have permission to approve this request',
+          );
         }
       } else if (currentUser.role === 'DISTRIBUTOR_ADMIN') {
-        const dist = await queryRunner.manager.findOne(Distributor, { where: { user_id: currentUser.userId } });
+        const dist = await queryRunner.manager.findOne(Distributor, {
+          where: { user_id: currentUser.userId },
+        });
         if (!dist || request.distributor_id !== dist.id) {
-          throw new ForbiddenException('You do not have permission to approve this request');
+          throw new ForbiddenException(
+            'You do not have permission to approve this request',
+          );
         }
       } else if (currentUser.role !== 'SUPER_ADMIN') {
         throw new ForbiddenException('Unauthorized role');
@@ -76,7 +101,9 @@ export class ApprovalService {
       await queryRunner.manager.save(log);
 
       if (request.requester_user_id) {
-        const user = await queryRunner.manager.findOne(User, { where: { id: request.requester_user_id } });
+        const user = await queryRunner.manager.findOne(User, {
+          where: { id: request.requester_user_id },
+        });
         if (user) {
           user.approval_status = status;
           await queryRunner.manager.save(user);
@@ -86,26 +113,46 @@ export class ApprovalService {
       await queryRunner.commitTransaction();
 
       // Post Transaction: Audit Logs & Socket
-      const auditAction = status === 'APPROVED' ? 'APPROVAL_REQUEST_APPROVED' : 'APPROVAL_REQUEST_REJECTED';
-      await this.auditLogService.logAction(auditAction, 'APPROVAL', request.id, currentUser.userId, {
-        request_type: request.request_type,
-        reason,
-      });
-      
+      const auditAction =
+        status === 'APPROVED'
+          ? 'APPROVAL_REQUEST_APPROVED'
+          : 'APPROVAL_REQUEST_REJECTED';
+      await this.auditLogService.logAction(
+        auditAction,
+        'APPROVAL',
+        request.id,
+        currentUser.userId,
+        {
+          request_type: request.request_type,
+          reason,
+        },
+      );
+
       if (request.manufacturer_id) {
-        this.socketGateway.broadcastToRoom(`manufacturer:${request.manufacturer_id}`, 'APPROVAL_STATUS_CHANGED', { requestId: request.id, status });
+        this.socketGateway.broadcastToRoom(
+          `manufacturer:${request.manufacturer_id}`,
+          'APPROVAL_STATUS_CHANGED',
+          { requestId: request.id, status },
+        );
       }
 
       if (request.requester_user_id) {
         let notifType = 'REQUEST_APPROVED';
         let rolePrefix = 'USER';
-        if (request.request_type === 'SALESMAN_REGISTRATION') rolePrefix = 'SALESMAN';
-        else if (request.request_type === 'DISTRIBUTOR_REGISTRATION') rolePrefix = 'DISTRIBUTOR';
-        else if (request.request_type === 'MANUFACTURER_REGISTRATION') rolePrefix = 'MANUFACTURER';
-        else if (request.request_type === 'LINK_REQUEST') rolePrefix = 'LINK_REQUEST';
-        
-        notifType = status === 'APPROVED' ? `${rolePrefix}_APPROVED` : `${rolePrefix}_REJECTED`;
-        
+        if (request.request_type === 'SALESMAN_REGISTRATION')
+          rolePrefix = 'SALESMAN';
+        else if (request.request_type === 'DISTRIBUTOR_REGISTRATION')
+          rolePrefix = 'DISTRIBUTOR';
+        else if (request.request_type === 'MANUFACTURER_REGISTRATION')
+          rolePrefix = 'MANUFACTURER';
+        else if (request.request_type === 'LINK_REQUEST')
+          rolePrefix = 'LINK_REQUEST';
+
+        notifType =
+          status === 'APPROVED'
+            ? `${rolePrefix}_APPROVED`
+            : `${rolePrefix}_REJECTED`;
+
         await this.notificationService.createNotification(
           request.requester_user_id,
           rolePrefix,
@@ -113,7 +160,7 @@ export class ApprovalService {
           `Your ${request.request_type} request was ${status}. ${reason || ''}`,
           notifType,
           'APPROVAL_REQUEST',
-          request.id
+          request.id,
         );
       }
 
@@ -126,18 +173,78 @@ export class ApprovalService {
     }
   }
 
-  async getPendingRequests(currentUser: { userId: string, role: string }) {
+  async getPendingRequests(
+    currentUser: { userId: string; role: string },
+    queryDto: ListQueryDto,
+  ): Promise<PaginatedResponse<any>> {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      sortBy,
+      sortOrder = 'DESC',
+      startDate,
+      endDate,
+      status = 'PENDING_APPROVAL',
+    } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.reqRepo.createQueryBuilder('req');
+
     if (currentUser.role === 'SUPER_ADMIN') {
-      return this.reqRepo.find({ where: { status: 'PENDING_APPROVAL' } });
+      // Global
     } else if (currentUser.role === 'MANUFACTURER_ADMIN') {
-      const mfg = await this.dataSource.getRepository(Manufacturer).findOne({ where: { user_id: currentUser.userId } });
-      if (!mfg) return [];
-      return this.reqRepo.find({ where: { status: 'PENDING_APPROVAL', manufacturer_id: mfg.id } });
+      const mfg = await this.dataSource
+        .getRepository(Manufacturer)
+        .findOne({ where: { user_id: currentUser.userId } });
+      if (!mfg) throw new ForbiddenException('Manufacturer not found');
+      qb.andWhere('req.manufacturer_id = :mfgId', { mfgId: mfg.id });
     } else if (currentUser.role === 'DISTRIBUTOR_ADMIN') {
-      const dist = await this.dataSource.getRepository(Distributor).findOne({ where: { user_id: currentUser.userId } });
-      if (!dist) return [];
-      return this.reqRepo.find({ where: { status: 'PENDING_APPROVAL', distributor_id: dist.id } });
+      const dist = await this.dataSource
+        .getRepository(Distributor)
+        .findOne({ where: { user_id: currentUser.userId } });
+      if (!dist) throw new ForbiddenException('Distributor not found');
+      qb.andWhere('req.distributor_id = :distId', { distId: dist.id });
+    } else {
+      throw new ForbiddenException('Unauthorized role');
     }
-    return [];
+
+    if (status) {
+      qb.andWhere('req.status = :status', { status });
+    }
+
+    if (startDate)
+      qb.andWhere('req.created_at >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    if (endDate)
+      qb.andWhere('req.created_at <= :endDate', { endDate: new Date(endDate) });
+
+    const allowedSortFields = [
+      'created_at',
+      'updated_at',
+      'status',
+      'request_type',
+    ];
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+      qb.orderBy(`req.${sortBy}`, sortOrder);
+    } else {
+      qb.orderBy('req.created_at', 'DESC');
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 }

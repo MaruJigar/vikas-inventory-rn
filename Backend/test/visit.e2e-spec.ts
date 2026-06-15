@@ -62,7 +62,10 @@ describe('VisitController (e2e)', () => {
         canActivate: (context) => {
           const req = context.switchToHttp().getRequest();
           const role = req.user?.role;
-          const requiredRoles = Reflect.getMetadata('roles', context.getHandler());
+          const requiredRoles = Reflect.getMetadata(
+            'roles',
+            context.getHandler(),
+          );
           if (!requiredRoles) return true;
           return requiredRoles.includes(role);
         },
@@ -84,7 +87,10 @@ describe('VisitController (e2e)', () => {
     // Default: service works normally
     mockVisitService.startVisit.mockResolvedValue({ id: 'v1' });
     mockVisitService.endVisit.mockResolvedValue({ id: 'v1', status: 'CLOSED' });
-    mockVisitService.noOrderVisit.mockResolvedValue({ id: 'v1', status: 'CLOSED' });
+    mockVisitService.noOrderVisit.mockResolvedValue({
+      id: 'v1',
+      status: 'CLOSED',
+    });
     mockVisitService.getVisits.mockResolvedValue([{ id: 'v1' }]);
     mockVisitService.getVisitById.mockResolvedValue({ id: 'v1' });
   });
@@ -146,7 +152,10 @@ describe('VisitController (e2e)', () => {
       .set('Authorization', `Bearer ${distToken}`)
       .expect(200)
       .expect((res) => {
-        expect(mockVisitService.getVisits).toHaveBeenCalledWith('dist1', 'DISTRIBUTOR_ADMIN');
+        expect(mockVisitService.getVisits).toHaveBeenCalledWith(
+          'dist1',
+          'DISTRIBUTOR_ADMIN',
+        );
       });
   });
 
@@ -156,7 +165,10 @@ describe('VisitController (e2e)', () => {
       .set('Authorization', `Bearer ${mfrToken}`)
       .expect(200)
       .expect(() => {
-        expect(mockVisitService.getVisits).toHaveBeenCalledWith('mfr1', 'MANUFACTURER_ADMIN');
+        expect(mockVisitService.getVisits).toHaveBeenCalledWith(
+          'mfr1',
+          'MANUFACTURER_ADMIN',
+        );
       });
   });
 
@@ -166,14 +178,20 @@ describe('VisitController (e2e)', () => {
       .set('Authorization', `Bearer ${salesmanToken}`)
       .expect(200)
       .expect(() => {
-        expect(mockVisitService.getVisits).toHaveBeenCalledWith('salesman1', 'SALESMAN');
+        expect(mockVisitService.getVisits).toHaveBeenCalledWith(
+          'salesman1',
+          'SALESMAN',
+        );
       });
   });
 
   // ─── GET /visits/:id ownership enforcement ──────────────────────────────────
 
   it('GET /visits/:id - Allowed for owner Salesman', () => {
-    mockVisitService.getVisitById.mockResolvedValue({ id: 'v1', salesman_id: 'salesman1' });
+    mockVisitService.getVisitById.mockResolvedValue({
+      id: 'v1',
+      salesman_id: 'salesman1',
+    });
     return request(app.getHttpServer())
       .get('/visits/v1')
       .set('Authorization', `Bearer ${salesmanToken}`)
@@ -181,7 +199,9 @@ describe('VisitController (e2e)', () => {
   });
 
   it('GET /visits/:id - Forbidden for different Salesman (IDOR)', () => {
-    mockVisitService.getVisitById.mockRejectedValue(new ForbiddenException('Not your visit'));
+    mockVisitService.getVisitById.mockRejectedValue(
+      new ForbiddenException('Not your visit'),
+    );
     return request(app.getHttpServer())
       .get('/visits/v1')
       .set('Authorization', `Bearer ${otherSalesmanToken}`)
@@ -189,7 +209,10 @@ describe('VisitController (e2e)', () => {
   });
 
   it('GET /visits/:id - Allowed for Distributor owning the visit', () => {
-    mockVisitService.getVisitById.mockResolvedValue({ id: 'v1', distributor_id: 'dist1' });
+    mockVisitService.getVisitById.mockResolvedValue({
+      id: 'v1',
+      distributor_id: 'dist1',
+    });
     return request(app.getHttpServer())
       .get('/visits/v1')
       .set('Authorization', `Bearer ${distToken}`)
@@ -197,7 +220,9 @@ describe('VisitController (e2e)', () => {
   });
 
   it('GET /visits/:id - Forbidden for Distributor accessing another distributor visit (IDOR)', () => {
-    mockVisitService.getVisitById.mockRejectedValue(new ForbiddenException('Not your visit'));
+    mockVisitService.getVisitById.mockRejectedValue(
+      new ForbiddenException('Not your visit'),
+    );
     return request(app.getHttpServer())
       .get('/visits/v1')
       .set('Authorization', `Bearer ${otherDistToken}`)
@@ -205,7 +230,10 @@ describe('VisitController (e2e)', () => {
   });
 
   it('GET /visits/:id - Allowed for Manufacturer with linked distributor', () => {
-    mockVisitService.getVisitById.mockResolvedValue({ id: 'v1', distributor_id: 'dist1' });
+    mockVisitService.getVisitById.mockResolvedValue({
+      id: 'v1',
+      distributor_id: 'dist1',
+    });
     return request(app.getHttpServer())
       .get('/visits/v1')
       .set('Authorization', `Bearer ${mfrToken}`)
@@ -213,7 +241,9 @@ describe('VisitController (e2e)', () => {
   });
 
   it('GET /visits/:id - Forbidden for Manufacturer accessing unlinked distributor visit (IDOR)', () => {
-    mockVisitService.getVisitById.mockRejectedValue(new ForbiddenException('Not in your ecosystem'));
+    mockVisitService.getVisitById.mockRejectedValue(
+      new ForbiddenException('Not in your ecosystem'),
+    );
     return request(app.getHttpServer())
       .get('/visits/v1')
       .set('Authorization', `Bearer ${mfrToken}`)
@@ -221,7 +251,9 @@ describe('VisitController (e2e)', () => {
   });
 
   it('GET /visits/:id - 404 when visit not found', () => {
-    mockVisitService.getVisitById.mockRejectedValue(new NotFoundException('Visit not found'));
+    mockVisitService.getVisitById.mockRejectedValue(
+      new NotFoundException('Visit not found'),
+    );
     return request(app.getHttpServer())
       .get('/visits/nonexistent')
       .set('Authorization', `Bearer ${distToken}`)

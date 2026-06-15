@@ -25,7 +25,8 @@ import { SocketGatewayModule } from '../socket-gateway/socket-gateway.module';
       ApprovalRequest,
       WorkingDay,
       Salesman,
-      Notification, InventoryMovement
+      Notification,
+      InventoryMovement,
     ]),
     SocketGatewayModule,
   ],

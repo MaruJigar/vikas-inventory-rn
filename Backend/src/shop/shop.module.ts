@@ -10,7 +10,7 @@ import { ShopDuplicateDetectionModule } from '../shop-duplicate-detection/shop-d
 @Module({
   imports: [
     TypeOrmModule.forFeature([Shop, Distributor, Salesman]),
-    ShopDuplicateDetectionModule
+    ShopDuplicateDetectionModule,
   ],
   controllers: [ShopController],
   providers: [ShopService],

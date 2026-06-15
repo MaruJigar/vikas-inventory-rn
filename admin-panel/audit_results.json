@@ -1,0 +1,382 @@
+[
+  {
+    "endpoint": "/analytics/dashboard",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/analytics/sales",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/analytics/visits",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/analytics/orders",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/analytics/inventory",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/analytics/backorders",
+    "method": "GET",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/analytics/fulfillment",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/analytics/approvals",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/approvals/pending",
+    "method": "GET",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/approvals/:id/review",
+    "method": "POST",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/auth/login",
+    "method": "POST",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/auth/register/distributor",
+    "method": "POST",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/auth/register/salesman",
+    "method": "POST",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/auth/refresh",
+    "method": "POST",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/auth/logout",
+    "method": "POST",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/auth/me",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/distributors/profile",
+    "method": "GET",
+    "roles": "DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/distributors/profile",
+    "method": "PUT",
+    "roles": "DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/orders/:id/confirm",
+    "method": "PATCH",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/orders/:id/processing",
+    "method": "PATCH",
+    "roles": "DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/orders/:id/packed",
+    "method": "PATCH",
+    "roles": "DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/orders/:id/dispatch",
+    "method": "PATCH",
+    "roles": "DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/orders/:id/deliver",
+    "method": "PATCH",
+    "roles": "DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/orders/:id/partial-dispatch",
+    "method": "PATCH",
+    "roles": "DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/orders/:id/partial-deliver",
+    "method": "PATCH",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/health",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/backorders",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/backorders/:id",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/backorders/:id/allocate",
+    "method": "POST",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/inventory",
+    "method": "GET",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/inventory/adjust",
+    "method": "POST",
+    "roles": "SUPER_ADMIN,DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/inventory/:id/movements",
+    "method": "GET",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/locations",
+    "method": "POST",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/locations/batch",
+    "method": "POST",
+    "roles": "SALESMAN"
+  },
+  {
+    "endpoint": "/locations/salesmen/:id/live",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/locations/salesmen/:id/history",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/manufacturers/profile",
+    "method": "POST",
+    "roles": "MANUFACTURER_ADMIN"
+  },
+  {
+    "endpoint": "/manufacturers/profile",
+    "method": "GET",
+    "roles": "MANUFACTURER_ADMIN"
+  },
+  {
+    "endpoint": "/manufacturers/profile",
+    "method": "PUT",
+    "roles": "MANUFACTURER_ADMIN"
+  },
+  {
+    "endpoint": "/manufacturers/profile/distributors/:distributorId",
+    "method": "POST",
+    "roles": "MANUFACTURER_ADMIN"
+  },
+  {
+    "endpoint": "/notifications",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/notifications/unread-count",
+    "method": "GET",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN,SALESMAN"
+  },
+  {
+    "endpoint": "/notifications/read-all",
+    "method": "PATCH",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN,SALESMAN"
+  },
+  {
+    "endpoint": "/notifications/:id/read",
+    "method": "PATCH",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN,SALESMAN"
+  },
+  {
+    "endpoint": "/notifications/:id",
+    "method": "DELETE",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/orders",
+    "method": "POST",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/orders",
+    "method": "GET",
+    "roles": "SALESMAN"
+  },
+  {
+    "endpoint": "/orders/:id",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/orders/:id",
+    "method": "PATCH",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/orders/:id/cancel",
+    "method": "PATCH",
+    "roles": "SALESMAN"
+  },
+  {
+    "endpoint": "/orders/:id/revisions",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/product-categories",
+    "method": "POST",
+    "roles": "MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/product-categories",
+    "method": "GET",
+    "roles": "MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/products",
+    "method": "POST",
+    "roles": "MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/products",
+    "method": "GET",
+    "roles": "MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/products/:id",
+    "method": "PUT",
+    "roles": "MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/product-pricing/products/:id/history",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/salesmen/register",
+    "method": "POST",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/salesmen",
+    "method": "GET",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN"
+  },
+  {
+    "endpoint": "/salesmen/:id",
+    "method": "GET",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN,SALESMAN"
+  },
+  {
+    "endpoint": "/salesmen/:id",
+    "method": "PUT",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN,SALESMAN"
+  },
+  {
+    "endpoint": "/shops/check-duplicate",
+    "method": "POST",
+    "roles": "DISTRIBUTOR_ADMIN,SALESMAN"
+  },
+  {
+    "endpoint": "/shops",
+    "method": "POST",
+    "roles": "DISTRIBUTOR_ADMIN,SALESMAN"
+  },
+  {
+    "endpoint": "/shops",
+    "method": "GET",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN,SALESMAN"
+  },
+  {
+    "endpoint": "/shops/:id",
+    "method": "GET",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN,SALESMAN"
+  },
+  {
+    "endpoint": "/shops/:id",
+    "method": "PATCH",
+    "roles": "SUPER_ADMIN,DISTRIBUTOR_ADMIN,SALESMAN"
+  },
+  {
+    "endpoint": "/shop-images/:shopId/upload",
+    "method": "POST",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/visits/start",
+    "method": "POST",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/visits/end",
+    "method": "POST",
+    "roles": "SALESMAN"
+  },
+  {
+    "endpoint": "/visits/no-order",
+    "method": "POST",
+    "roles": "SALESMAN"
+  },
+  {
+    "endpoint": "/visits",
+    "method": "GET",
+    "roles": "SALESMAN"
+  },
+  {
+    "endpoint": "/visits/:id",
+    "method": "GET",
+    "roles": "ANY"
+  },
+  {
+    "endpoint": "/working-day/check-in",
+    "method": "POST",
+    "roles": "SALESMAN"
+  },
+  {
+    "endpoint": "/working-day/check-out",
+    "method": "POST",
+    "roles": "SALESMAN"
+  },
+  {
+    "endpoint": "/working-day/history",
+    "method": "GET",
+    "roles": "SUPER_ADMIN,MANUFACTURER_ADMIN,DISTRIBUTOR_ADMIN,SALESMAN"
+  }
+]

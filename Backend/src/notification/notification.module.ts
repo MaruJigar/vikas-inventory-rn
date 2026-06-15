@@ -11,7 +11,7 @@ import { SocketGatewayModule } from '../socket-gateway/socket-gateway.module';
   imports: [
     TypeOrmModule.forFeature([Notification]),
     AuditLogModule,
-    SocketGatewayModule
+    SocketGatewayModule,
   ],
   controllers: [NotificationController],
   providers: [NotificationService],
