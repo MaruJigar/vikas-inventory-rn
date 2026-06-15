@@ -63,9 +63,9 @@ export class Shop {
   @ApiPropertyOptional({ description: 'Location' })
   location: any;
 
-  @Column({ type: 'text' })
-  @ApiProperty({ description: 'Verification photo url' })
-  verification_photo_url: string;
+  @Column({ type: 'text', nullable: true })
+  @ApiPropertyOptional({ description: 'Verification photo url' })
+  verification_photo_url: string | null;
 
   @Column({ type: 'varchar', length: 50, default: 'VERIFIED' })
   @ApiProperty({ description: 'Verification status' })

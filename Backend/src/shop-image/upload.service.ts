@@ -46,13 +46,11 @@ export class UploadService {
     } as const;
 
     const folder =
-      ENTITY_FOLDER_MAP[
-        entityType as keyof typeof ENTITY_FOLDER_MAP
-      ] ?? 'misc';
+      ENTITY_FOLDER_MAP[entityType as keyof typeof ENTITY_FOLDER_MAP] ?? 'misc';
 
     const prefix = entityType ? entityType.toLowerCase() : 'misc';
     const filename = `${prefix}_${uuidv4()}.${ext}`;
-    
+
     const relativePath = join(folder, filename);
     const dirPath = join(getUploadRoot(), folder);
     const filePath = join(getUploadRoot(), relativePath);

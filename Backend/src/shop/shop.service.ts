@@ -2,7 +2,6 @@ import {
   Injectable,
   ForbiddenException,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -46,9 +45,7 @@ export class ShopService {
       );
     }
 
-    if (!dto.verification_photo_url) {
-      throw new BadRequestException('Shop verification photo is mandatory');
-    }
+    // Removed mandatory verification photo check
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -72,8 +69,10 @@ export class ShopService {
         state: dto.state,
         gst_number: dto.gst_number,
         location: point,
-        verification_photo_url: dto.verification_photo_url,
-        verification_status: 'VERIFIED',
+        verification_photo_url: dto.verification_photo_url || null,
+        verification_status: dto.verification_photo_url
+          ? 'VERIFIED'
+          : 'PENDING',
       });
 
       const savedShop = await queryRunner.manager.save(shop);

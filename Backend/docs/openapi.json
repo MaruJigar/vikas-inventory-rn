@@ -5082,8 +5082,7 @@
           "phone",
           "address",
           "latitude",
-          "longitude",
-          "verification_photo_url"
+          "longitude"
         ]
       },
       "Shop": {
@@ -5138,7 +5137,7 @@
             "description": "Location"
           },
           "verification_photo_url": {
-            "type": "string",
+            "type": "object",
             "description": "Verification photo url"
           },
           "verification_status": {
@@ -5181,7 +5180,6 @@
           "name",
           "phone",
           "address",
-          "verification_photo_url",
           "verification_status",
           "is_active",
           "created_at",
