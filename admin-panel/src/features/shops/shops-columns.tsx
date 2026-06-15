@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
 import { ShopStatusBadge } from './components/shop-status-badge';
 import Image from 'next/image';
+import { getImageUrl } from '@/lib/utils/image';
 
 interface ShopsColumnsProps {
   onViewDetails: (shop: ShopDto) => void;
@@ -21,7 +22,7 @@ export const getShopsColumns = ({ onViewDetails }: ShopsColumnsProps): ColumnDef
       return (
         <div className="relative h-10 w-10 overflow-hidden rounded-md border">
           <Image
-            src={process.env.NEXT_PUBLIC_API_URL + url}
+            src={getImageUrl(url)}
             alt={row.original.name}
             fill
             className="object-cover"

@@ -6,6 +6,7 @@ import {
   UseGuards,
   Request,
   Param,
+  NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
@@ -38,6 +39,15 @@ export class ShopImageController {
     @Param('shopId') shopId: string,
     @Request() req: any,
   ) {
+    if (!shopId) {
+      throw new NotFoundException('Shop ID is required');
+    }
+
+    const shop = await this.shopRepository.findOne({ where: { id: shopId } });
+    if (!shop) {
+      throw new NotFoundException(`Shop ${shopId} not found`);
+    }
+
     const uploadedFile = await this.uploadService.processAndCompressImage(
       file,
       req.user.userId,
@@ -45,12 +55,9 @@ export class ShopImageController {
       shopId,
     );
 
-    const shop = await this.shopRepository.findOne({ where: { id: shopId } });
-    if (shop) {
-      shop.verification_photo_url = uploadedFile.file_url;
-      shop.verification_status = 'VERIFIED';
-      await this.shopRepository.save(shop);
-    }
+    shop.verification_photo_url = uploadedFile.file_url;
+    shop.verification_status = 'VERIFIED';
+    await this.shopRepository.save(shop);
 
     return uploadedFile;
   }

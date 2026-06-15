@@ -5,15 +5,19 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { DataTable } from '@/components/data-table/DataTable';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import { useDataTable } from '@/hooks/table/useDataTable';
 import { useShopsQuery } from '@/hooks/shops/useShopsQuery';
 import { getShopsColumns } from '@/features/shops/shops-columns';
 import { ShopFilters } from '@/features/shops/ShopFilters';
 import { ShopDetailsDrawer } from '@/features/shops/components/shop-details-drawer';
+import { CreateShopDrawer } from '@/features/shops/components/CreateShopDrawer';
 import { ShopDto } from '@/types/api/shop.types';
 
 function ShopsPageContent() {
   const [selectedShop, setSelectedShop] = useState<ShopDto | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   // ── URL-driven table state (canonical hook) ────────────────────────
   const {
@@ -42,6 +46,10 @@ function ShopsPageContent() {
               Manage and view registered shops.
             </p>
           </div>
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Shop
+          </Button>
         </div>
 
         {/* Toolbar: Search Filter */}
@@ -66,6 +74,12 @@ function ShopsPageContent() {
           shop={selectedShop}
           isOpen={!!selectedShop}
           onClose={() => setSelectedShop(null)}
+        />
+
+        {/* Create Drawer */}
+        <CreateShopDrawer
+          isOpen={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
         />
       </div>
     </AppLayout>
