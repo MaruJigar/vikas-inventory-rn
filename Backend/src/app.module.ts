@@ -40,10 +40,12 @@ import { HealthModule } from './health/health.module';
 import { McpToolsModule } from './mcp-tools/mcp-tools.module';
 import { VisitModule } from './visit/visit.module';
 
+import { getUploadRoot } from './common/utils/upload-path.util';
+
 @Module({
   imports: [
     ServeStaticModule.forRoot({
-      rootPath: join('/opt/storage/uploads'),
+      rootPath: getUploadRoot(),
       serveRoot: '/uploads',
     }),
     McpModule.forRoot({
