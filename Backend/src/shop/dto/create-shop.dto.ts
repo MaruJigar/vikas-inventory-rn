@@ -66,10 +66,10 @@ export class CreateShopDto {
   @ApiProperty({ description: 'Longitude' })
   longitude: number;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  @ApiProperty({ description: 'Verification photo url' })
-  verification_photo_url: string;
+  @ApiPropertyOptional({ description: 'Verification photo url' })
+  verification_photo_url?: string;
 
   @IsOptional()
   @ValidateNested()
