@@ -35,8 +35,22 @@ export class UploadService {
 
     // Generate unique file name
     const ext = this.mimeToExt(file.mimetype);
-    const prefix = (entityType || 'unknown').toLowerCase();
-    const folder = prefix + 's'; // e.g. 'products' or 'shops'
+
+    const ENTITY_FOLDER_MAP = {
+      PRODUCT: 'products',
+      SHOP: 'shops',
+      USER: 'users',
+      DOCUMENT: 'documents',
+      MANUFACTURER: 'manufacturers',
+      DISTRIBUTOR: 'distributors',
+    } as const;
+
+    const folder =
+      ENTITY_FOLDER_MAP[
+        entityType as keyof typeof ENTITY_FOLDER_MAP
+      ] ?? 'misc';
+
+    const prefix = entityType ? entityType.toLowerCase() : 'misc';
     const filename = `${prefix}_${uuidv4()}.${ext}`;
     
     const relativePath = join(folder, filename);
