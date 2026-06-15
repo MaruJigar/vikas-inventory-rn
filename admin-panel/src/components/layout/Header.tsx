@@ -2,6 +2,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+import { getRoleLabel } from '@/lib/auth/rbac';
+
 export function Header() {
   const { user, logout } = useAuthStore();
 
@@ -18,7 +20,7 @@ export function Header() {
         <div className="flex items-center space-x-2">
           <UserCircle className="w-6 h-6 text-gray-500" />
           <span className="text-sm font-medium text-gray-700">
-            {user?.name || 'Administrator'}
+            {user ? `${user.name || user.email.split('@')[0]} (${getRoleLabel(user.role)})` : 'Loading...'}
           </span>
         </div>
         <Button variant="outline" size="sm" onClick={logout}>

@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,29 +28,52 @@ export class BackordersService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  async listBackorders(userRole: string, userId: string, queryDto: ListQueryDto): Promise<PaginatedResponse<any>> {
-    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC', startDate, endDate, status } = queryDto;
+  async listBackorders(
+    userRole: string,
+    userId: string,
+    queryDto: ListQueryDto,
+  ): Promise<PaginatedResponse<any>> {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      sortBy,
+      sortOrder = 'DESC',
+      startDate,
+      endDate,
+      status,
+    } = queryDto;
     const skip = (page - 1) * limit;
 
-    const query = this.backorderRepo.createQueryBuilder('backorder')
+    const query = this.backorderRepo
+      .createQueryBuilder('backorder')
       .leftJoinAndSelect('backorder.order', 'order')
       .leftJoinAndSelect('order.shop', 'shop')
       .leftJoinAndSelect('order.salesman', 'salesman')
       .leftJoinAndSelect('backorder.product', 'product');
 
     if (userRole === 'DISTRIBUTOR_ADMIN') {
-      const dist = await this.dataSource.query(`SELECT id FROM distributors WHERE user_id = $1`, [userId]);
+      const dist = await this.dataSource.query(
+        `SELECT id FROM distributors WHERE user_id = $1`,
+        [userId],
+      );
       if (!dist.length) throw new ForbiddenException('Distributor not found');
-      query.andWhere('backorder.distributor_id = :distId', { distId: dist[0].id });
+      query.andWhere('backorder.distributor_id = :distId', {
+        distId: dist[0].id,
+      });
     } else if (userRole === 'MANUFACTURER_ADMIN') {
-      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
-      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
-      
+      const mfrResult = await this.dataSource.query(
+        `SELECT id FROM manufacturers WHERE user_id = $1`,
+        [userId],
+      );
+      if (!mfrResult.length)
+        throw new ForbiddenException('Manufacturer profile not found');
+
       query.innerJoin(
         'manufacturer_distributors',
         'md',
         'md.distributor_id = backorder.distributor_id AND md.manufacturer_id = :mfrId',
-        { mfrId: mfrResult[0].id }
+        { mfrId: mfrResult[0].id },
       );
     } else if (userRole === 'SUPER_ADMIN') {
       // Global
@@ -57,8 +85,14 @@ export class BackordersService {
       query.andWhere('backorder.status = :status', { status });
     }
 
-    if (startDate) query.andWhere('backorder.created_at >= :startDate', { startDate: new Date(startDate) });
-    if (endDate) query.andWhere('backorder.created_at <= :endDate', { endDate: new Date(endDate) });
+    if (startDate)
+      query.andWhere('backorder.created_at >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    if (endDate)
+      query.andWhere('backorder.created_at <= :endDate', {
+        endDate: new Date(endDate),
+      });
 
     const allowedSortFields = ['created_at', 'updated_at', 'status'];
     if (sortBy && allowedSortFields.includes(sortBy)) {
@@ -84,7 +118,8 @@ export class BackordersService {
   }
 
   async getBackorder(id: string, userRole: string, userId: string) {
-    const query = this.backorderRepo.createQueryBuilder('backorder')
+    const query = this.backorderRepo
+      .createQueryBuilder('backorder')
       .leftJoinAndSelect('backorder.order', 'order')
       .leftJoinAndSelect('order.shop', 'shop')
       .leftJoinAndSelect('order.salesman', 'salesman')
@@ -92,18 +127,27 @@ export class BackordersService {
       .where('backorder.id = :id', { id });
 
     if (userRole === 'DISTRIBUTOR_ADMIN') {
-      const dist = await this.dataSource.query(`SELECT id FROM distributors WHERE user_id = $1`, [userId]);
+      const dist = await this.dataSource.query(
+        `SELECT id FROM distributors WHERE user_id = $1`,
+        [userId],
+      );
       if (!dist.length) throw new ForbiddenException('Distributor not found');
-      query.andWhere('backorder.distributor_id = :distId', { distId: dist[0].id });
+      query.andWhere('backorder.distributor_id = :distId', {
+        distId: dist[0].id,
+      });
     } else if (userRole === 'MANUFACTURER_ADMIN') {
-      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
-      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
-      
+      const mfrResult = await this.dataSource.query(
+        `SELECT id FROM manufacturers WHERE user_id = $1`,
+        [userId],
+      );
+      if (!mfrResult.length)
+        throw new ForbiddenException('Manufacturer profile not found');
+
       query.innerJoin(
         'manufacturer_distributors',
         'md',
         'md.distributor_id = backorder.distributor_id AND md.manufacturer_id = :mfrId',
-        { mfrId: mfrResult[0].id }
+        { mfrId: mfrResult[0].id },
       );
     } else if (userRole === 'SUPER_ADMIN') {
       // Global
@@ -116,8 +160,15 @@ export class BackordersService {
     return backorder;
   }
 
-  async allocateBackorder(id: string, allocateQuantity: number, userId: string) {
-    if (allocateQuantity <= 0) throw new BadRequestException('Allocation quantity must be greater than 0');
+  async allocateBackorder(
+    id: string,
+    allocateQuantity: number,
+    userId: string,
+  ) {
+    if (allocateQuantity <= 0)
+      throw new BadRequestException(
+        'Allocation quantity must be greater than 0',
+      );
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -125,7 +176,8 @@ export class BackordersService {
 
     try {
       // 1. Lock Backorder
-      const backorder = await queryRunner.manager.getRepository(Backorder)
+      const backorder = await queryRunner.manager
+        .getRepository(Backorder)
         .createQueryBuilder('backorder')
         .setLock('pessimistic_write')
         .where('backorder.id = :id', { id })
@@ -133,30 +185,42 @@ export class BackordersService {
         .getOne();
 
       if (!backorder) throw new NotFoundException('Backorder not found');
-      if (backorder.status === 'RESOLVED') throw new BadRequestException('Backorder is already resolved');
+      if (backorder.status === 'RESOLVED')
+        throw new BadRequestException('Backorder is already resolved');
 
-      const unfulfilled = Number(backorder.quantity) - Number(backorder.resolved_quantity);
+      const unfulfilled =
+        Number(backorder.quantity) - Number(backorder.resolved_quantity);
       if (allocateQuantity > unfulfilled) {
-        throw new BadRequestException(`Cannot allocate more than unfulfilled backorder quantity (${unfulfilled})`);
+        throw new BadRequestException(
+          `Cannot allocate more than unfulfilled backorder quantity (${unfulfilled})`,
+        );
       }
 
       // 2. Lock Inventory
-      const inventory = await queryRunner.manager.getRepository(DistributorInventory)
+      const inventory = await queryRunner.manager
+        .getRepository(DistributorInventory)
         .createQueryBuilder('inv')
         .setLock('pessimistic_write')
-        .where('inv.distributor_id = :distributorId', { distributorId: backorder.distributor_id })
-        .andWhere('inv.product_id = :productId', { productId: backorder.product_id })
+        .where('inv.distributor_id = :distributorId', {
+          distributorId: backorder.distributor_id,
+        })
+        .andWhere('inv.product_id = :productId', {
+          productId: backorder.product_id,
+        })
         .getOne();
 
       if (!inventory) throw new NotFoundException('Inventory not found');
-      
+
       const availableQty = Number(inventory.available_quantity);
       if (availableQty < allocateQuantity) {
-        throw new BadRequestException(`Insufficient available quantity. Have ${availableQty}, requested ${allocateQuantity}`);
+        throw new BadRequestException(
+          `Insufficient available quantity. Have ${availableQty}, requested ${allocateQuantity}`,
+        );
       }
 
       // 3. Lock OrderItem
-      const orderItem = await queryRunner.manager.getRepository(OrderItem)
+      const orderItem = await queryRunner.manager
+        .getRepository(OrderItem)
         .createQueryBuilder('item')
         .setLock('pessimistic_write')
         .where('item.id = :itemId', { itemId: backorder.order_item_id })
@@ -195,7 +259,7 @@ export class BackordersService {
       // Update Backorder
       const previousResolved = Number(backorder.resolved_quantity);
       backorder.resolved_quantity = previousResolved + allocateQuantity;
-      
+
       let auditEvent = 'BACKORDER_PARTIALLY_ALLOCATED';
       let socketEvent = 'backorder:allocated';
       if (Number(backorder.resolved_quantity) === Number(backorder.quantity)) {
@@ -209,12 +273,16 @@ export class BackordersService {
       await queryRunner.manager.save(Backorder, backorder);
 
       // Update OrderItem
-      orderItem.reserved_quantity = Number(orderItem.reserved_quantity) + allocateQuantity;
-      orderItem.backordered_quantity = Number(orderItem.backordered_quantity) - allocateQuantity;
+      orderItem.reserved_quantity =
+        Number(orderItem.reserved_quantity) + allocateQuantity;
+      orderItem.backordered_quantity =
+        Number(orderItem.backordered_quantity) - allocateQuantity;
       await queryRunner.manager.save(OrderItem, orderItem);
 
       // Fetch Order for Notification
-      const order = await queryRunner.manager.getRepository(Order).findOne({ where: { id: backorder.order_id }});
+      const order = await queryRunner.manager
+        .getRepository(Order)
+        .findOne({ where: { id: backorder.order_id } });
 
       await queryRunner.commitTransaction();
 
@@ -228,22 +296,30 @@ export class BackordersService {
           previous_resolved: previousResolved,
           new_resolved: backorder.resolved_quantity,
           allocated: allocateQuantity,
-          status: backorder.status
-        }
+          status: backorder.status,
+        },
       );
 
-      this.socketGateway.broadcastToRoom(`distributor:${backorder.distributor_id}`, socketEvent, {
-        backorderId: backorder.id,
-        allocated: allocateQuantity,
-        status: backorder.status
-      });
+      this.socketGateway.broadcastToRoom(
+        `distributor:${backorder.distributor_id}`,
+        socketEvent,
+        {
+          backorderId: backorder.id,
+          allocated: allocateQuantity,
+          status: backorder.status,
+        },
+      );
 
-      this.socketGateway.broadcastToRoom(`distributor:${backorder.distributor_id}`, 'inventory:updated', {
-        productId: inventory.product_id,
-        available: inventory.available_quantity,
-        reserved: inventory.reserved_quantity,
-        backordered: inventory.backordered_quantity
-      });
+      this.socketGateway.broadcastToRoom(
+        `distributor:${backorder.distributor_id}`,
+        'inventory:updated',
+        {
+          productId: inventory.product_id,
+          available: inventory.available_quantity,
+          reserved: inventory.reserved_quantity,
+          backordered: inventory.backordered_quantity,
+        },
+      );
 
       if (order && backorder.status === 'RESOLVED') {
         await this.notificationService.createNotification(
@@ -253,7 +329,7 @@ export class BackordersService {
           `Backorder for Order ${order.id} has been fully resolved. It is ready for dispatch.`,
           'BACKORDER_RESOLVED_ALERT',
           'Order',
-          order.id
+          order.id,
         );
       }
 

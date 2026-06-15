@@ -10,13 +10,19 @@ export class AuditLogService {
     private auditLogRepo: Repository<AuditLog>,
   ) {}
 
-  async logAction(action: string, entityType: string, entityId: string | null, actorId: string | null, metadata: any) {
+  async logAction(
+    action: string,
+    entityType: string,
+    entityId: string | null,
+    actorId: string | null,
+    metadata: any,
+  ) {
     const log = this.auditLogRepo.create({
       action,
       entity_type: entityType,
       entity_id: entityId as any,
       actor_user_id: actorId as any,
-      metadata
+      metadata,
     });
     return this.auditLogRepo.save(log);
   }

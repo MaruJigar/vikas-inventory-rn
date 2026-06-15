@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -17,14 +21,18 @@ import { UpdateManufacturerAdminDto } from './dto/update-manufacturer-admin.dto'
 @Injectable()
 export class ManufacturerService {
   constructor(
-    @InjectRepository(Manufacturer) private manufacturerRepo: Repository<Manufacturer>,
+    @InjectRepository(Manufacturer)
+    private manufacturerRepo: Repository<Manufacturer>,
     private dataSource: DataSource,
     private auditLogService: AuditLogService,
   ) {}
 
   async createProfile(userId: string, dto: CreateManufacturerDto) {
-    const existing = await this.manufacturerRepo.findOne({ where: { user_id: userId } });
-    if (existing) throw new BadRequestException('Manufacturer profile already exists');
+    const existing = await this.manufacturerRepo.findOne({
+      where: { user_id: userId },
+    });
+    if (existing)
+      throw new BadRequestException('Manufacturer profile already exists');
 
     const profile = this.manufacturerRepo.create({
       user_id: userId,
@@ -34,7 +42,9 @@ export class ManufacturerService {
   }
 
   async getProfile(userId: string) {
-    const profile = await this.manufacturerRepo.findOne({ where: { user_id: userId } });
+    const profile = await this.manufacturerRepo.findOne({
+      where: { user_id: userId },
+    });
     if (!profile) throw new NotFoundException('Manufacturer profile not found');
     return profile;
   }
@@ -45,14 +55,25 @@ export class ManufacturerService {
     return this.manufacturerRepo.save(profile);
   }
 
-  async getManufacturers(queryDto: ListQueryDto): Promise<PaginatedResponse<Manufacturer>> {
-    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC' } = queryDto;
+  async getManufacturers(
+    queryDto: ListQueryDto,
+  ): Promise<PaginatedResponse<Manufacturer>> {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      sortBy,
+      sortOrder = 'DESC',
+    } = queryDto;
     const skip = (page - 1) * limit;
 
     const qb = this.manufacturerRepo.createQueryBuilder('manufacturer');
 
     if (search) {
-      qb.andWhere('(manufacturer.company_name ILIKE :search OR manufacturer.contact_person ILIKE :search)', { search: `%${search}%` });
+      qb.andWhere(
+        '(manufacturer.company_name ILIKE :search OR manufacturer.contact_person ILIKE :search)',
+        { search: `%${search}%` },
+      );
     }
 
     const allowedSortFields = ['created_at', 'updated_at', 'company_name'];
@@ -84,15 +105,23 @@ export class ManufacturerService {
     return manufacturer;
   }
 
-  async createManufacturerAdmin(actorUserId: string, dto: CreateManufacturerAdminDto) {
+  async createManufacturerAdmin(
+    actorUserId: string,
+    dto: CreateManufacturerAdminDto,
+  ) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
       // Create user
-      const existing = await queryRunner.manager.findOne(User, { where: [{ email: dto.email }, { phone: dto.phone }] });
-      if (existing) throw new BadRequestException('User with email or phone already exists');
+      const existing = await queryRunner.manager.findOne(User, {
+        where: [{ email: dto.email }, { phone: dto.phone }],
+      });
+      if (existing)
+        throw new BadRequestException(
+          'User with email or phone already exists',
+        );
 
       const hashedPassword = await bcrypt.hash(dto.password, 10);
 
@@ -125,7 +154,7 @@ export class ManufacturerService {
         'MANUFACTURER',
         manufacturer.id,
         actorUserId,
-        { new_values: manufacturer }
+        { new_values: manufacturer },
       );
 
       return { user, profile: manufacturer };
@@ -137,7 +166,11 @@ export class ManufacturerService {
     }
   }
 
-  async updateManufacturerAdmin(actorUserId: string, id: string, dto: UpdateManufacturerAdminDto) {
+  async updateManufacturerAdmin(
+    actorUserId: string,
+    id: string,
+    dto: UpdateManufacturerAdminDto,
+  ) {
     const manufacturer = await this.getManufacturerById(id);
     const oldValues = { ...manufacturer };
     Object.assign(manufacturer, dto);
@@ -148,7 +181,7 @@ export class ManufacturerService {
       'MANUFACTURER',
       updated.id,
       actorUserId,
-      { old_values: oldValues, new_values: updated }
+      { old_values: oldValues, new_values: updated },
     );
 
     return updated;
@@ -159,10 +192,15 @@ export class ManufacturerService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      const manufacturer = await queryRunner.manager.findOne(Manufacturer, { where: { id: manufacturerId } });
-      const distributor = await queryRunner.manager.findOne(Distributor, { where: { id: distributorId } });
-      
-      if (!manufacturer || !distributor) throw new NotFoundException('Manufacturer or Distributor not found');
+      const manufacturer = await queryRunner.manager.findOne(Manufacturer, {
+        where: { id: manufacturerId },
+      });
+      const distributor = await queryRunner.manager.findOne(Distributor, {
+        where: { id: distributorId },
+      });
+
+      if (!manufacturer || !distributor)
+        throw new NotFoundException('Manufacturer or Distributor not found');
 
       const link = queryRunner.manager.create(ManufacturerDistributor, {
         manufacturer_id: manufacturerId,

@@ -21,12 +21,12 @@ describe('NotificationController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [NotificationController],
-      providers: [
-        { provide: NotificationService, useValue: mockService },
-      ],
+      providers: [{ provide: NotificationService, useValue: mockService }],
     })
-      .overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true })
-      .overrideGuard(RolesGuard).useValue({ canActivate: () => true })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
       .compile();
 
     controller = module.get<NotificationController>(NotificationController);
@@ -37,11 +37,16 @@ describe('NotificationController', () => {
   });
 
   it('getUnreadCount', async () => {
-    expect(await controller.getUnreadCount(mockReq)).toEqual({ unread_count: 5 });
+    expect(await controller.getUnreadCount(mockReq)).toEqual({
+      unread_count: 5,
+    });
   });
 
   it('markAsRead', async () => {
-    expect(await controller.markAsRead('n1', mockReq)).toEqual({ id: 'n1', is_read: true });
+    expect(await controller.markAsRead('n1', mockReq)).toEqual({
+      id: 'n1',
+      is_read: true,
+    });
   });
 
   it('markAllAsRead', async () => {
@@ -49,6 +54,8 @@ describe('NotificationController', () => {
   });
 
   it('deleteNotification', async () => {
-    expect(await controller.deleteNotification('n1', mockReq)).toEqual({ success: true });
+    expect(await controller.deleteNotification('n1', mockReq)).toEqual({
+      success: true,
+    });
   });
 });

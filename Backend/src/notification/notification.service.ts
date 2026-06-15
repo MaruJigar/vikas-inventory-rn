@@ -15,7 +15,15 @@ export class NotificationService {
     private readonly auditLogService: AuditLogService,
   ) {}
 
-  async createNotification(userId: string, role: string, title: string, message: string, type: string, entityType?: string, entityId?: string) {
+  async createNotification(
+    userId: string,
+    role: string,
+    title: string,
+    message: string,
+    type: string,
+    entityType?: string,
+    entityId?: string,
+  ) {
     const notif = this.notifRepo.create({
       recipient_user_id: userId,
       recipient_role: role,
@@ -26,24 +34,50 @@ export class NotificationService {
       entity_id: entityId,
       is_read: false,
     });
-    
+
     await this.notifRepo.save(notif);
-    
-    await this.auditLogService.logAction('SYSTEM', 'NOTIFICATION_CREATED', 'Notification', notif.id, { recipient: userId, type });
-    this.socketGateway.broadcastToRoom(`user:${userId}`, 'NOTIFICATION_CREATED', notif);
-    
+
+    await this.auditLogService.logAction(
+      'SYSTEM',
+      'NOTIFICATION_CREATED',
+      'Notification',
+      notif.id,
+      { recipient: userId, type },
+    );
+    this.socketGateway.broadcastToRoom(
+      `user:${userId}`,
+      'NOTIFICATION_CREATED',
+      notif,
+    );
+
     return notif;
   }
 
-  async getNotifications(userId: string, queryDto: ListQueryDto): Promise<PaginatedResponse<any>> {
-    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC', startDate, endDate, status } = queryDto;
+  async getNotifications(
+    userId: string,
+    queryDto: ListQueryDto,
+  ): Promise<PaginatedResponse<any>> {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      sortBy,
+      sortOrder = 'DESC',
+      startDate,
+      endDate,
+      status,
+    } = queryDto;
     const skip = (page - 1) * limit;
 
-    const qb = this.notifRepo.createQueryBuilder('notif')
+    const qb = this.notifRepo
+      .createQueryBuilder('notif')
       .where('notif.recipient_user_id = :userId', { userId });
 
     if (search) {
-      qb.andWhere('(notif.title ILIKE :search OR notif.message ILIKE :search)', { search: `%${search}%` });
+      qb.andWhere(
+        '(notif.title ILIKE :search OR notif.message ILIKE :search)',
+        { search: `%${search}%` },
+      );
     }
 
     if (status !== undefined) {
@@ -57,8 +91,14 @@ export class NotificationService {
       }
     }
 
-    if (startDate) qb.andWhere('notif.created_at >= :startDate', { startDate: new Date(startDate) });
-    if (endDate) qb.andWhere('notif.created_at <= :endDate', { endDate: new Date(endDate) });
+    if (startDate)
+      qb.andWhere('notif.created_at >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    if (endDate)
+      qb.andWhere('notif.created_at <= :endDate', {
+        endDate: new Date(endDate),
+      });
 
     const allowedSortFields = ['created_at', 'is_read'];
     if (sortBy && allowedSortFields.includes(sortBy)) {
@@ -85,40 +125,58 @@ export class NotificationService {
 
   async getUnreadCount(userId: string) {
     const count = await this.notifRepo.count({
-      where: { recipient_user_id: userId, is_read: false }
+      where: { recipient_user_id: userId, is_read: false },
     });
     return { unread_count: count };
   }
 
   async markAsRead(id: string, userId: string) {
-    const notif = await this.notifRepo.findOne({ where: { id, recipient_user_id: userId } });
+    const notif = await this.notifRepo.findOne({
+      where: { id, recipient_user_id: userId },
+    });
     if (!notif) throw new NotFoundException('Notification not found');
-    
+
     notif.is_read = true;
     notif.read_at = new Date();
     await this.notifRepo.save(notif);
 
-    await this.auditLogService.logAction(userId, 'NOTIFICATION_READ', 'Notification', notif.id, {});
-    this.socketGateway.broadcastToRoom(`user:${userId}`, 'NOTIFICATION_READ', { id: notif.id });
-    
+    await this.auditLogService.logAction(
+      userId,
+      'NOTIFICATION_READ',
+      'Notification',
+      notif.id,
+      {},
+    );
+    this.socketGateway.broadcastToRoom(`user:${userId}`, 'NOTIFICATION_READ', {
+      id: notif.id,
+    });
+
     return notif;
   }
 
   async markAllAsRead(userId: string) {
     await this.notifRepo.update(
       { recipient_user_id: userId, is_read: false },
-      { is_read: true, read_at: new Date() }
+      { is_read: true, read_at: new Date() },
     );
     return { success: true };
   }
 
   async deleteNotification(id: string, userId: string) {
-    const notif = await this.notifRepo.findOne({ where: { id, recipient_user_id: userId } });
+    const notif = await this.notifRepo.findOne({
+      where: { id, recipient_user_id: userId },
+    });
     if (!notif) throw new NotFoundException('Notification not found');
-    
+
     await this.notifRepo.remove(notif);
-    await this.auditLogService.logAction(userId, 'NOTIFICATION_DELETED', 'Notification', id, {});
-    
+    await this.auditLogService.logAction(
+      userId,
+      'NOTIFICATION_DELETED',
+      'Notification',
+      id,
+      {},
+    );
+
     return { success: true };
   }
 }

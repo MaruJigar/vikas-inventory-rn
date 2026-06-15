@@ -7,7 +7,7 @@ export interface UserDto {
 }
 
 export interface AuthDto {
-  email: string;
+  email_or_phone: string;
   password?: string;
   fcmToken?: string;
 }

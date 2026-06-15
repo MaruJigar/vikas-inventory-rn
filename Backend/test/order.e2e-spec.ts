@@ -5,7 +5,11 @@ import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
 import { RolesGuard } from '../src/role-permission/roles.guard';
 import { OrderService } from '../src/order/order.service';
 import { OrdersController } from '../src/order/order.controller';
-import { ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 
 describe('OrdersController (e2e)', () => {
   let app: INestApplication;
@@ -24,11 +28,19 @@ describe('OrdersController (e2e)', () => {
     updateOrder: jest.fn().mockResolvedValue({ id: 'o1' }),
     cancelOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'CANCELLED' }),
     getOrderRevisions: jest.fn().mockResolvedValue([{ revision_number: 1 }]),
-    confirmOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'CONFIRMED' }),
-    processingOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'PROCESSING' }),
+    confirmOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'o1', status: 'CONFIRMED' }),
+    processingOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'o1', status: 'PROCESSING' }),
     packedOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'PACKED' }),
-    dispatchOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'DISPATCHED' }),
-    deliverOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'DELIVERED' }),
+    dispatchOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'o1', status: 'DISPATCHED' }),
+    deliverOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'o1', status: 'DELIVERED' }),
   };
 
   beforeAll(async () => {
@@ -42,14 +54,32 @@ describe('OrdersController (e2e)', () => {
           const req = context.switchToHttp().getRequest();
           const auth = req.headers['authorization'];
           const tokenMap: Record<string, any> = {
-            [`Bearer ${salesmanToken}`]:     { userId: 'u1', role: 'SALESMAN' },
-            [`Bearer ${otherSalesmanToken}`]:{ userId: 'u2', role: 'SALESMAN' },
-            [`Bearer ${distToken}`]:         { userId: 'u3', role: 'DISTRIBUTOR_ADMIN' },
-            [`Bearer ${otherDistToken}`]:    { userId: 'u4', role: 'DISTRIBUTOR_ADMIN' },
-            [`Bearer ${mfrToken}`]:          { userId: 'u5', role: 'MANUFACTURER_ADMIN' },
-            [`Bearer ${superAdminToken}`]:   { userId: 'u6', role: 'SUPER_ADMIN' },
+            [`Bearer ${salesmanToken}`]: { userId: 'u1', role: 'SALESMAN' },
+            [`Bearer ${otherSalesmanToken}`]: {
+              userId: 'u2',
+              role: 'SALESMAN',
+            },
+            [`Bearer ${distToken}`]: {
+              userId: 'u3',
+              role: 'DISTRIBUTOR_ADMIN',
+            },
+            [`Bearer ${otherDistToken}`]: {
+              userId: 'u4',
+              role: 'DISTRIBUTOR_ADMIN',
+            },
+            [`Bearer ${mfrToken}`]: {
+              userId: 'u5',
+              role: 'MANUFACTURER_ADMIN',
+            },
+            [`Bearer ${superAdminToken}`]: {
+              userId: 'u6',
+              role: 'SUPER_ADMIN',
+            },
           };
-          if (tokenMap[auth]) { req.user = tokenMap[auth]; return true; }
+          if (tokenMap[auth]) {
+            req.user = tokenMap[auth];
+            return true;
+          }
           return false;
         },
       })
@@ -58,7 +88,10 @@ describe('OrdersController (e2e)', () => {
         canActivate: (context) => {
           const req = context.switchToHttp().getRequest();
           const role = req.user?.role;
-          const requiredRoles = Reflect.getMetadata('roles', context.getHandler());
+          const requiredRoles = Reflect.getMetadata(
+            'roles',
+            context.getHandler(),
+          );
           if (!requiredRoles) return true;
           return requiredRoles.includes(role);
         },
@@ -69,16 +102,33 @@ describe('OrdersController (e2e)', () => {
     await app.init();
   });
 
-  afterAll(async () => { await app.close(); });
+  afterAll(async () => {
+    await app.close();
+  });
   beforeEach(() => {
     jest.clearAllMocks();
-    mockOrderService.createOrder.mockResolvedValue({ id: 'o1', status: 'CREATED' });
+    mockOrderService.createOrder.mockResolvedValue({
+      id: 'o1',
+      status: 'CREATED',
+    });
     mockOrderService.getOrders.mockResolvedValue([{ id: 'o1' }]);
     mockOrderService.getOrderById.mockResolvedValue({ id: 'o1' });
-    mockOrderService.cancelOrder.mockResolvedValue({ id: 'o1', status: 'CANCELLED' });
-    mockOrderService.confirmOrder.mockResolvedValue({ id: 'o1', status: 'CONFIRMED' });
-    mockOrderService.dispatchOrder.mockResolvedValue({ id: 'o1', status: 'DISPATCHED' });
-    mockOrderService.deliverOrder.mockResolvedValue({ id: 'o1', status: 'DELIVERED' });
+    mockOrderService.cancelOrder.mockResolvedValue({
+      id: 'o1',
+      status: 'CANCELLED',
+    });
+    mockOrderService.confirmOrder.mockResolvedValue({
+      id: 'o1',
+      status: 'CONFIRMED',
+    });
+    mockOrderService.dispatchOrder.mockResolvedValue({
+      id: 'o1',
+      status: 'DISPATCHED',
+    });
+    mockOrderService.deliverOrder.mockResolvedValue({
+      id: 'o1',
+      status: 'DELIVERED',
+    });
   });
 
   // ─── Role access control ──────────────────────────────────────────────────
@@ -108,10 +158,7 @@ describe('OrdersController (e2e)', () => {
   });
 
   it('POST /orders - Rejected without auth', () => {
-    return request(app.getHttpServer())
-      .post('/orders')
-      .send({})
-      .expect(403);
+    return request(app.getHttpServer()).post('/orders').send({}).expect(403);
   });
 
   // ─── 🛡️ Cancel – role-based 🛡️──────────────────────────────────────────────────
@@ -143,7 +190,9 @@ describe('OrdersController (e2e)', () => {
   // ─── Ownership enforcement via service mock ───────────────────────────────
 
   it('GET /orders/:id - Salesman IDOR rejected by service', () => {
-    mockOrderService.getOrderById.mockRejectedValue(new ForbiddenException('Not your order'));
+    mockOrderService.getOrderById.mockRejectedValue(
+      new ForbiddenException('Not your order'),
+    );
     return request(app.getHttpServer())
       .get('/orders/o1')
       .set('Authorization', `Bearer ${otherSalesmanToken}`)
@@ -151,7 +200,9 @@ describe('OrdersController (e2e)', () => {
   });
 
   it('GET /orders/:id - Distributor IDOR rejected by service', () => {
-    mockOrderService.getOrderById.mockRejectedValue(new ForbiddenException('Not your order'));
+    mockOrderService.getOrderById.mockRejectedValue(
+      new ForbiddenException('Not your order'),
+    );
     return request(app.getHttpServer())
       .get('/orders/o1')
       .set('Authorization', `Bearer ${otherDistToken}`)
@@ -159,7 +210,9 @@ describe('OrdersController (e2e)', () => {
   });
 
   it('GET /orders/:id - Manufacturer ecosystem IDOR rejected by service', () => {
-    mockOrderService.getOrderById.mockRejectedValue(new ForbiddenException('Not in your ecosystem'));
+    mockOrderService.getOrderById.mockRejectedValue(
+      new ForbiddenException('Not in your ecosystem'),
+    );
     return request(app.getHttpServer())
       .get('/orders/o1')
       .set('Authorization', `Bearer ${mfrToken}`)
@@ -167,7 +220,9 @@ describe('OrdersController (e2e)', () => {
   });
 
   it('GET /orders/:id - 404 for nonexistent order', () => {
-    mockOrderService.getOrderById.mockRejectedValue(new NotFoundException('Order not found'));
+    mockOrderService.getOrderById.mockRejectedValue(
+      new NotFoundException('Order not found'),
+    );
     return request(app.getHttpServer())
       .get('/orders/nonexistent')
       .set('Authorization', `Bearer ${distToken}`)
@@ -182,7 +237,10 @@ describe('OrdersController (e2e)', () => {
       .set('Authorization', `Bearer ${salesmanToken}`)
       .expect(200)
       .expect(() => {
-        expect(mockOrderService.getOrders).toHaveBeenCalledWith('u1', 'SALESMAN');
+        expect(mockOrderService.getOrders).toHaveBeenCalledWith(
+          'u1',
+          'SALESMAN',
+        );
       });
   });
 
@@ -192,7 +250,10 @@ describe('OrdersController (e2e)', () => {
       .set('Authorization', `Bearer ${distToken}`)
       .expect(200)
       .expect(() => {
-        expect(mockOrderService.getOrders).toHaveBeenCalledWith('u3', 'DISTRIBUTOR_ADMIN');
+        expect(mockOrderService.getOrders).toHaveBeenCalledWith(
+          'u3',
+          'DISTRIBUTOR_ADMIN',
+        );
       });
   });
 
@@ -202,7 +263,10 @@ describe('OrdersController (e2e)', () => {
       .set('Authorization', `Bearer ${mfrToken}`)
       .expect(200)
       .expect(() => {
-        expect(mockOrderService.getOrders).toHaveBeenCalledWith('u5', 'MANUFACTURER_ADMIN');
+        expect(mockOrderService.getOrders).toHaveBeenCalledWith(
+          'u5',
+          'MANUFACTURER_ADMIN',
+        );
       });
   });
 
@@ -216,8 +280,6 @@ describe('OrdersController (e2e)', () => {
   });
 
   it('GET /orders/:id/revisions - Rejects unauthenticated requests', () => {
-    return request(app.getHttpServer())
-      .get('/orders/o1/revisions')
-      .expect(403);
+    return request(app.getHttpServer()).get('/orders/o1/revisions').expect(403);
   });
 });

@@ -24,12 +24,12 @@ describe('AnalyticsController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AnalyticsController],
-      providers: [
-        { provide: AnalyticsService, useValue: mockService },
-      ],
+      providers: [{ provide: AnalyticsService, useValue: mockService }],
     })
-      .overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true })
-      .overrideGuard(RolesGuard).useValue({ canActivate: () => true })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
       .compile();
 
     controller = module.get<AnalyticsController>(AnalyticsController);

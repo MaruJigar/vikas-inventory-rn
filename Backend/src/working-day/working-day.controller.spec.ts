@@ -22,11 +22,11 @@ describe('WorkingDayController', () => {
         { provide: WorkingDayService, useValue: mockWorkingDayService },
       ],
     })
-    .overrideGuard(JwtAuthGuard)
-    .useValue({ canActivate: () => true })
-    .overrideGuard(RolesGuard)
-    .useValue({ canActivate: () => true })
-    .compile();
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<WorkingDayController>(WorkingDayController);
   });
@@ -39,10 +39,10 @@ describe('WorkingDayController', () => {
     it('should call service checkIn', async () => {
       const dto: CheckInDto = { latitude: 10, longitude: 20 };
       mockWorkingDayService.checkIn.mockResolvedValue({ id: 'wd1' });
-      
+
       const req = { user: { userId: 'u1' } };
       const res = await controller.checkIn(dto, req);
-      
+
       expect(res).toEqual({ id: 'wd1' });
       expect(mockWorkingDayService.checkIn).toHaveBeenCalledWith('u1', dto);
     });
@@ -52,10 +52,10 @@ describe('WorkingDayController', () => {
     it('should call service checkOut', async () => {
       const dto: CheckOutDto = { latitude: 10, longitude: 20 };
       mockWorkingDayService.checkOut.mockResolvedValue({ id: 'wd1' });
-      
+
       const req = { user: { userId: 'u1' } };
       const res = await controller.checkOut(dto, req);
-      
+
       expect(res).toEqual({ id: 'wd1' });
       expect(mockWorkingDayService.checkOut).toHaveBeenCalledWith('u1', dto);
     });
@@ -64,12 +64,16 @@ describe('WorkingDayController', () => {
   describe('getHistory', () => {
     it('should call service getHistory', async () => {
       mockWorkingDayService.getHistory.mockResolvedValue([{ id: 'wd1' }]);
-      
+
       const req = { user: { userId: 'u1', role: 'SALESMAN' } };
       const res = await controller.getHistory(req);
-      
+
       expect(res).toEqual([{ id: 'wd1' }]);
-      expect(mockWorkingDayService.getHistory).toHaveBeenCalledWith('u1', 'SALESMAN', []);
+      expect(mockWorkingDayService.getHistory).toHaveBeenCalledWith(
+        'u1',
+        'SALESMAN',
+        [],
+      );
     });
   });
 });

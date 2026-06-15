@@ -1,4 +1,9 @@
-import { Injectable, ForbiddenException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -27,22 +32,31 @@ export class VisitService {
     @InjectRepository(Order) private orderRepo: Repository<Order>,
     @InjectRepository(Distributor) private distRepo: Repository<Distributor>,
     @InjectRepository(Manufacturer) private mfrRepo: Repository<Manufacturer>,
-    @InjectRepository(ManufacturerDistributor) private mfrDistRepo: Repository<ManufacturerDistributor>,
+    @InjectRepository(ManufacturerDistributor)
+    private mfrDistRepo: Repository<ManufacturerDistributor>,
     private dataSource: DataSource,
     private auditLogService: AuditLogService,
-    private socketGateway: AppSocketGateway
+    private socketGateway: AppSocketGateway,
   ) {}
 
   async startVisit(userId: string, dto: StartVisitDto) {
-    const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
-    if (!salesman) throw new ForbiddenException('Only salesmen can start visits');
+    const salesman = await this.salesmanRepo.findOne({
+      where: { user_id: userId },
+    });
+    if (!salesman)
+      throw new ForbiddenException('Only salesmen can start visits');
 
     if (salesman.approval_status !== 'APPROVED') {
       throw new ForbiddenException('Salesman is not approved');
     }
 
-    const activeWd = await this.wdRepo.findOne({ where: { salesman_id: salesman.id, status: 'ACTIVE' } });
-    if (!activeWd) throw new ForbiddenException('Cannot start visit without active check-in');
+    const activeWd = await this.wdRepo.findOne({
+      where: { salesman_id: salesman.id, status: 'ACTIVE' },
+    });
+    if (!activeWd)
+      throw new ForbiddenException(
+        'Cannot start visit without active check-in',
+      );
 
     const shop = await this.shopRepo.findOne({ where: { id: dto.shopId } });
     if (!shop) throw new NotFoundException('Shop not found');
@@ -51,15 +65,19 @@ export class VisitService {
     }
 
     if (dto.idempotencyKey) {
-      const existing = await this.visitRepo.findOne({ where: { idempotency_key: dto.idempotencyKey } });
+      const existing = await this.visitRepo.findOne({
+        where: { idempotency_key: dto.idempotencyKey },
+      });
       if (existing) return existing;
     }
 
     // Timestamp validation: offline timestamps must not be in the future
     if (dto.startedAt) {
       const ts = new Date(dto.startedAt);
-      if (isNaN(ts.getTime())) throw new BadRequestException('Invalid startedAt timestamp');
-      if (ts > new Date()) throw new BadRequestException('startedAt cannot be in the future');
+      if (isNaN(ts.getTime()))
+        throw new BadRequestException('Invalid startedAt timestamp');
+      if (ts > new Date())
+        throw new BadRequestException('startedAt cannot be in the future');
     }
 
     let point: any = null;
@@ -85,35 +103,55 @@ export class VisitService {
 
     const saved = await this.visitRepo.save(visit);
 
-    await this.auditLogService.logAction('VISIT_STARTED', 'SHOP_VISIT', saved.id, userId, { shop_id: shop.id });
+    await this.auditLogService.logAction(
+      'VISIT_STARTED',
+      'SHOP_VISIT',
+      saved.id,
+      userId,
+      { shop_id: shop.id },
+    );
 
-    const dist = await this.distRepo.findOne({ where: { id: salesman.distributor_id } });
+    const dist = await this.distRepo.findOne({
+      where: { id: salesman.distributor_id },
+    });
     if (dist) {
-      this.socketGateway.broadcastToRoom(`distributor:${dist.id}`, 'VISIT_STARTED', {
-        visitId: saved.id,
-        salesmanId: salesman.id,
-        shopId: shop.id,
-        timestamp: saved.started_at,
-      });
+      this.socketGateway.broadcastToRoom(
+        `distributor:${dist.id}`,
+        'VISIT_STARTED',
+        {
+          visitId: saved.id,
+          salesmanId: salesman.id,
+          shopId: shop.id,
+          timestamp: saved.started_at,
+        },
+      );
     }
 
     return saved;
   }
 
   async endVisit(userId: string, dto: EndVisitDto) {
-    const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
+    const salesman = await this.salesmanRepo.findOne({
+      where: { user_id: userId },
+    });
     if (!salesman) throw new ForbiddenException('Only salesmen can end visits');
 
     const visit = await this.visitRepo.findOne({ where: { id: dto.visitId } });
     if (!visit) throw new NotFoundException('Visit not found');
-    if (visit.salesman_id !== salesman.id) throw new ForbiddenException('Cannot end visit you do not own');
-    if (visit.status === 'CLOSED') throw new BadRequestException('Visit is already closed');
+    if (visit.salesman_id !== salesman.id)
+      throw new ForbiddenException('Cannot end visit you do not own');
+    if (visit.status === 'CLOSED')
+      throw new BadRequestException('Visit is already closed');
 
     // Rule: Order must exist OR no-order reason must be provided
     // Since this is endVisit without a reason, we must check for an order
-    const orderCount = await this.orderRepo.count({ where: { visit_id: visit.id } });
+    const orderCount = await this.orderRepo.count({
+      where: { visit_id: visit.id },
+    });
     if (orderCount === 0 && !visit.no_order_reason) {
-      throw new BadRequestException('Cannot close visit without an order or a no-order reason');
+      throw new BadRequestException(
+        'Cannot close visit without an order or a no-order reason',
+      );
     }
 
     let point: any = null;
@@ -127,9 +165,14 @@ export class VisitService {
     // Timestamp validation for endVisit
     if (dto.endedAt) {
       const ts = new Date(dto.endedAt);
-      if (isNaN(ts.getTime())) throw new BadRequestException('Invalid endedAt timestamp');
-      if (ts > new Date()) throw new BadRequestException('endedAt cannot be in the future');
-      if (ts < visit.started_at) throw new BadRequestException('endedAt cannot be before visit started_at');
+      if (isNaN(ts.getTime()))
+        throw new BadRequestException('Invalid endedAt timestamp');
+      if (ts > new Date())
+        throw new BadRequestException('endedAt cannot be in the future');
+      if (ts < visit.started_at)
+        throw new BadRequestException(
+          'endedAt cannot be before visit started_at',
+        );
     }
 
     visit.status = 'CLOSED';
@@ -138,24 +181,39 @@ export class VisitService {
 
     const saved = await this.visitRepo.save(visit);
 
-    await this.auditLogService.logAction('VISIT_ENDED', 'SHOP_VISIT', saved.id, userId, { order_count: orderCount });
+    await this.auditLogService.logAction(
+      'VISIT_ENDED',
+      'SHOP_VISIT',
+      saved.id,
+      userId,
+      { order_count: orderCount },
+    );
 
-    this.socketGateway.broadcastToRoom(`distributor:${visit.distributor_id}`, 'VISIT_ENDED', {
-      visitId: saved.id,
-      timestamp: saved.ended_at,
-    });
+    this.socketGateway.broadcastToRoom(
+      `distributor:${visit.distributor_id}`,
+      'VISIT_ENDED',
+      {
+        visitId: saved.id,
+        timestamp: saved.ended_at,
+      },
+    );
 
     return saved;
   }
 
   async noOrderVisit(userId: string, dto: NoOrderVisitDto) {
-    const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
-    if (!salesman) throw new ForbiddenException('Only salesmen can update visits');
+    const salesman = await this.salesmanRepo.findOne({
+      where: { user_id: userId },
+    });
+    if (!salesman)
+      throw new ForbiddenException('Only salesmen can update visits');
 
     const visit = await this.visitRepo.findOne({ where: { id: dto.visitId } });
     if (!visit) throw new NotFoundException('Visit not found');
-    if (visit.salesman_id !== salesman.id) throw new ForbiddenException('Cannot update visit you do not own');
-    if (visit.status === 'CLOSED') throw new BadRequestException('Visit is already closed');
+    if (visit.salesman_id !== salesman.id)
+      throw new ForbiddenException('Cannot update visit you do not own');
+    if (visit.status === 'CLOSED')
+      throw new BadRequestException('Visit is already closed');
 
     let point: any = null;
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
@@ -168,9 +226,14 @@ export class VisitService {
     // Timestamp validation for noOrderVisit
     if (dto.endedAt) {
       const ts = new Date(dto.endedAt);
-      if (isNaN(ts.getTime())) throw new BadRequestException('Invalid endedAt timestamp');
-      if (ts > new Date()) throw new BadRequestException('endedAt cannot be in the future');
-      if (ts < visit.started_at) throw new BadRequestException('endedAt cannot be before visit started_at');
+      if (isNaN(ts.getTime()))
+        throw new BadRequestException('Invalid endedAt timestamp');
+      if (ts > new Date())
+        throw new BadRequestException('endedAt cannot be in the future');
+      if (ts < visit.started_at)
+        throw new BadRequestException(
+          'endedAt cannot be before visit started_at',
+        );
     }
 
     visit.no_order_reason = dto.reason;
@@ -181,19 +244,42 @@ export class VisitService {
 
     const saved = await this.visitRepo.save(visit);
 
-    await this.auditLogService.logAction('VISIT_ENDED', 'SHOP_VISIT', saved.id, userId, { reason: dto.reason });
+    await this.auditLogService.logAction(
+      'VISIT_ENDED',
+      'SHOP_VISIT',
+      saved.id,
+      userId,
+      { reason: dto.reason },
+    );
 
-    this.socketGateway.broadcastToRoom(`distributor:${visit.distributor_id}`, 'VISIT_ENDED', {
-      visitId: saved.id,
-      reason: dto.reason,
-      timestamp: saved.ended_at,
-    });
+    this.socketGateway.broadcastToRoom(
+      `distributor:${visit.distributor_id}`,
+      'VISIT_ENDED',
+      {
+        visitId: saved.id,
+        reason: dto.reason,
+        timestamp: saved.ended_at,
+      },
+    );
 
     return saved;
   }
 
-  async getVisits(userId: string, role: string, queryDto: ListQueryDto): Promise<PaginatedResponse<any>> {
-    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC', startDate, endDate, status } = queryDto;
+  async getVisits(
+    userId: string,
+    role: string,
+    queryDto: ListQueryDto,
+  ): Promise<PaginatedResponse<any>> {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      sortBy,
+      sortOrder = 'DESC',
+      startDate,
+      endDate,
+      status,
+    } = queryDto;
     const skip = (page - 1) * limit;
 
     const qb = this.visitRepo.createQueryBuilder('visit');
@@ -207,17 +293,21 @@ export class VisitService {
     } else if (role === 'MANUFACTURER_ADMIN') {
       const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
       if (!mfr) throw new ForbiddenException('Manufacturer not found');
-      
+
       qb.innerJoin(
         'manufacturer_distributors',
         'md',
         'md.distributor_id = visit.distributor_id AND md.manufacturer_id = :mfrId',
-        { mfrId: mfr.id }
+        { mfrId: mfr.id },
       );
     } else if (role === 'SALESMAN') {
-      const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
+      const salesman = await this.salesmanRepo.findOne({
+        where: { user_id: userId },
+      });
       if (!salesman) throw new ForbiddenException('Salesman not found');
-      qb.andWhere('visit.salesman_id = :salesmanId', { salesmanId: salesman.id });
+      qb.andWhere('visit.salesman_id = :salesmanId', {
+        salesmanId: salesman.id,
+      });
     } else {
       throw new ForbiddenException('Unauthorized role');
     }
@@ -230,10 +320,21 @@ export class VisitService {
       qb.andWhere('visit.status = :status', { status });
     }
 
-    if (startDate) qb.andWhere('visit.created_at >= :startDate', { startDate: new Date(startDate) });
-    if (endDate) qb.andWhere('visit.created_at <= :endDate', { endDate: new Date(endDate) });
+    if (startDate)
+      qb.andWhere('visit.created_at >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    if (endDate)
+      qb.andWhere('visit.created_at <= :endDate', {
+        endDate: new Date(endDate),
+      });
 
-    const allowedSortFields = ['created_at', 'updated_at', 'started_at', 'ended_at'];
+    const allowedSortFields = [
+      'created_at',
+      'updated_at',
+      'started_at',
+      'ended_at',
+    ];
     if (sortBy && allowedSortFields.includes(sortBy)) {
       qb.orderBy(`visit.${sortBy}`, sortOrder);
     } else {
@@ -257,7 +358,9 @@ export class VisitService {
   }
 
   async getVisitById(userId: string, role: string, id: string) {
-    const qb = this.visitRepo.createQueryBuilder('visit').where('visit.id = :id', { id });
+    const qb = this.visitRepo
+      .createQueryBuilder('visit')
+      .where('visit.id = :id', { id });
 
     if (role === 'SUPER_ADMIN') {
       // Global
@@ -268,17 +371,21 @@ export class VisitService {
     } else if (role === 'MANUFACTURER_ADMIN') {
       const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
       if (!mfr) throw new ForbiddenException('Manufacturer not found');
-      
+
       qb.innerJoin(
         'manufacturer_distributors',
         'md',
         'md.distributor_id = visit.distributor_id AND md.manufacturer_id = :mfrId',
-        { mfrId: mfr.id }
+        { mfrId: mfr.id },
       );
     } else if (role === 'SALESMAN') {
-      const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
+      const salesman = await this.salesmanRepo.findOne({
+        where: { user_id: userId },
+      });
       if (!salesman) throw new ForbiddenException('Salesman not found');
-      qb.andWhere('visit.salesman_id = :salesmanId', { salesmanId: salesman.id });
+      qb.andWhere('visit.salesman_id = :salesmanId', {
+        salesmanId: salesman.id,
+      });
     } else {
       throw new ForbiddenException('Unauthorized role');
     }

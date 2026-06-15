@@ -12,7 +12,11 @@ import { InventoryMovement } from '../inventory/inventory-movement.entity';
 import { Distributor } from '../distributor/distributor.entity';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AppSocketGateway } from '../socket-gateway/socket.gateway';
-import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 
 describe('FulfillmentService', () => {
   let service: FulfillmentService;
@@ -75,7 +79,13 @@ describe('FulfillmentService', () => {
     jest.clearAllMocks();
   });
 
-  const createdOrder = { id: 'o1', status: 'CREATED', distributor_id: 'd1', salesman_id: 's1', order_number: 'ORD-1' };
+  const createdOrder = {
+    id: 'o1',
+    status: 'CREATED',
+    distributor_id: 'd1',
+    salesman_id: 's1',
+    order_number: 'ORD-1',
+  };
   const confirmedOrder = { ...createdOrder, status: 'CONFIRMED' };
   const processingOrder = { ...createdOrder, status: 'PROCESSING' };
   const packedOrder = { ...createdOrder, status: 'PACKED' };
@@ -90,55 +100,89 @@ describe('FulfillmentService', () => {
       managerRepos['OrderItem'] = {
         ...mockManagerRepo(),
         find: jest.fn().mockResolvedValue([
-          { id: 'i1', product_id: 'p1', reserved_quantity: 5, backordered_quantity: 0, dispatched_quantity: 0 },
+          {
+            id: 'i1',
+            product_id: 'p1',
+            reserved_quantity: 5,
+            backordered_quantity: 0,
+            dispatched_quantity: 0,
+          },
         ]),
       };
       managerRepos['DistributorInventory'] = mockManagerRepo();
       managerRepos['InventoryMovement'] = mockManagerRepo();
       managerRepos['Backorder'] = mockManagerRepo();
-      
+
       managerRepos['Order'].findOne.mockResolvedValue(createdOrder); // lock return
-      managerRepos['DistributorInventory'].findOne.mockResolvedValue({ available_quantity: 10, reserved_quantity: 5 }); // lock return
+      managerRepos['DistributorInventory'].findOne.mockResolvedValue({
+        available_quantity: 10,
+        reserved_quantity: 5,
+      }); // lock return
     });
 
     it('confirmOrder: should transition CREATED → CONFIRMED', async () => {
-      mockOrderRepo.findOne.mockResolvedValueOnce(createdOrder).mockResolvedValueOnce(confirmedOrder);
+      mockOrderRepo.findOne
+        .mockResolvedValueOnce(createdOrder)
+        .mockResolvedValueOnce(confirmedOrder);
       const result = await service.confirmOrder('u1', 'o1', {});
       expect(result.status).toBe('CONFIRMED');
-      expect(managerRepos['Order'].update).toHaveBeenCalledWith('o1', { status: 'CONFIRMED' });
-      expect(managerRepos['FulfillmentLog'].save).toHaveBeenCalledWith(expect.objectContaining({ action: 'CONFIRMED' }));
+      expect(managerRepos['Order'].update).toHaveBeenCalledWith('o1', {
+        status: 'CONFIRMED',
+      });
+      expect(managerRepos['FulfillmentLog'].save).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'CONFIRMED' }),
+      );
     });
 
     it('processingOrder: should transition CONFIRMED → PROCESSING', async () => {
       managerRepos['Order'].findOne.mockResolvedValue(confirmedOrder);
-      mockOrderRepo.findOne.mockResolvedValueOnce(confirmedOrder).mockResolvedValueOnce(processingOrder);
+      mockOrderRepo.findOne
+        .mockResolvedValueOnce(confirmedOrder)
+        .mockResolvedValueOnce(processingOrder);
       const result = await service.processingOrder('u1', 'o1', {});
       expect(result.status).toBe('PROCESSING');
     });
 
     it('packedOrder: should transition PROCESSING → PACKED', async () => {
       managerRepos['Order'].findOne.mockResolvedValue(processingOrder);
-      mockOrderRepo.findOne.mockResolvedValueOnce(processingOrder).mockResolvedValueOnce(packedOrder);
+      mockOrderRepo.findOne
+        .mockResolvedValueOnce(processingOrder)
+        .mockResolvedValueOnce(packedOrder);
       const result = await service.packedOrder('u1', 'o1', {});
       expect(result.status).toBe('PACKED');
     });
 
     it('dispatchOrder: should transition PACKED → DISPATCHED and decrement inventory', async () => {
       managerRepos['Order'].findOne.mockResolvedValue(packedOrder);
-      mockOrderRepo.findOne.mockResolvedValueOnce(packedOrder).mockResolvedValueOnce(dispatchedOrder);
+      mockOrderRepo.findOne
+        .mockResolvedValueOnce(packedOrder)
+        .mockResolvedValueOnce(dispatchedOrder);
       const result = await service.dispatchOrder('u1', 'o1', {});
       expect(result.status).toBe('DISPATCHED');
-      expect(managerRepos['DistributorInventory'].decrement).toHaveBeenCalledTimes(2); // available and reserved
+      expect(
+        managerRepos['DistributorInventory'].decrement,
+      ).toHaveBeenCalledTimes(2); // available and reserved
       expect(managerRepos['InventoryMovement'].save).toHaveBeenCalled();
-      expect(managerRepos['OrderItem'].update).toHaveBeenCalledWith('i1', expect.objectContaining({ dispatched_quantity: 5, status: 'DISPATCHED' }));
+      expect(managerRepos['OrderItem'].update).toHaveBeenCalledWith(
+        'i1',
+        expect.objectContaining({
+          dispatched_quantity: 5,
+          status: 'DISPATCHED',
+        }),
+      );
     });
 
     it('deliverOrder: should transition DISPATCHED → DELIVERED', async () => {
       managerRepos['Order'].findOne.mockResolvedValue(dispatchedOrder);
-      mockOrderRepo.findOne.mockResolvedValueOnce(dispatchedOrder).mockResolvedValueOnce({ ...dispatchedOrder, status: 'DELIVERED' });
+      mockOrderRepo.findOne
+        .mockResolvedValueOnce(dispatchedOrder)
+        .mockResolvedValueOnce({ ...dispatchedOrder, status: 'DELIVERED' });
       const result = await service.deliverOrder('u1', 'o1', {});
       expect(result.status).toBe('DELIVERED');
-      expect(managerRepos['OrderItem'].update).toHaveBeenCalledWith('i1', expect.objectContaining({ status: 'DELIVERED' }));
+      expect(managerRepos['OrderItem'].update).toHaveBeenCalledWith(
+        'i1',
+        expect.objectContaining({ status: 'DELIVERED' }),
+      );
     });
   });
 
@@ -156,29 +200,71 @@ describe('FulfillmentService', () => {
 
     it('partialDispatchOrder: should dispatch partially and resolve backorder logic', async () => {
       managerRepos['Order'].findOne.mockResolvedValue(packedOrder);
-      mockOrderRepo.findOne.mockResolvedValueOnce(packedOrder).mockResolvedValueOnce({ ...packedOrder, status: 'PARTIAL_DISPATCH' });
+      mockOrderRepo.findOne
+        .mockResolvedValueOnce(packedOrder)
+        .mockResolvedValueOnce({ ...packedOrder, status: 'PARTIAL_DISPATCH' });
       managerRepos['OrderItem'].find.mockResolvedValue([
-        { id: 'i1', product_id: 'p1', reserved_quantity: 5, dispatched_quantity: 0 },
+        {
+          id: 'i1',
+          product_id: 'p1',
+          reserved_quantity: 5,
+          dispatched_quantity: 0,
+        },
       ]);
-      managerRepos['DistributorInventory'].findOne.mockResolvedValue({ available_quantity: 10, reserved_quantity: 5 });
+      managerRepos['DistributorInventory'].findOne.mockResolvedValue({
+        available_quantity: 10,
+        reserved_quantity: 5,
+      });
 
-      await service.partialDispatchOrder('u1', 'o1', { items: [{ orderItemId: 'i1', dispatchQuantity: 2 }] });
+      await service.partialDispatchOrder('u1', 'o1', {
+        items: [{ orderItemId: 'i1', dispatchQuantity: 2 }],
+      });
 
-      expect(managerRepos['OrderItem'].update).toHaveBeenCalledWith('i1', expect.objectContaining({ dispatched_quantity: 2, status: 'PARTIAL_DISPATCH' }));
-      expect(managerRepos['Backorder'].save).toHaveBeenCalledWith(expect.objectContaining({ quantity: 3, status: 'OPEN' }));
+      expect(managerRepos['OrderItem'].update).toHaveBeenCalledWith(
+        'i1',
+        expect.objectContaining({
+          dispatched_quantity: 2,
+          status: 'PARTIAL_DISPATCH',
+        }),
+      );
+      expect(managerRepos['Backorder'].save).toHaveBeenCalledWith(
+        expect.objectContaining({ quantity: 3, status: 'OPEN' }),
+      );
     });
 
     it('partialDeliverOrder: should deliver partially', async () => {
-      const partialDispatchedOrder = { ...createdOrder, status: 'PARTIAL_DISPATCH' };
+      const partialDispatchedOrder = {
+        ...createdOrder,
+        status: 'PARTIAL_DISPATCH',
+      };
       managerRepos['Order'].findOne.mockResolvedValue(partialDispatchedOrder);
-      mockOrderRepo.findOne.mockResolvedValueOnce(partialDispatchedOrder).mockResolvedValueOnce({ ...partialDispatchedOrder, status: 'PARTIAL_DELIVERY' });
+      mockOrderRepo.findOne
+        .mockResolvedValueOnce(partialDispatchedOrder)
+        .mockResolvedValueOnce({
+          ...partialDispatchedOrder,
+          status: 'PARTIAL_DELIVERY',
+        });
       managerRepos['OrderItem'].find.mockResolvedValue([
-        { id: 'i1', product_id: 'p1', reserved_quantity: 5, dispatched_quantity: 2, delivered_quantity: 0 },
+        {
+          id: 'i1',
+          product_id: 'p1',
+          reserved_quantity: 5,
+          dispatched_quantity: 2,
+          delivered_quantity: 0,
+        },
       ]);
 
-      await service.partialDeliverOrder('u1', 'o1', { items: [{ orderItemId: 'i1', deliverQuantity: 1 }] });
+      await service.partialDeliverOrder('u1', 'o1', {
+        items: [{ orderItemId: 'i1', deliverQuantity: 1 }],
+      });
 
-      expect(managerRepos['OrderItem'].update).toHaveBeenCalledWith('i1', expect.objectContaining({ delivered_quantity: 1, status: 'PARTIAL_DELIVERY' }));
+      expect(managerRepos['OrderItem'].update).toHaveBeenCalledWith(
+        'i1',
+        expect.objectContaining({
+          delivered_quantity: 1,
+          status: 'PARTIAL_DELIVERY',
+        }),
+      );
     });
   });
 });

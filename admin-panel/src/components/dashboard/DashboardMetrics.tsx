@@ -1,6 +1,6 @@
 import { DashboardResponse } from "@/types/api/analytics.types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, CheckCircle2, XCircle, TrendingUp, ShoppingCart, Package, AlertCircle, Calendar } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, TrendingUp, ShoppingCart, Package, AlertCircle } from "lucide-react";
 
 interface DashboardMetricsProps {
   data: DashboardResponse;

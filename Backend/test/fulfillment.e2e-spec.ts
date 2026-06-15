@@ -11,13 +11,25 @@ describe('FulfillmentController (e2e)', () => {
   let app: INestApplication;
 
   const mockFulfillmentService = {
-    confirmOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'CONFIRMED' }),
-    processingOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'PROCESSING' }),
+    confirmOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'o1', status: 'CONFIRMED' }),
+    processingOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'o1', status: 'PROCESSING' }),
     packOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'PACKED' }),
-    dispatchOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'DISPATCHED' }),
-    deliverOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'DELIVERED' }),
-    partialDispatchOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'PARTIAL_DISPATCH' }),
-    partialDeliverOrder: jest.fn().mockResolvedValue({ id: 'o1', status: 'PARTIAL_DELIVER' }),
+    dispatchOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'o1', status: 'DISPATCHED' }),
+    deliverOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'o1', status: 'DELIVERED' }),
+    partialDispatchOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'o1', status: 'PARTIAL_DISPATCH' }),
+    partialDeliverOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'o1', status: 'PARTIAL_DELIVER' }),
   };
 
   const mockAuthGuard = { canActivate: jest.fn(() => true) };
@@ -30,14 +42,16 @@ describe('FulfillmentController (e2e)', () => {
         { provide: FulfillmentService, useValue: mockFulfillmentService },
       ],
     })
-      .overrideGuard(JwtAuthGuard).useValue({
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
         canActivate: (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest();
           req.user = mockUser;
           return true;
         },
       })
-      .overrideGuard(RolesGuard).useValue({
+      .overrideGuard(RolesGuard)
+      .useValue({
         canActivate: (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest();
           const roles = Reflect.getMetadata('roles', context.getHandler());
@@ -64,7 +78,11 @@ describe('FulfillmentController (e2e)', () => {
       .expect(200)
       .expect((res: any) => {
         expect(res.body.id).toEqual('o1');
-        expect(mockFulfillmentService.confirmOrder).toHaveBeenCalledWith('distributor-1', 'o1', { notes: 'Confirming' });
+        expect(mockFulfillmentService.confirmOrder).toHaveBeenCalledWith(
+          'distributor-1',
+          'o1',
+          { notes: 'Confirming' },
+        );
       });
   });
 

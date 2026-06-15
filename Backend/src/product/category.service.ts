@@ -7,12 +7,15 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 @Injectable()
 export class CategoryService {
   constructor(
-    @InjectRepository(ProductCategory) private categoryRepo: Repository<ProductCategory>,
+    @InjectRepository(ProductCategory)
+    private categoryRepo: Repository<ProductCategory>,
   ) {}
 
   async createCategory(dto: CreateCategoryDto) {
     if (dto.parent_id) {
-      const parent = await this.categoryRepo.findOne({ where: { id: dto.parent_id } });
+      const parent = await this.categoryRepo.findOne({
+        where: { id: dto.parent_id },
+      });
       if (!parent) throw new NotFoundException('Parent category not found');
     }
     const category = this.categoryRepo.create(dto);

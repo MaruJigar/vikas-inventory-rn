@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -15,14 +20,18 @@ import { PaginatedResponse } from '../common/interfaces/paginated-response.inter
 @Injectable()
 export class DistributorService {
   constructor(
-    @InjectRepository(Distributor) private distributorRepo: Repository<Distributor>,
-    @InjectRepository(ManufacturerDistributor) private manufacturerDistributorRepo: Repository<ManufacturerDistributor>,
+    @InjectRepository(Distributor)
+    private distributorRepo: Repository<Distributor>,
+    @InjectRepository(ManufacturerDistributor)
+    private manufacturerDistributorRepo: Repository<ManufacturerDistributor>,
     private dataSource: DataSource,
     private auditLogService: AuditLogService,
   ) {}
 
   async getProfile(userId: string) {
-    const profile = await this.distributorRepo.findOne({ where: { user_id: userId } });
+    const profile = await this.distributorRepo.findOne({
+      where: { user_id: userId },
+    });
     if (!profile) throw new NotFoundException('Distributor profile not found');
     return profile;
   }
@@ -33,31 +42,46 @@ export class DistributorService {
     return this.distributorRepo.save(profile);
   }
 
-  async getDistributors(actorUserId: string, role: string, queryDto: ListQueryDto): Promise<PaginatedResponse<Distributor>> {
-    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC' } = queryDto;
+  async getDistributors(
+    actorUserId: string,
+    role: string,
+    queryDto: ListQueryDto,
+  ): Promise<PaginatedResponse<Distributor>> {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      sortBy,
+      sortOrder = 'DESC',
+    } = queryDto;
     const skip = (page - 1) * limit;
 
     const qb = this.distributorRepo.createQueryBuilder('distributor');
 
     if (role === 'MANUFACTURER_ADMIN') {
       const manufacturerResult = await this.dataSource.query(
-        `SELECT id FROM manufacturers WHERE user_id = $1`, [actorUserId]
+        `SELECT id FROM manufacturers WHERE user_id = $1`,
+        [actorUserId],
       );
-      if (!manufacturerResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      if (!manufacturerResult.length)
+        throw new ForbiddenException('Manufacturer profile not found');
       const manufacturerId = manufacturerResult[0].id;
 
       qb.innerJoin(
         'manufacturer_distributors',
         'md',
         'md.distributor_id = distributor.id AND md.manufacturer_id = :manufacturerId',
-        { manufacturerId }
+        { manufacturerId },
       );
     } else if (role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Unauthorized role');
     }
 
     if (search) {
-      qb.andWhere('(distributor.business_name ILIKE :search OR distributor.email ILIKE :search)', { search: `%${search}%` });
+      qb.andWhere(
+        '(distributor.business_name ILIKE :search OR distributor.email ILIKE :search)',
+        { search: `%${search}%` },
+      );
     }
 
     const allowedSortFields = ['created_at', 'updated_at', 'business_name'];
@@ -84,20 +108,24 @@ export class DistributorService {
   }
 
   async getDistributorById(actorUserId: string, role: string, id: string) {
-    const qb = this.distributorRepo.createQueryBuilder('distributor').where('distributor.id = :id', { id });
+    const qb = this.distributorRepo
+      .createQueryBuilder('distributor')
+      .where('distributor.id = :id', { id });
 
     if (role === 'MANUFACTURER_ADMIN') {
       const manufacturerResult = await this.dataSource.query(
-        `SELECT id FROM manufacturers WHERE user_id = $1`, [actorUserId]
+        `SELECT id FROM manufacturers WHERE user_id = $1`,
+        [actorUserId],
       );
-      if (!manufacturerResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      if (!manufacturerResult.length)
+        throw new ForbiddenException('Manufacturer profile not found');
       const manufacturerId = manufacturerResult[0].id;
 
       qb.innerJoin(
         'manufacturer_distributors',
         'md',
         'md.distributor_id = distributor.id AND md.manufacturer_id = :manufacturerId',
-        { manufacturerId }
+        { manufacturerId },
       );
     } else if (role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Unauthorized role');
@@ -105,20 +133,30 @@ export class DistributorService {
 
     const distributor = await qb.getOne();
     if (!distributor) {
-      if (role === 'MANUFACTURER_ADMIN') throw new ForbiddenException('Unauthorized or Distributor not found');
+      if (role === 'MANUFACTURER_ADMIN')
+        throw new ForbiddenException('Unauthorized or Distributor not found');
       throw new NotFoundException('Distributor not found');
     }
     return distributor;
   }
 
-  async createDistributorAdmin(actorUserId: string, role: string, dto: CreateDistributorAdminDto) {
+  async createDistributorAdmin(
+    actorUserId: string,
+    role: string,
+    dto: CreateDistributorAdminDto,
+  ) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      const exists = await queryRunner.manager.findOne(User, { where: [{ email: dto.email }, { phone: dto.phone }] });
-      if (exists) throw new BadRequestException('User with email or phone already exists');
+      const exists = await queryRunner.manager.findOne(User, {
+        where: [{ email: dto.email }, { phone: dto.phone }],
+      });
+      if (exists)
+        throw new BadRequestException(
+          'User with email or phone already exists',
+        );
 
       const hashedPassword = await bcrypt.hash(dto.password, 10);
 
@@ -150,7 +188,9 @@ export class DistributorService {
       // Resolve Linkage
       let manufacturerId: string | null = null;
       if (role === 'MANUFACTURER_ADMIN') {
-        const mfr = await queryRunner.manager.findOne('Manufacturer', { where: { user_id: actorUserId } });
+        const mfr = await queryRunner.manager.findOne('Manufacturer', {
+          where: { user_id: actorUserId },
+        });
         if (mfr) manufacturerId = (mfr as any).id;
       } else if (role === 'SUPER_ADMIN' && dto.manufacturer_id) {
         manufacturerId = dto.manufacturer_id;
@@ -172,7 +212,7 @@ export class DistributorService {
         'DISTRIBUTOR',
         distributor.id,
         actorUserId,
-        { new_values: distributor }
+        { new_values: distributor },
       );
 
       return { user, profile: distributor };
@@ -184,7 +224,12 @@ export class DistributorService {
     }
   }
 
-  async updateDistributorAdmin(actorUserId: string, role: string, id: string, dto: UpdateDistributorAdminDto) {
+  async updateDistributorAdmin(
+    actorUserId: string,
+    role: string,
+    id: string,
+    dto: UpdateDistributorAdminDto,
+  ) {
     const distributor = await this.getDistributorById(actorUserId, role, id);
     const oldValues = { ...distributor };
     Object.assign(distributor, dto);
@@ -195,7 +240,7 @@ export class DistributorService {
       'DISTRIBUTOR',
       updated.id,
       actorUserId,
-      { old_values: oldValues, new_values: updated }
+      { old_values: oldValues, new_values: updated },
     );
 
     return updated;

@@ -1,13 +1,12 @@
 import { api } from '@/lib/api/axios';
-import { ApiResponse } from '@/types/api/common.types';
-import { AuthDto, UserDto } from '@/types/api/auth.types';
+import { AuthDto } from '@/types/api/auth.types';
 
 export interface LoginResponse {
-  accessToken: string;
-  user: UserDto;
+  access_token: string;
+  refresh_token: string;
 }
 
 export const authService = {
-  login: (data: AuthDto) => api.post<ApiResponse<LoginResponse>>('/auth/login', data).then(res => res.data),
-  refreshToken: () => api.post<ApiResponse<LoginResponse>>('/auth/refresh').then(res => res.data)
+  login: (data: AuthDto) => api.post<LoginResponse>('/auth/login', data).then(res => res.data),
+  refreshToken: () => api.post<LoginResponse>('/auth/refresh').then(res => res.data)
 };

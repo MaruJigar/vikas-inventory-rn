@@ -16,19 +16,19 @@ import { ManufacturerDistributor } from '../distributor/manufacturer-distributor
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      LocationLog, 
-      LatestLocation, 
-      Salesman, 
-      Distributor, 
-      WorkingDay, 
-      Manufacturer, 
-      ManufacturerDistributor
+      LocationLog,
+      LatestLocation,
+      Salesman,
+      Distributor,
+      WorkingDay,
+      Manufacturer,
+      ManufacturerDistributor,
     ]),
     AuditLogModule,
     SocketGatewayModule,
   ],
   controllers: [LocationController],
   providers: [LocationService],
-  exports: [LocationService]
+  exports: [LocationService],
 })
 export class LocationModule {}

@@ -16,9 +16,7 @@ describe('VisitController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [VisitController],
-      providers: [
-        { provide: VisitService, useValue: mockVisitService },
-      ],
+      providers: [{ provide: VisitService, useValue: mockVisitService }],
     }).compile();
 
     controller = module.get<VisitController>(VisitController);
@@ -29,22 +27,38 @@ describe('VisitController', () => {
   });
 
   it('startVisit', () => {
-    expect(controller.startVisit({ user: { userId: 'u1' } }, { shopId: 'shop1' })).resolves.toBeDefined();
+    expect(
+      controller.startVisit({ user: { userId: 'u1' } }, { shopId: 'shop1' }),
+    ).resolves.toBeDefined();
   });
 
   it('endVisit', () => {
-    expect(controller.endVisit({ user: { userId: 'u1' } }, { visitId: 'v1' })).resolves.toBeDefined();
+    expect(
+      controller.endVisit({ user: { userId: 'u1' } }, { visitId: 'v1' }),
+    ).resolves.toBeDefined();
   });
 
   it('noOrderVisit', () => {
-    expect(controller.noOrderVisit({ user: { userId: 'u1' } }, { visitId: 'v1', reason: 'reason' })).resolves.toBeDefined();
+    expect(
+      controller.noOrderVisit(
+        { user: { userId: 'u1' } },
+        { visitId: 'v1', reason: 'reason' },
+      ),
+    ).resolves.toBeDefined();
   });
 
   it('getVisits', () => {
-    expect(controller.getVisits({ user: { userId: 'u1', role: 'SALESMAN' } })).resolves.toBeDefined();
+    expect(
+      controller.getVisits({ user: { userId: 'u1', role: 'SALESMAN' } }),
+    ).resolves.toBeDefined();
   });
 
   it('getVisitById', () => {
-    expect(controller.getVisitById({ user: { userId: 'u1', role: 'SALESMAN' } }, 'v1')).resolves.toBeDefined();
+    expect(
+      controller.getVisitById(
+        { user: { userId: 'u1', role: 'SALESMAN' } },
+        'v1',
+      ),
+    ).resolves.toBeDefined();
   });
 });

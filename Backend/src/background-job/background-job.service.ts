@@ -15,7 +15,7 @@ export class BackgroundJobService {
   @Cron(CronExpression.EVERY_MINUTE)
   async processPendingJobs() {
     this.logger.debug('Polling background_jobs table for PENDING jobs...');
-    
+
     const pendingJobs = await this.jobRepo.find({
       where: { status: 'PENDING' },
       take: 10,
@@ -30,7 +30,7 @@ export class BackgroundJobService {
 
         // MOCK EXECUTION LOGIC
         this.logger.debug(`Executing job ${job.id} (${job.job_type})`);
-        
+
         job.status = 'COMPLETED';
         job.completed_at = new Date();
         await this.jobRepo.save(job);

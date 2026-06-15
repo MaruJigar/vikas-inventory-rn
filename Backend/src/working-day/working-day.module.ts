@@ -13,14 +13,14 @@ import { SocketGatewayModule } from '../socket-gateway/socket-gateway.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      WorkingDay, 
-      LocationLog, 
-      LatestLocation, 
-      Salesman, 
-      Distributor
+      WorkingDay,
+      LocationLog,
+      LatestLocation,
+      Salesman,
+      Distributor,
     ]),
     AuditLogModule,
-    SocketGatewayModule
+    SocketGatewayModule,
   ],
   controllers: [WorkingDayController],
   providers: [WorkingDayService],

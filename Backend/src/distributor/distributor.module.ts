@@ -7,7 +7,10 @@ import { Distributor } from './distributor.entity';
 import { ManufacturerDistributor } from './manufacturer-distributor.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Distributor, ManufacturerDistributor]), AuditLogModule],
+  imports: [
+    TypeOrmModule.forFeature([Distributor, ManufacturerDistributor]),
+    AuditLogModule,
+  ],
   providers: [DistributorService],
   controllers: [DistributorController],
   exports: [DistributorService],

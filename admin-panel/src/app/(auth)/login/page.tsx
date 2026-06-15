@@ -34,10 +34,36 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setError(null);
-      const response = await authService.login({ email: data.email, password: data.password });
-      if (response.data) {
-        login(response.data.user, response.data.accessToken);
-        router.push('/dashboard');
+      const response = await authService.login({ email_or_phone: data.email, password: data.password });
+      if (response && response.access_token) {
+        // Decode JWT to extract user info
+        const token = response.access_token;
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const payload = JSON.parse(jsonPayload);
+
+        const user = {
+          id: payload.sub,
+          userId: payload.sub,
+          email: payload.email,
+          role: payload.role,
+          name: payload.email.split('@')[0], // Fallback name
+        };
+
+        // Set cookies for Next.js middleware
+        document.cookie = `accessToken=${token}; path=/; max-age=604800; SameSite=Lax`;
+        document.cookie = `refreshToken=${response.refresh_token}; path=/; max-age=604800; SameSite=Lax`;
+
+        login(user as import('@/store/useAuthStore').User, token);
+        
+        if (payload.role === 'SALESMAN') {
+          router.push('/');
+        } else {
+          router.push('/dashboard');
+        }
       }
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {

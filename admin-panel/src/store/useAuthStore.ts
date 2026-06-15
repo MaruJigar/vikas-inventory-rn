@@ -18,10 +18,44 @@ interface AuthState {
   setLoading: (isLoading: boolean) => void;
 }
 
+function getInitialState() {
+  if (typeof window === 'undefined') return null;
+  
+  const token = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('accessToken='))
+    ?.split('=')[1] || localStorage.getItem('accessToken');
+    
+  if (!token) return null;
+  
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    const payload = JSON.parse(jsonPayload);
+    
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      return null;
+    }
+
+    return {
+      id: payload.sub,
+      userId: payload.sub,
+      email: payload.email,
+      role: payload.role,
+      name: payload.email ? payload.email.split('@')[0] : 'Admin',
+    };
+  } catch {
+    return null;
+  }
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
+  user: getInitialState() as User | null,
+  isAuthenticated: !!getInitialState(),
+  isLoading: false,
   login: (user, token) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('accessToken', token);
@@ -31,6 +65,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('accessToken');
+      document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     }
     set({ user: null, isAuthenticated: false, isLoading: false });
   },

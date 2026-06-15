@@ -28,7 +28,10 @@ describe('DistributorService - Ownership Governance', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DistributorService,
-        { provide: getRepositoryToken(Distributor), useValue: mockDistributorRepo },
+        {
+          provide: getRepositoryToken(Distributor),
+          useValue: mockDistributorRepo,
+        },
         { provide: getRepositoryToken(ManufacturerDistributor), useValue: {} },
         { provide: AuditLogService, useValue: {} },
         { provide: DataSource, useValue: mockDataSource },
@@ -47,7 +50,7 @@ describe('DistributorService - Ownership Governance', () => {
       mockDataSource.query.mockResolvedValueOnce([]); // No profile found
 
       await expect(
-        service.getDistributorById('user-1', 'MANUFACTURER_ADMIN', 'dist-1')
+        service.getDistributorById('user-1', 'MANUFACTURER_ADMIN', 'dist-1'),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -56,14 +59,14 @@ describe('DistributorService - Ownership Governance', () => {
       mockQueryBuilder.getOne.mockResolvedValueOnce(null); // Join failed to find the record
 
       await expect(
-        service.getDistributorById('user-1', 'MANUFACTURER_ADMIN', 'dist-1')
+        service.getDistributorById('user-1', 'MANUFACTURER_ADMIN', 'dist-1'),
       ).rejects.toThrow(ForbiddenException);
 
       expect(mockQueryBuilder.innerJoin).toHaveBeenCalledWith(
         'manufacturer_distributors',
         'md',
         'md.distributor_id = distributor.id AND md.manufacturer_id = :manufacturerId',
-        { manufacturerId: 'mfr-1' }
+        { manufacturerId: 'mfr-1' },
       );
     });
 
@@ -72,7 +75,11 @@ describe('DistributorService - Ownership Governance', () => {
       const dist = { id: 'dist-1', business_name: 'Test' };
       mockQueryBuilder.getOne.mockResolvedValueOnce(dist);
 
-      const result = await service.getDistributorById('user-1', 'MANUFACTURER_ADMIN', 'dist-1');
+      const result = await service.getDistributorById(
+        'user-1',
+        'MANUFACTURER_ADMIN',
+        'dist-1',
+      );
 
       expect(result).toEqual(dist);
     });
@@ -81,7 +88,11 @@ describe('DistributorService - Ownership Governance', () => {
       const dist = { id: 'dist-1', business_name: 'Test' };
       mockQueryBuilder.getOne.mockResolvedValueOnce(dist);
 
-      const result = await service.getDistributorById('user-2', 'SUPER_ADMIN', 'dist-1');
+      const result = await service.getDistributorById(
+        'user-2',
+        'SUPER_ADMIN',
+        'dist-1',
+      );
 
       expect(result).toEqual(dist);
       expect(mockQueryBuilder.innerJoin).not.toHaveBeenCalled();

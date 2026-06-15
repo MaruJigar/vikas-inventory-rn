@@ -3,6 +3,8 @@ import { McpModule } from '@nestjs-mcp/server';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -63,7 +65,39 @@ import { VisitModule } from './visit/visit.module';
       }),
     }),
     ScheduleModule.forRoot(),
-    AuthModule, UserModule, RolePermissionModule, ApprovalModule, ManufacturerModule, DistributorModule, SalesmanModule, ProductModule, ProductPricingModule, InventoryModule, ShopModule, ShopImageModule, ShopDuplicateDetectionModule, ShopVisitModule, OrderModule, OrderRevisionModule, BillingModule, BackorderModule, FulfillmentModule, LocationModule, WorkingDayModule, OfflineSyncModule, NotificationModule, SocketGatewayModule, FirebaseNotificationModule, AnalyticsModule, BackgroundJobModule, AuditLogModule, AdminPanelApiModule, HealthModule, McpToolsModule, VisitModule],
+    AuthModule,
+    UserModule,
+    RolePermissionModule,
+    ApprovalModule,
+    ManufacturerModule,
+    DistributorModule,
+    SalesmanModule,
+    ProductModule,
+    ProductPricingModule,
+    InventoryModule,
+    ShopModule,
+    ShopImageModule,
+    ShopDuplicateDetectionModule,
+    ShopVisitModule,
+    OrderModule,
+    OrderRevisionModule,
+    BillingModule,
+    BackorderModule,
+    FulfillmentModule,
+    LocationModule,
+    WorkingDayModule,
+    OfflineSyncModule,
+    NotificationModule,
+    SocketGatewayModule,
+    FirebaseNotificationModule,
+    AnalyticsModule,
+    BackgroundJobModule,
+    AuditLogModule,
+    AdminPanelApiModule,
+    HealthModule,
+    McpToolsModule,
+    VisitModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

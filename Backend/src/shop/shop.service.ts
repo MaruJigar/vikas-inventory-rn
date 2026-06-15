@@ -1,4 +1,9 @@
-import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Shop } from './shop.entity';
@@ -17,7 +22,7 @@ export class ShopService {
     @InjectRepository(Distributor) private distRepo: Repository<Distributor>,
     @InjectRepository(Salesman) private salesmanRepo: Repository<Salesman>,
     private duplicateDetectionService: ShopDuplicateDetectionService,
-    private dataSource: DataSource
+    private dataSource: DataSource,
   ) {}
 
   async createShop(dto: CreateShopDto, userId: string, userRole: string) {
@@ -25,7 +30,9 @@ export class ShopService {
     let salesmanId: string | undefined = undefined;
 
     if (userRole === 'SALESMAN') {
-      const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
+      const salesman = await this.salesmanRepo.findOne({
+        where: { user_id: userId },
+      });
       if (!salesman) throw new ForbiddenException('Salesman profile not found');
       distributorId = salesman.distributor_id;
       salesmanId = salesman.id;
@@ -34,7 +41,9 @@ export class ShopService {
       if (!dist) throw new ForbiddenException('Distributor profile not found');
       distributorId = dist.id;
     } else {
-      throw new ForbiddenException('Only distributors and salesmen can create shops');
+      throw new ForbiddenException(
+        'Only distributors and salesmen can create shops',
+      );
     }
 
     if (!dto.verification_photo_url) {
@@ -78,7 +87,7 @@ export class ShopService {
           matched_shop_id: dto.duplicate_bypass.matched_shop_id,
           match_type: dto.duplicate_bypass.match_type,
           action_taken: 'CREATED_ANYWAY',
-          created_by_user_id: userId
+          created_by_user_id: userId,
         });
       }
 
@@ -92,8 +101,21 @@ export class ShopService {
     }
   }
 
-  async getShops(userId: string, userRole: string, queryDto: ListQueryDto): Promise<PaginatedResponse<Shop>> {
-    const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC', startDate, endDate, status } = queryDto;
+  async getShops(
+    userId: string,
+    userRole: string,
+    queryDto: ListQueryDto,
+  ): Promise<PaginatedResponse<Shop>> {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      sortBy,
+      sortOrder = 'DESC',
+      startDate,
+      endDate,
+      status,
+    } = queryDto;
     const skip = (page - 1) * limit;
 
     const qb = this.shopRepo.createQueryBuilder('shop');
@@ -101,37 +123,54 @@ export class ShopService {
     if (userRole === 'SUPER_ADMIN') {
       // Global
     } else if (userRole === 'MANUFACTURER_ADMIN') {
-      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
-      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
-      
+      const mfrResult = await this.dataSource.query(
+        `SELECT id FROM manufacturers WHERE user_id = $1`,
+        [userId],
+      );
+      if (!mfrResult.length)
+        throw new ForbiddenException('Manufacturer profile not found');
+
       qb.innerJoin(
         'manufacturer_distributors',
         'md',
         'md.distributor_id = shop.distributor_id AND md.manufacturer_id = :mfrId',
-        { mfrId: mfrResult[0].id }
+        { mfrId: mfrResult[0].id },
       );
     } else if (userRole === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
       if (!dist) throw new ForbiddenException('Distributor profile not found');
       qb.andWhere('shop.distributor_id = :distId', { distId: dist.id });
     } else if (userRole === 'SALESMAN') {
-      const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
+      const salesman = await this.salesmanRepo.findOne({
+        where: { user_id: userId },
+      });
       if (!salesman) throw new ForbiddenException('Salesman profile not found');
-      qb.andWhere('shop.distributor_id = :distId', { distId: salesman.distributor_id });
+      qb.andWhere('shop.distributor_id = :distId', {
+        distId: salesman.distributor_id,
+      });
     } else {
       throw new ForbiddenException('Unauthorized role');
     }
 
     if (search) {
-      qb.andWhere('(shop.name ILIKE :search OR shop.phone ILIKE :search OR shop.owner_name ILIKE :search)', { search: `%${search}%` });
+      qb.andWhere(
+        '(shop.name ILIKE :search OR shop.phone ILIKE :search OR shop.owner_name ILIKE :search)',
+        { search: `%${search}%` },
+      );
     }
 
     if (status) {
       qb.andWhere('shop.verification_status = :status', { status });
     }
 
-    if (startDate) qb.andWhere('shop.created_at >= :startDate', { startDate: new Date(startDate) });
-    if (endDate) qb.andWhere('shop.created_at <= :endDate', { endDate: new Date(endDate) });
+    if (startDate)
+      qb.andWhere('shop.created_at >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    if (endDate)
+      qb.andWhere('shop.created_at <= :endDate', {
+        endDate: new Date(endDate),
+      });
 
     const allowedSortFields = ['created_at', 'updated_at', 'name'];
     if (sortBy && allowedSortFields.includes(sortBy)) {
@@ -157,28 +196,38 @@ export class ShopService {
   }
 
   async getShopById(id: string, userId: string, userRole: string) {
-    const qb = this.shopRepo.createQueryBuilder('shop').where('shop.id = :id', { id });
+    const qb = this.shopRepo
+      .createQueryBuilder('shop')
+      .where('shop.id = :id', { id });
 
     if (userRole === 'SUPER_ADMIN') {
       // Global
     } else if (userRole === 'MANUFACTURER_ADMIN') {
-      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
-      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
-      
+      const mfrResult = await this.dataSource.query(
+        `SELECT id FROM manufacturers WHERE user_id = $1`,
+        [userId],
+      );
+      if (!mfrResult.length)
+        throw new ForbiddenException('Manufacturer profile not found');
+
       qb.innerJoin(
         'manufacturer_distributors',
         'md',
         'md.distributor_id = shop.distributor_id AND md.manufacturer_id = :mfrId',
-        { mfrId: mfrResult[0].id }
+        { mfrId: mfrResult[0].id },
       );
     } else if (userRole === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
       if (!dist) throw new ForbiddenException('Distributor profile not found');
       qb.andWhere('shop.distributor_id = :distId', { distId: dist.id });
     } else if (userRole === 'SALESMAN') {
-      const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
+      const salesman = await this.salesmanRepo.findOne({
+        where: { user_id: userId },
+      });
       if (!salesman) throw new ForbiddenException('Salesman profile not found');
-      qb.andWhere('shop.distributor_id = :distId', { distId: salesman.distributor_id });
+      qb.andWhere('shop.distributor_id = :distId', {
+        distId: salesman.distributor_id,
+      });
     } else {
       throw new ForbiddenException('Unauthorized role');
     }
@@ -189,7 +238,12 @@ export class ShopService {
     return shop;
   }
 
-  async updateShop(id: string, dto: UpdateShopDto, userId: string, userRole: string) {
+  async updateShop(
+    id: string,
+    dto: UpdateShopDto,
+    userId: string,
+    userRole: string,
+  ) {
     const shop = await this.getShopById(id, userId, userRole);
 
     if (userRole === 'MANUFACTURER_ADMIN') {

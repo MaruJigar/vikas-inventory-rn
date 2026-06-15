@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+  Query,
+} from '@nestjs/common';
 import { ProductService } from './product.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
@@ -6,26 +16,56 @@ import { Roles } from '../role-permission/roles.decorator';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ListQueryDto } from '../common/dto/list-query.dto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiBadRequestResponse,
+  ApiUnauthorizedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+} from '@nestjs/swagger';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
+import { Product } from './product.entity';
 
 @Controller('products')
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags('Product')
 export class ProductController {
   constructor(private productService: ProductService) {}
 
   @Roles('MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Post()
+  @ApiOperation({ summary: 'Create Product' })
+  @ApiBearerAuth('bearer')
   createProduct(@Request() req, @Body() dto: CreateProductDto) {
     return this.productService.createProduct(req.user.userId, dto);
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get Products' })
+  @ApiBearerAuth('bearer')
+  @ApiPaginatedResponse(Product)
   getProducts(@Request() req, @Query() query: ListQueryDto) {
-    return this.productService.getProducts(req.user.userId, req.user.role, query);
+    return this.productService.getProducts(
+      req.user.userId,
+      req.user.role,
+      query,
+    );
   }
 
   @Roles('MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Put(':id')
-  updateProduct(@Request() req, @Param('id') id: string, @Body() dto: UpdateProductDto) {
+  @ApiOperation({ summary: 'Update Product' })
+  @ApiBearerAuth('bearer')
+  updateProduct(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: UpdateProductDto,
+  ) {
     return this.productService.updateProduct(req.user.userId, id, dto);
   }
 }

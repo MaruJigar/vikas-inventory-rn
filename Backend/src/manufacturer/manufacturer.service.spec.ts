@@ -25,8 +25,8 @@ describe('ManufacturerService', () => {
         findOne: jest.fn(),
         create: jest.fn(),
         save: jest.fn(),
-      }
-    })
+      },
+    }),
   };
 
   beforeEach(async () => {
@@ -40,7 +40,7 @@ describe('ManufacturerService', () => {
         {
           provide: DataSource,
           useValue: mockDataSource,
-        }
+        },
       ],
     }).compile();
 
@@ -58,10 +58,15 @@ describe('ManufacturerService', () => {
   describe('createProfile', () => {
     it('should create and save a new profile', async () => {
       mockManufacturerRepo.findOne.mockResolvedValue(null);
-      mockManufacturerRepo.create.mockReturnValue({ id: 'man1', company_name: 'TechCorp' });
+      mockManufacturerRepo.create.mockReturnValue({
+        id: 'man1',
+        company_name: 'TechCorp',
+      });
       mockManufacturerRepo.save.mockImplementation(async (val) => val);
 
-      const result = await service.createProfile('user1', { company_name: 'TechCorp' });
+      const result = await service.createProfile('user1', {
+        company_name: 'TechCorp',
+      });
       expect(result.id).toBe('man1');
       expect(mockManufacturerRepo.save).toHaveBeenCalled();
     });
@@ -70,8 +75,13 @@ describe('ManufacturerService', () => {
   describe('linkDistributor', () => {
     it('should link distributor using transaction', async () => {
       const qr = mockDataSource.createQueryRunner();
-      qr.manager.findOne.mockResolvedValueOnce({ id: 'man1' }).mockResolvedValueOnce({ id: 'dist1' });
-      qr.manager.create.mockReturnValue({ manufacturer_id: 'man1', distributor_id: 'dist1' });
+      qr.manager.findOne
+        .mockResolvedValueOnce({ id: 'man1' })
+        .mockResolvedValueOnce({ id: 'dist1' });
+      qr.manager.create.mockReturnValue({
+        manufacturer_id: 'man1',
+        distributor_id: 'dist1',
+      });
       qr.manager.save.mockResolvedValue(true);
 
       const result = await service.linkDistributor('man1', 'dist1');
@@ -85,7 +95,9 @@ describe('ManufacturerService', () => {
       const qr = mockDataSource.createQueryRunner();
       qr.manager.findOne.mockResolvedValueOnce(null);
 
-      await expect(service.linkDistributor('man1', 'dist1')).rejects.toThrow(NotFoundException);
+      await expect(service.linkDistributor('man1', 'dist1')).rejects.toThrow(
+        NotFoundException,
+      );
       expect(qr.rollbackTransaction).toHaveBeenCalled();
       expect(qr.release).toHaveBeenCalled();
     });

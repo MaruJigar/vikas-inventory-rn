@@ -52,10 +52,10 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuthStore();
 
-  // If no user, fallback to SUPER_ADMIN for dev structure scaffolding
-  const role = user?.role || 'SUPER_ADMIN';
+  // Do not default to SUPER_ADMIN to avoid leakage. If no user/role, show no items.
+  const role = user?.role;
 
-  const filteredItems = navItems.filter(item => hasRole(role, item.roles));
+  const filteredItems = role ? navItems.filter(item => hasRole(role, item.roles)) : [];
 
   return (
     <div className="w-64 bg-slate-900 text-white min-h-screen flex flex-col">

@@ -28,10 +28,10 @@ describe('AuthService', () => {
             create: jest.fn().mockReturnValue({ id: 'user123' }),
             save: jest.fn(),
             insert: jest.fn(),
-          }
-        })
-      }
-    }
+          },
+        }),
+      },
+    },
   };
 
   const mockJwtService = {
@@ -80,36 +80,55 @@ describe('AuthService', () => {
       mockUserRepo.findOne.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.validateUser('test', 'wrong')).rejects.toThrow(UnauthorizedException);
+      await expect(service.validateUser('test', 'wrong')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
   describe('login', () => {
     it('should return access and refresh tokens', async () => {
-      const mockUser = { id: '1', email: 'test@test.com', role: 'SALESMAN', approval_status: 'APPROVED' } as User;
+      const mockUser = {
+        id: '1',
+        email: 'test@test.com',
+        role: 'SALESMAN',
+        approval_status: 'APPROVED',
+      } as User;
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_refresh');
-      
+
       const result = await service.login(mockUser);
       expect(result.access_token).toBe('mock_token');
       expect(result.refresh_token).toBe('mock_token');
-      expect(mockUserRepo.update).toHaveBeenCalledWith('1', expect.objectContaining({ hashed_refresh_token: 'hashed_refresh' }));
+      expect(mockUserRepo.update).toHaveBeenCalledWith(
+        '1',
+        expect.objectContaining({ hashed_refresh_token: 'hashed_refresh' }),
+      );
     });
   });
 
   describe('registerDistributor', () => {
     it('should execute transaction to create User and Distributor', async () => {
       mockUserRepo.findOne.mockResolvedValue(null); // No existing user
-      const dto = { full_name: 'John', email: 'j@j.com', phone: '123', password: 'pass', business_name: 'Biz' };
-      
-      const result = await service.registerDistributor(dto as any);
+      const dto = {
+        full_name: 'John',
+        email: 'j@j.com',
+        phone: '123',
+        password: 'pass',
+        business_name: 'Biz',
+      };
+
+      const result = await service.registerDistributor(dto);
       expect(result.message).toContain('Distributor registered successfully');
-      
+
       // Check query runner was used
       const qr = mockUserRepo.manager.connection.createQueryRunner();
       expect(qr.connect).toHaveBeenCalled();
       expect(qr.startTransaction).toHaveBeenCalled();
       expect(qr.manager.save).toHaveBeenCalled();
-      expect(qr.manager.insert).toHaveBeenCalledWith('distributors', expect.any(Object));
+      expect(qr.manager.insert).toHaveBeenCalledWith(
+        'distributors',
+        expect.any(Object),
+      );
       expect(qr.commitTransaction).toHaveBeenCalled();
       expect(qr.release).toHaveBeenCalled();
     });

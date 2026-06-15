@@ -1,4 +1,10 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import { Response } from 'express';
 
@@ -9,7 +15,7 @@ export class DatabaseExceptionFilter implements ExceptionFilter {
   catch(exception: QueryFailedError, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    
+
     this.logger.error(`Database Error: ${exception.message}`);
 
     response.status(HttpStatus.BAD_REQUEST).json({

@@ -36,10 +36,18 @@ export class Orders1781416495400 implements MigrationInterface {
       );
     `);
 
-    await queryRunner.query(`CREATE INDEX "idx_orders_visit_id" ON "orders"("visit_id");`);
-    await queryRunner.query(`CREATE INDEX "idx_orders_salesman_id" ON "orders"("salesman_id");`);
-    await queryRunner.query(`CREATE INDEX "idx_orders_distributor_id" ON "orders"("distributor_id");`);
-    await queryRunner.query(`CREATE INDEX "idx_orders_status" ON "orders"("status");`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_orders_visit_id" ON "orders"("visit_id");`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_orders_salesman_id" ON "orders"("salesman_id");`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_orders_distributor_id" ON "orders"("distributor_id");`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_orders_status" ON "orders"("status");`,
+    );
     await queryRunner.query(`
       CREATE UNIQUE INDEX "idx_orders_idempotency_key"
       ON "orders"("idempotency_key")
@@ -71,7 +79,9 @@ export class Orders1781416495400 implements MigrationInterface {
         "updated_at" TIMESTAMP NOT NULL DEFAULT NOW()
       );
     `);
-    await queryRunner.query(`CREATE INDEX "idx_order_items_order_id" ON "order_items"("order_id");`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_order_items_order_id" ON "order_items"("order_id");`,
+    );
 
     // order_revisions
     await queryRunner.query(`
@@ -122,9 +132,15 @@ export class Orders1781416495400 implements MigrationInterface {
         "updated_at" TIMESTAMP NOT NULL DEFAULT NOW()
       );
     `);
-    await queryRunner.query(`CREATE INDEX "idx_backorders_order_id" ON "backorders"("order_id");`);
-    await queryRunner.query(`CREATE INDEX "idx_backorders_distributor_id" ON "backorders"("distributor_id");`);
-    await queryRunner.query(`CREATE INDEX "idx_backorders_status" ON "backorders"("status");`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_backorders_order_id" ON "backorders"("order_id");`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_backorders_distributor_id" ON "backorders"("distributor_id");`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_backorders_status" ON "backorders"("status");`,
+    );
 
     // fulfillment_logs
     await queryRunner.query(`

@@ -34,3 +34,30 @@ export interface CreateProductDto {
 }
 
 export type UpdateProductDto = Partial<CreateProductDto>;
+
+export interface CategoryDto {
+  id: string;
+  name: string;
+  parent_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCategoryDto {
+  name: string;
+  parent_id?: string;
+}
+
+export interface PricingHistoryDto {
+  id: string;
+  product_id: string;
+  old_mrp: number;
+  new_mrp: number;
+  old_distributor_discount_percent: number;
+  new_distributor_discount_percent: number;
+  old_special_discount_percent: number;
+  new_special_discount_percent: number;
+  changed_by_user_id: string;
+  changed_by_user_name: string;
+  created_at: string;
+}

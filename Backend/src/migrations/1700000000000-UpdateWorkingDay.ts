@@ -1,4 +1,9 @@
-import { MigrationInterface, QueryRunner, TableColumn, TableIndex } from 'typeorm';
+import {
+  MigrationInterface,
+  QueryRunner,
+  TableColumn,
+  TableIndex,
+} from 'typeorm';
 
 export class UpdateWorkingDay1700000000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -10,7 +15,7 @@ export class UpdateWorkingDay1700000000000 implements MigrationInterface {
         length: '150',
         isNullable: true,
         isUnique: true,
-      })
+      }),
     );
 
     await queryRunner.createIndex(
@@ -20,7 +25,7 @@ export class UpdateWorkingDay1700000000000 implements MigrationInterface {
         columnNames: ['salesman_id'],
         isUnique: true,
         where: "status = 'ACTIVE'",
-      })
+      }),
     );
   }
 
