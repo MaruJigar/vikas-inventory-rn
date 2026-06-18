@@ -8,4 +8,10 @@ export const shopService = {
   getShops: (params?: QueryParams) => api.get<PaginatedResponse<ShopDto>>('/shops', { params }).then(res => res.data),
   getShopById: (id: string) => api.get<ApiResponse<ShopDto>>(`/shops/${id}`).then(res => res.data),
   updateShop: (id: string, data: UpdateShopDto) => api.patch<ApiResponse<ShopDto>>(`/shops/${id}`, data).then(res => res.data),
+  uploadShopImage: (shopId: string, formData: FormData) => 
+    api.post<ApiResponse<{ url: string }>>(`/shop-images/${shopId}/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }).then(res => res.data),
 };

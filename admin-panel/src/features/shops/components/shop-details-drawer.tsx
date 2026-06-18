@@ -1,5 +1,6 @@
 import { ShopDto } from '@/types/api/shop.types';
 import { formatDate } from '@/lib/utils';
+import { getImageUrl } from '@/lib/utils/image';
 import { ShopStatusBadge } from './shop-status-badge';
 import Image from 'next/image';
 import { EntityFormDrawer } from '@/components/shared/EntityFormDrawer';
@@ -28,7 +29,7 @@ export function ShopDetailsDrawer({ shop, isOpen, onClose }: ShopDetailsDrawerPr
             <div className="relative h-24 w-24 overflow-hidden rounded-lg border bg-slate-100 flex-shrink-0">
               {shop.verification_photo_url ? (
                 <Image
-                  src={process.env.NEXT_PUBLIC_API_URL + shop.verification_photo_url}
+                  src={getImageUrl(shop.verification_photo_url)}
                   alt={shop.name}
                   fill
                   className="object-cover"
