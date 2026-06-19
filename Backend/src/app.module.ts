@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { McpModule } from '@nestjs-mcp/server';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -37,10 +39,25 @@ import { BackgroundJobModule } from './background-job/background-job.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { AdminPanelApiModule } from './admin-panel-api/admin-panel-api.module';
 import { HealthModule } from './health/health.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { McpToolsModule } from './mcp-tools/mcp-tools.module';
 import { VisitModule } from './visit/visit.module';
+import { QueueModule } from './queue/queue.module';
+
+import { appConfig } from './config/app.config';
+import { databaseConfig } from './config/database.config';
+import { jwtConfig } from './config/jwt.config';
+import { rateLimitConfig } from './config/rate-limit.config';
+import { metricsConfig } from './config/metrics.config';
+import { queueConfig } from './config/queue.config';
+import { validateEnv } from './config/env.validation';
+import { ApiThrottlerGuard } from './common/guards/api-throttler.guard';
 
 import { getUploadRoot } from './common/utils/upload-path.util';
+import { requestIdMiddleware } from './common/middleware/request-id.middleware';
+import { MetricsMiddleware } from './common/middleware/metrics.middleware';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
 @Module({
   imports: [
@@ -54,20 +71,37 @@ import { getUploadRoot } from './common/utils/upload-path.util';
     }),
     ConfigModule.forRoot({
       isGlobal: true,
+      validate: validateEnv,
+      load: [appConfig, databaseConfig, jwtConfig, rateLimitConfig, metricsConfig, queueConfig],
+    }),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          name: 'default',
+          ttl: config.get<number>('rateLimit.global.ttl', 60000),
+          limit: config.get<number>('rateLimit.global.max', 100),
+        },
+        {
+          name: 'auth',
+          ttl: config.get<number>('rateLimit.auth.ttl', 60000),
+          limit: config.get<number>('rateLimit.auth.max', 5),
+        },
+      ],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
+      inject: [databaseConfig.KEY, ConfigService],
+      useFactory: (dbConfigService: any, configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get<string>('DB_HOST', 'localhost'),
-        port: configService.get<number>('DB_PORT', 5432),
-        username: configService.get<string>('DB_USER', 'postgres'),
-        password: configService.get<string>('DB_PASS', 'postgres'),
-        database: configService.get<string>('DB_NAME', 'vikas_inventory'),
+        host: dbConfigService.host,
+        port: dbConfigService.port,
+        username: dbConfigService.user,
+        password: dbConfigService.password,
+        database: dbConfigService.name,
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, // Should be false in production
-        logging: true,
+        synchronize: configService.get<string>('NODE_ENV') !== 'production',
+        logging: configService.get<string>('NODE_ENV') !== 'production',
       }),
     }),
     ScheduleModule.forRoot(),
@@ -101,10 +135,23 @@ import { getUploadRoot } from './common/utils/upload-path.util';
     AuditLogModule,
     AdminPanelApiModule,
     HealthModule,
+    MetricsModule,
     McpToolsModule,
     VisitModule,
+    QueueModule.forRoot(),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ApiThrottlerGuard,
+    },
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(requestIdMiddleware).forRoutes('*');
+    consumer.apply(MetricsMiddleware).forRoutes('*');
+  }
+}

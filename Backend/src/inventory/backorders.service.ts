@@ -14,7 +14,7 @@ import { OrderItem } from '../order/order-item.entity';
 import { Order } from '../order/order.entity';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AppSocketGateway } from '../socket-gateway/socket.gateway';
-import { NotificationService } from '../notification/notification.service';
+import { NotificationQueueService } from '../notification/notification-queue.service';
 import { InventoryMovement } from './inventory-movement.entity';
 
 @Injectable()
@@ -25,7 +25,7 @@ export class BackordersService {
     private readonly dataSource: DataSource,
     private readonly auditLogService: AuditLogService,
     private readonly socketGateway: AppSocketGateway,
-    private readonly notificationService: NotificationService,
+    private readonly notificationQueueService: NotificationQueueService,
   ) {}
 
   async listBackorders(
@@ -322,7 +322,8 @@ export class BackordersService {
       );
 
       if (order && backorder.status === 'RESOLVED') {
-        await this.notificationService.createNotification(
+        // Enqueue notification safely out-of-band
+        await this.notificationQueueService.enqueueNotification(
           order.salesman_id,
           'SALESMAN',
           'Backorder Resolved',

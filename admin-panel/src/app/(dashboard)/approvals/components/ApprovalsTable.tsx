@@ -80,8 +80,8 @@ export function ApprovalsTable({ approvals, isLoading, onRowClick }: ApprovalsTa
               onClick={() => onRowClick(approval)}
             >
               <TableCell className="font-medium">{approval.id.substring(0, 8)}...</TableCell>
-              <TableCell>{approval.type}</TableCell>
-              <TableCell>{approval.requested_by || 'N/A'}</TableCell>
+              <TableCell>{approval.request_type}</TableCell>
+              <TableCell>{approval.requester_user_id || 'N/A'}</TableCell>
               <TableCell>
                 <Badge className={getStatusColor(approval.status)} variant="outline">
                   {approval.status}
