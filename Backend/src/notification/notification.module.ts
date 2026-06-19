@@ -8,6 +8,7 @@ import { NotificationProcessor } from './notification.processor';
 import { AuditLogModule } from '../audit-log/audit-log.module';
 import { SocketGatewayModule } from '../socket-gateway/socket-gateway.module';
 import { BullModule } from '@nestjs/bullmq';
+import { MetricsModule } from '../metrics/metrics.module';
 
 @Global()
 @Module({
@@ -15,6 +16,7 @@ import { BullModule } from '@nestjs/bullmq';
     TypeOrmModule.forFeature([Notification]),
     AuditLogModule,
     SocketGatewayModule,
+    MetricsModule,
   ],
   controllers: [NotificationController],
   providers: [NotificationService, NotificationQueueService, NotificationProcessor],
