@@ -3,7 +3,12 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Distributor } from '../distributor/distributor.entity';
+import { Shop } from '../shop/shop.entity';
+import { User } from '../user/user.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('shop_duplicate_logs')
@@ -15,6 +20,10 @@ export class ShopDuplicateLog {
   @Column({ type: 'uuid', nullable: true })
   @ApiPropertyOptional({ description: 'Distributor id' })
   distributor_id: string;
+
+  @ManyToOne(() => Distributor)
+  @JoinColumn({ name: 'distributor_id' })
+  distributor: Distributor;
 
   @Column({ type: 'varchar', length: 200, nullable: true })
   @ApiPropertyOptional({ description: 'Attempted shop name' })
@@ -37,6 +46,10 @@ export class ShopDuplicateLog {
   @ApiPropertyOptional({ description: 'Matched shop id' })
   matched_shop_id: string;
 
+  @ManyToOne(() => Shop)
+  @JoinColumn({ name: 'matched_shop_id' })
+  matched_shop: Shop;
+
   @Column({ type: 'varchar', length: 50, nullable: true })
   @ApiPropertyOptional({ description: 'Match type' })
   match_type: string;
@@ -52,6 +65,10 @@ export class ShopDuplicateLog {
   @Column({ type: 'uuid', nullable: true })
   @ApiPropertyOptional({ description: 'Created by user id' })
   created_by_user_id: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'created_by_user_id' })
+  created_by_user: User;
 
   @CreateDateColumn()
   @ApiProperty({ description: 'Created at' })

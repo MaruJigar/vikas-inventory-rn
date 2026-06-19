@@ -15,7 +15,8 @@ import { AuditLogService } from '../audit-log/audit-log.service';
 import { AppSocketGateway } from '../socket-gateway/socket.gateway';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
 import { Distributor } from '../distributor/distributor.entity';
-import { NotificationService } from '../notification/notification.service';
+import { Salesman } from '../salesman/salesman.entity';
+import { NotificationQueueService } from '../notification/notification-queue.service';
 
 @Injectable()
 export class ApprovalService {
@@ -27,7 +28,7 @@ export class ApprovalService {
     private dataSource: DataSource,
     private auditLogService: AuditLogService,
     private socketGateway: AppSocketGateway,
-    private notificationService: NotificationService,
+    private notificationQueueService: NotificationQueueService,
   ) {}
 
   async createRequest(type: string, requesterId: string, metadata: any) {
@@ -110,6 +111,53 @@ export class ApprovalService {
         }
       }
 
+      // Sync Salesman entity
+      if (request.salesman_id) {
+        const salesman = await queryRunner.manager.findOne(Salesman, {
+          where: { id: request.salesman_id },
+        });
+        if (salesman) {
+          salesman.approval_status = status;
+          salesman.is_active = status === 'APPROVED';
+          salesman.approved_by_user_id = currentUser.userId;
+          salesman.approved_at = new Date();
+          if (reason) salesman.rejected_reason = reason;
+          await queryRunner.manager.save(salesman);
+        }
+      }
+
+      // Sync Distributor entity
+      if (
+        request.distributor_id &&
+        request.request_type === 'DISTRIBUTOR_APPROVAL'
+      ) {
+        const distributor = await queryRunner.manager.findOne(Distributor, {
+          where: { id: request.distributor_id },
+        });
+        if (distributor) {
+          distributor.approval_status = status;
+          distributor.is_active = status === 'APPROVED';
+          distributor.approved_by_user_id = currentUser.userId;
+          distributor.approved_at = new Date();
+          if (reason) distributor.rejected_reason = reason;
+          await queryRunner.manager.save(distributor);
+        }
+      }
+
+      // Sync Manufacturer entity
+      if (
+        request.manufacturer_id &&
+        request.request_type === 'MANUFACTURER_APPROVAL'
+      ) {
+        const manufacturer = await queryRunner.manager.findOne(Manufacturer, {
+          where: { id: request.manufacturer_id },
+        });
+        if (manufacturer) {
+          manufacturer.is_active = status === 'APPROVED';
+          await queryRunner.manager.save(manufacturer);
+        }
+      }
+
       await queryRunner.commitTransaction();
 
       // Post Transaction: Audit Logs & Socket
@@ -153,7 +201,8 @@ export class ApprovalService {
             ? `${rolePrefix}_APPROVED`
             : `${rolePrefix}_REJECTED`;
 
-        await this.notificationService.createNotification(
+        // Enqueue notification safely out-of-band
+        await this.notificationQueueService.enqueueNotification(
           request.requester_user_id,
           rolePrefix,
           `Request ${status}`,

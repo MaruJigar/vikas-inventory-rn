@@ -5,7 +5,7 @@ import { Backorder } from '../order/backorder.entity';
 import { DataSource } from 'typeorm';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AppSocketGateway } from '../socket-gateway/socket.gateway';
-import { NotificationService } from '../notification/notification.service';
+import { NotificationQueueService } from '../notification/notification-queue.service';
 import {
   BadRequestException,
   ForbiddenException,
@@ -43,7 +43,7 @@ describe('BackordersService', () => {
 
   const mockAuditLogService = { logAction: jest.fn() };
   const mockSocketGateway = { broadcastToRoom: jest.fn() };
-  const mockNotificationService = { createNotification: jest.fn() };
+  const mockNotificationService = { enqueueNotification: jest.fn() };
 
   const mockQueryBuilder = {
     leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -113,7 +113,7 @@ describe('BackordersService', () => {
         { provide: DataSource, useValue: mockDataSource },
         { provide: AuditLogService, useValue: mockAuditLogService },
         { provide: AppSocketGateway, useValue: mockSocketGateway },
-        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: NotificationQueueService, useValue: mockNotificationService },
       ],
     }).compile();
 
@@ -198,7 +198,7 @@ describe('BackordersService', () => {
         'backorder:resolved',
         expect.any(Object),
       );
-      expect(mockNotificationService.createNotification).toHaveBeenCalledWith(
+      expect(mockNotificationService.enqueueNotification).toHaveBeenCalledWith(
         's1',
         'BACKORDER_RESOLVED_ALERT',
         expect.any(String),

@@ -5,10 +5,13 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
+  Index,
 } from 'typeorm';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('salesmen')
+@Index('idx_salesmen_dist_status', ['distributor_id', 'approval_status'])
+@Index('idx_salesmen_created_at', ['created_at'])
 export class Salesman {
   @PrimaryGeneratedColumn('uuid')
   @ApiProperty({ description: 'Id' })

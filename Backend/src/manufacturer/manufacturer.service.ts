@@ -176,6 +176,22 @@ export class ManufacturerService {
     Object.assign(manufacturer, dto);
     const updated = await this.manufacturerRepo.save(manufacturer);
 
+    if (
+      manufacturer.user_id &&
+      (dto.email || dto.phone || dto.contact_person)
+    ) {
+      const userRepo = this.dataSource.getRepository(User);
+      const user = await userRepo.findOne({
+        where: { id: manufacturer.user_id },
+      });
+      if (user) {
+        if (dto.email) user.email = dto.email;
+        if (dto.phone) user.phone = dto.phone;
+        if (dto.contact_person) user.full_name = dto.contact_person;
+        await userRepo.save(user);
+      }
+    }
+
     await this.auditLogService.logAction(
       'MANUFACTURER_UPDATED',
       'MANUFACTURER',

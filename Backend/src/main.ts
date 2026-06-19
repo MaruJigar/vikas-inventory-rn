@@ -1,7 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-import { DatabaseExceptionFilter } from './common/filters/database-exception.filter';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { requestIdMiddleware } from './common/middleware/request-id.middleware';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,15 +17,26 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  app.useGlobalFilters(new DatabaseExceptionFilter());
+  app.use(requestIdMiddleware);
+  app.useGlobalInterceptors(new LoggingInterceptor());
+
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
+  });
+
+  const configService = app.get(ConfigService);
+  const appConfig = configService.get('app');
+
+  app.useGlobalFilters(new GlobalExceptionFilter(configService));
 
   app.enableCors({
     origin: [
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:8081',
-      process.env.ADMIN_PANEL_URL,
-      process.env.REACT_NATIVE_WEB_URL,
+      appConfig.adminPanelUrl,
+      appConfig.reactNativeWebUrl,
     ].filter(Boolean) as string[],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -71,6 +85,6 @@ async function bootstrap() {
     JSON.stringify(document, null, 2),
   );
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(appConfig.port);
 }
 bootstrap();

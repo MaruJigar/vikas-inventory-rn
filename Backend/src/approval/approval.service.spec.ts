@@ -31,7 +31,7 @@ describe('ApprovalService', () => {
     mockUserRepo = { findOne: jest.fn() };
     mockAuditLogService = { logAction: jest.fn() };
     mockSocketGateway = { broadcastToRoom: jest.fn() };
-    mockNotificationService = { createNotification: jest.fn() };
+    mockNotificationService = { enqueueNotification: jest.fn() };
 
     mockDataSource = {
       getRepository: jest.fn((entity) => {
@@ -92,8 +92,8 @@ describe('ApprovalService', () => {
         { provide: AuditLogService, useValue: mockAuditLogService },
         { provide: AppSocketGateway, useValue: mockSocketGateway },
         {
-          provide: require('../notification/notification.service')
-            .NotificationService,
+          provide: require('../notification/notification-queue.service')
+            .NotificationQueueService,
           useValue: mockNotificationService,
         },
         { provide: DataSource, useValue: mockDataSource },

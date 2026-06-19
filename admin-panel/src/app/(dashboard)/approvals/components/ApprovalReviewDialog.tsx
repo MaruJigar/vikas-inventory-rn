@@ -70,11 +70,11 @@ export function ApprovalReviewDialog({ approval, open, onOpenChange }: ApprovalR
           </div>
           <div className="grid grid-cols-3 gap-4 border-b pb-4">
             <div className="font-medium text-sm text-gray-500">Type</div>
-            <div className="col-span-2 text-sm">{approval.type}</div>
+            <div className="col-span-2 text-sm">{approval.request_type}</div>
           </div>
           <div className="grid grid-cols-3 gap-4 border-b pb-4">
             <div className="font-medium text-sm text-gray-500">Requester</div>
-            <div className="col-span-2 text-sm">{approval.requested_by || 'Unknown'}</div>
+            <div className="col-span-2 text-sm">{approval.requester_user_id || 'Unknown'}</div>
           </div>
           <div className="grid grid-cols-3 gap-4 border-b pb-4">
             <div className="font-medium text-sm text-gray-500">Date</div>

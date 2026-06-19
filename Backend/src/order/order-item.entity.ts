@@ -4,7 +4,11 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Order } from './order.entity';
+import { Product } from '../product/product.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('order_items')
@@ -17,9 +21,17 @@ export class OrderItem {
   @ApiProperty({ description: 'Order id' })
   order_id: string;
 
+  @ManyToOne(() => Order)
+  @JoinColumn({ name: 'order_id' })
+  order: Order;
+
   @Column({ type: 'uuid' })
   @ApiProperty({ description: 'Product id' })
   product_id: string;
+
+  @ManyToOne(() => Product)
+  @JoinColumn({ name: 'product_id' })
+  product: Product;
 
   @Column({ type: 'varchar', length: 200 })
   @ApiProperty({ description: 'Product name snapshot' })

@@ -5,10 +5,19 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
 } from 'typeorm';
+import { Manufacturer } from '../manufacturer/manufacturer.entity';
+import { Distributor } from '../distributor/distributor.entity';
+import { ProductCategory } from './product-category.entity';
+import { User } from '../user/user.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('products')
+@Index('idx_products_mfr_cat', ['manufacturer_id', 'category_id'])
+@Index('idx_products_created_at', ['created_at'])
 export class Product {
   @PrimaryGeneratedColumn('uuid')
   @ApiProperty({ description: 'Id' })
@@ -22,13 +31,25 @@ export class Product {
   @ApiPropertyOptional({ description: 'Manufacturer id' })
   manufacturer_id: string;
 
+  @ManyToOne(() => Manufacturer)
+  @JoinColumn({ name: 'manufacturer_id' })
+  manufacturer: Manufacturer;
+
   @Column({ type: 'uuid', nullable: true })
   @ApiPropertyOptional({ description: 'Distributor id' })
   distributor_id: string;
 
+  @ManyToOne(() => Distributor)
+  @JoinColumn({ name: 'distributor_id' })
+  distributor: Distributor;
+
   @Column({ type: 'uuid', nullable: true })
   @ApiPropertyOptional({ description: 'Category id' })
   category_id: string;
+
+  @ManyToOne(() => ProductCategory)
+  @JoinColumn({ name: 'category_id' })
+  category: ProductCategory;
 
   @Column({ type: 'varchar', length: 200 })
   @ApiProperty({ description: 'Name' })
@@ -97,6 +118,10 @@ export class Product {
   @Column({ type: 'uuid', nullable: true })
   @ApiPropertyOptional({ description: 'Created by user id' })
   created_by_user_id: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'created_by_user_id' })
+  created_by_user: User;
 
   @CreateDateColumn()
   @ApiProperty({ description: 'Created at' })

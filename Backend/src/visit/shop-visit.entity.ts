@@ -15,6 +15,9 @@ import { WorkingDay } from '../working-day/working-day.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('shop_visits')
+@Index('idx_visits_dist_status', ['distributor_id', 'status'])
+@Index('idx_visits_salesman_status', ['salesman_id', 'status'])
+@Index('idx_visits_created_at', ['created_at'])
 export class ShopVisit {
   @PrimaryGeneratedColumn('uuid')
   @ApiProperty({ description: 'Id' })

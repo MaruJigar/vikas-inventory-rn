@@ -1,16 +1,17 @@
 import { Module, Global } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AppSocketGateway } from './socket.gateway';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
+import { jwtConfig } from '../config/jwt.config';
 
 @Global()
 @Module({
   imports: [
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET', 'supersecret'),
+      inject: [jwtConfig.KEY],
+      useFactory: (jwtCfg: any) => ({
+        secret: jwtCfg.secret,
       }),
     }),
   ],

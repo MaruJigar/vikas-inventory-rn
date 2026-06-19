@@ -5,6 +5,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -21,6 +23,10 @@ export class ProductCategory {
   @Column({ type: 'uuid', nullable: true })
   @ApiPropertyOptional({ description: 'Parent id' })
   parent_id: string;
+
+  @ManyToOne(() => ProductCategory)
+  @JoinColumn({ name: 'parent_id' })
+  parent: ProductCategory;
 
   @CreateDateColumn()
   @ApiProperty({ description: 'Created at' })
