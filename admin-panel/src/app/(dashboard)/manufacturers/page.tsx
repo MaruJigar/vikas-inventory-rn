@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { DataTable } from '@/components/shared/DataTable';
-import { useDataTable } from '@/hooks/useDataTable';
+import { Skeleton } from '@/components/ui/skeleton';
+import { DataTable } from '@/components/data-table/DataTable';
+import { useDataTable } from '@/hooks/table/useDataTable';
 import { useManufacturersQuery } from '@/hooks/manufacturers/useManufacturersQuery';
 import { usePendingApprovalsQuery } from '@/hooks/approvals/usePendingApprovalsQuery';
 import { getManufacturersColumns } from '@/features/manufacturers/manufacturers-columns';
@@ -11,7 +12,7 @@ import { ManufacturerFilters } from '@/features/manufacturers/ManufacturerFilter
 import { ManufacturerDetailsDrawer } from '@/features/manufacturers/components/ManufacturerDetailsDrawer';
 import { ManufacturerDto } from '@/types/api/manufacturer.types';
 
-export default function ManufacturersPage() {
+function ManufacturersPageContent() {
   const { queryState, setPage, setLimit, setSearch } = useDataTable();
   
   const [selectedManufacturer, setSelectedManufacturer] = useState<ManufacturerDto | null>(null);
@@ -22,7 +23,6 @@ export default function ManufacturersPage() {
   // Fetch pending approvals for mapping status
   const { data: pendingApprovalsResponse } = usePendingApprovalsQuery();
 
-  const data = response?.data;
   const pendingApprovals = pendingApprovalsResponse?.data || [];
 
   // Compute pending manufacturer IDs for quick lookup in columns
@@ -61,7 +61,7 @@ export default function ManufacturersPage() {
         {/* DataTable */}
         <DataTable
           columns={columns ?? []}
-          data={data ?? undefined}
+          data={response ?? undefined}
           isLoading={isLoading}
           isError={isError}
           error={error as Error | null}
@@ -77,5 +77,21 @@ export default function ManufacturersPage() {
         />
       </div>
     </AppLayout>
+  );
+}
+
+export default function ManufacturersPage() {
+  return (
+    <Suspense fallback={
+      <AppLayout>
+        <div className="space-y-4 p-6">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-64 w-full rounded-lg" />
+        </div>
+      </AppLayout>
+    }>
+      <ManufacturersPageContent />
+    </Suspense>
   );
 }
