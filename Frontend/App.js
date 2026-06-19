@@ -1,57 +1,18 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { AppProvider, AppContext } from './src/context/AppContext';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './src/api/queryClient';
+
+// Legacy Context
+import { AppProvider } from './src/context/AppContext';
 import { COLORS } from './src/styles/colors';
 
-// Import Screens
-import { LoginScreen } from './src/screens/LoginScreen';
-import { SalesmanDashboardScreen } from './src/screens/SalesmanDashboardScreen';
-import { CustomerSelectScreen } from './src/screens/CustomerSelectScreen';
-import { ProductListingScreen } from './src/screens/ProductListingScreen';
-import { OrderConfirmationScreen } from './src/screens/OrderConfirmationScreen';
-import { OrderHistoryScreen } from './src/screens/OrderHistoryScreen';
-import { OrderDetailsScreen } from './src/screens/OrderDetailsScreen';
-import { AdminDashboardScreen } from './src/screens/AdminDashboardScreen';
-import { InventoryManagementScreen } from './src/screens/InventoryManagementScreen';
-import { NotificationsScreen } from './src/screens/NotificationsScreen';
-import { InvoiceScreen } from './src/screens/InvoiceScreen';
-import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
-import { SalesmenManagementScreen } from './src/screens/SalesmenManagementScreen';
-
-const Stack = createNativeStackNavigator();
-
-const screenOptions = {
-  headerShown: false,
-  animation: 'slide_from_right',
-};
-
-// Salesman: DIRECT LANDING in Order History (Req #1)
-const SalesmanNavigator = () => (
-  <Stack.Navigator screenOptions={screenOptions} initialRouteName="OrderHistory">
-    <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
-    <Stack.Screen name="CustomerSelect" component={CustomerSelectScreen} />
-    <Stack.Screen name="ProductListing" component={ProductListingScreen} />
-    <Stack.Screen name="OrderConfirmation" component={OrderConfirmationScreen} />
-    <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
-  </Stack.Navigator>
-);
-
-// Admin: Full access — orders, inventory, invoices, notifications
-const AdminNavigator = () => (
-  <Stack.Navigator screenOptions={screenOptions}>
-    <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
-    <Stack.Screen name="AdminOrders" component={OrderHistoryScreen} />
-    <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
-    <Stack.Screen name="Invoice" component={InvoiceScreen} />
-    <Stack.Screen name="InventoryManagement" component={InventoryManagementScreen} />
-    <Stack.Screen name="Notifications" component={NotificationsScreen} />
-    <Stack.Screen name="Analytics" component={AnalyticsScreen} />
-    <Stack.Screen name="SalesmenManagement" component={SalesmenManagementScreen} />
-  </Stack.Navigator>
-);
+// New Architecture
+import { RootNavigator } from './src/navigation/RootNavigator';
+import { useAuthStore } from './src/store/useAuthStore';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 // Web responsive wrapper — constrains to mobile width on desktop browsers
 const WebResponsiveWrapper = ({ children }) => {
@@ -98,21 +59,17 @@ const webStyles = StyleSheet.create({
   },
 });
 
-const AppNavigator = () => {
-  const { appState } = useContext(AppContext);
+const MainApp = () => {
+  const hydrateAuth = useAuthStore((state) => state.hydrateAuth);
+
+  useEffect(() => {
+    hydrateAuth();
+  }, [hydrateAuth]);
 
   return (
     <WebResponsiveWrapper>
       <NavigationContainer>
-        <Stack.Navigator screenOptions={screenOptions}>
-          {!appState.currentUser ? (
-            <Stack.Screen name="Login" component={LoginScreen} />
-          ) : appState.userRole === 'salesman' ? (
-            <Stack.Screen name="SalesmanStack" component={SalesmanNavigator} />
-          ) : (
-            <Stack.Screen name="AdminStack" component={AdminNavigator} />
-          )}
-        </Stack.Navigator>
+        <RootNavigator />
       </NavigationContainer>
     </WebResponsiveWrapper>
   );
@@ -120,9 +77,14 @@ const AppNavigator = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <StatusBar style="light" backgroundColor={COLORS.primary} />
-      <AppNavigator />
-    </AppProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AppProvider>
+          <StatusBar style="light" backgroundColor={COLORS.primary} />
+          <MainApp />
+        </AppProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
+
