@@ -4,7 +4,11 @@ import {
   Column,
   CreateDateColumn,
   Unique,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Order } from './order.entity';
+import { User } from '../user/user.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('order_revisions')
@@ -17,6 +21,10 @@ export class OrderRevision {
   @Column({ type: 'uuid' })
   @ApiProperty({ description: 'Order id' })
   order_id: string;
+
+  @ManyToOne(() => Order)
+  @JoinColumn({ name: 'order_id' })
+  order: Order;
 
   @Column({ type: 'int' })
   @ApiProperty({ description: 'Revision number' })
@@ -37,6 +45,10 @@ export class OrderRevision {
   @Column({ type: 'uuid', nullable: true })
   @ApiPropertyOptional({ description: 'Changed by user id' })
   changed_by_user_id: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'changed_by_user_id' })
+  changed_by_user: User;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   @ApiPropertyOptional({ description: 'Changed by role' })

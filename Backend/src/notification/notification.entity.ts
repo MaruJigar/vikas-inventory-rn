@@ -3,10 +3,15 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
+  Index,
 } from 'typeorm';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('notifications')
+@Index('idx_notifications_user_read', ['recipient_user_id', 'is_read'])
+@Index('idx_notifications_created_at', ['created_at'])
 export class Notification {
   @PrimaryGeneratedColumn('uuid')
   @ApiProperty({ description: 'Id' })

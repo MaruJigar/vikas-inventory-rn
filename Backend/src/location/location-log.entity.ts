@@ -3,10 +3,12 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('location_logs')
+@Index('idx_location_logs_location', ['location'], { spatial: true })
 export class LocationLog {
   @PrimaryGeneratedColumn('uuid')
   @ApiProperty({ description: 'Id' })

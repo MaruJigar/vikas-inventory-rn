@@ -4,10 +4,14 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('approval_requests')
+@Index('idx_approvals_dist_status', ['distributor_id', 'status'])
+@Index('idx_approvals_mfr_status', ['manufacturer_id', 'status'])
+@Index('idx_approvals_created_at', ['created_at'])
 export class ApprovalRequest {
   @PrimaryGeneratedColumn('uuid')
   @ApiProperty({ description: 'Id' })
