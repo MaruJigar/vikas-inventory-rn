@@ -1,12 +1,12 @@
-# Field Sales Platform - Architecture Governance Skill
+# Field Sales Platform - React Native Architecture Governance Skill
 
 ## Purpose
 
-This skill governs all development, analysis, planning, implementation, verification, testing, refactoring, architecture reviews, and bug fixes for the Field Sales Platform.
+This skill governs all frontend development, architecture reviews, implementation, bug fixes, refactoring, testing, offline-sync development, API integration, navigation design, UI development, performance optimization, and code verification for the Field Sales Platform React Native application.
 
 This skill is mandatory.
 
-Before performing any task, read this skill and the project documentation.
+Before performing any task, read this skill and all referenced documentation.
 
 Failure to follow this skill is considered an implementation defect.
 
@@ -15,25 +15,63 @@ Failure to follow this skill is considered an implementation defect.
 # PROJECT OVERVIEW
 
 Project Name:
+
 Field Sales Platform
 
-Technology Stack:
+Frontend Technology Stack:
+
+Core:
+
+* React Native
+* TypeScript
+
+Architecture:
+
+* Feature Based Modular Architecture
+* Offline First
+* Role Based Navigation
+* Visit Centric Workflow
+* API First Integration
+* Database Driven Synchronization
+
+Navigation:
+
+* React Navigation
+* Bottom Tabs
+* Stack Navigation
+* Deep Linking
+
+State Management:
+
+* Zustand
+
+Server State:
+
+* TanStack Query
+
+Forms:
+
+* React Hook Form
+* Zod
+
+Local Database:
+
+* WatermelonDB
+
+Realtime:
+
+* Socket.IO
+
+Notifications:
+
+* Firebase Cloud Messaging
 
 Backend:
 
 * NestJS
-* TypeScript
-* TypeORM
 * PostgreSQL
 * PostGIS
 * Socket.IO
-* Firebase Cloud Messaging
-
-Mobile:
-
-* React Native
-* Offline First
-* WatermelonDB
 
 Admin:
 
@@ -42,73 +80,103 @@ Admin:
 * Tailwind
 * shadcn/ui
 
-Architecture:
-
-* Single VPS Deployment
-* PostgreSQL is Source of Truth
-* Offline First Mobile
-* Visit Centric Business Model
-* Database Driven Jobs
-* Role Based Access Control
-* Ownership Based Access Control
-
 ---
 
 # ABSOLUTE DOCUMENT AUTHORITY ORDER
 
-Every implementation decision must be sourced from documentation.
+Every frontend decision must be sourced from documentation.
 
 Documentation precedence:
 
 Priority 1:
-11_Backend_Module_Implementation_Guide.md
+Frontend_Product_UX_Architecture_Spec.md
 
 Priority 2:
-08_Database_Schema_And_ERD_Specification.md
-
-Priority 3:
-07_API_Contracts_And_Sync_Specification.md
-
-Priority 4:
-backend_architecture_updated.md
-
-Priority 5:
-09_Admin_Panel_Specification.md
-
-Priority 6:
-01_Product_Vision_And_User_Journeys.md
-
-Priority 7:
-02_Salesman_Module_Specification.md
-
-Priority 8:
-03_Distributor_Module_Specification.md
-
-Priority 9:
-04_Manufacturer_Module_Specification.md
-
-Priority 10:
 05_React_Native_Technical_Architecture.md
 
-Priority 11:
+Priority 3:
 06_Design_System_And_QA.md
 
+Priority 4:
+07_API_Contracts_And_Sync_Specification.md
+
+Priority 5:
+01_Product_Vision_And_User_Journeys.md
+
+Priority 6:
+02_Salesman_Module_Specification.md
+
+Priority 7:
+03_Distributor_Module_Specification.md
+
+Priority 8:
+04_Manufacturer_Module_Specification.md
+
+Priority 9:
+11_Backend_Module_Implementation_Guide.md
+
+Priority 10:
+08_Database_Schema_And_ERD_Specification.md
+
+Priority 11:
+backend_architecture_updated.md
+
 Priority 12:
+09_Admin_Panel_Specification.md
+
+Priority 13:
 10_System_Architecture_And_Deployment.md
 
 If documents conflict:
 
 Higher priority document wins.
 
-Never invent undocumented rules.
+Never invent requirements.
+
+Never invent screens.
+
+Never invent workflows.
+
+Never invent navigation.
+
+Never invent API behavior.
+
+Never invent sync behavior.
 
 If documentation is unclear:
 
 STOP
-Document ambiguity
-Ask for clarification
+
+Document ambiguity.
+
+Ask for clarification.
 
 Never assume.
+
+---
+
+# FRONTEND GOVERNANCE PHILOSOPHY
+
+Frontend is NOT responsible only for rendering UI.
+
+Frontend is responsible for enforcing documented business workflows.
+
+The mobile application must prevent invalid user actions before requests reach the backend.
+
+Frontend must always validate:
+
+* Navigation access
+* Approval status
+* Permissions
+* Ownership visibility
+* Visit requirements
+* Offline constraints
+* Required images
+* Sync requirements
+
+Backend remains source of truth.
+
+Frontend must never contradict backend rules.
 
 ---
 
@@ -116,119 +184,433 @@ Never assume.
 
 Before any implementation:
 
-Step 1:
+Step 1
+
 Identify impacted module.
 
-Step 2:
-Read ALL related documentation.
+Step 2
 
-Step 3:
+Identify impacted role:
+
+* Pending User
+* Salesman
+* Distributor
+* Manufacturer
+
+Step 3
+
+Read ALL relevant documentation.
+
+Step 4
+
 Generate Documentation Understanding Report.
 
-Step 4:
-Generate Blueprint.
+Step 5
 
-Step 5:
+Generate Frontend Blueprint.
+
+Must include:
+
+* Screens impacted
+* Components impacted
+* Navigation impact
+* API impact
+* WatermelonDB impact
+* Zustand impact
+* Sync impact
+* Realtime impact
+* Notification impact
+* Testing impact
+
+Step 6
+
 Wait for approval.
 
 Only after approval:
 
-Step 6:
+Step 7
+
 Implement.
 
-Step 7:
+Step 8
+
 Generate Verification Report.
 
-Step 8:
+Step 9
+
+Generate Compliance Report.
+
+Step 10
+
 Generate Gap Analysis.
 
-Step 9:
+Step 11
+
 Wait for approval.
 
 Never skip steps.
 
 ---
 
-# MODULE COMPLETION CRITERIA
+# REACT NATIVE ARCHITECTURE RULES
 
-A module is NOT complete when code compiles.
+Mandatory structure:
 
-A module is complete ONLY when ALL requirements below are satisfied.
+src/
 
-## Database
+app/
+navigation/
+modules/
+components/
+services/
+database/
+sockets/
+notifications/
+store/
+hooks/
+constants/
+theme/
+utils/
+types/
+assets/
 
-* Tables implemented
-* Relations implemented
-* Constraints implemented
-* Indexes implemented
-* Transactions implemented
-* PostGIS requirements implemented
+Never violate folder structure.
 
-## APIs
+Never place business logic inside screens.
 
-* Controllers implemented
-* DTOs implemented
-* Validation implemented
-* Swagger implemented
-* Error handling implemented
+Never place API logic inside components.
 
-## Business Logic
+Never place navigation logic inside reusable UI components.
 
-* All documented workflows implemented
-* All documented edge cases implemented
-* No undocumented assumptions
+Never place WatermelonDB queries directly inside UI.
 
-## Security
+---
 
-* Authentication verified
-* Authorization verified
-* Ownership verified
-* Role checks verified
-* Approval status verified
+# MODULE STRUCTURE RULES
 
-## Realtime
+Every module must contain:
 
-* Socket.IO implemented
-* Events documented
-* Room strategy implemented
+screens/
+components/
+hooks/
+services/
+types/
+validators/
 
-## Notifications
+Optional:
 
-* Notification records implemented
-* Push notification integration implemented
+constants/
+navigation/
+utils/
 
-## Audit
+Business logic belongs in:
 
-* Audit logging implemented
-* Audit payload complete
+services/
 
-## Offline
+Form logic belongs in:
 
-* Idempotency implemented
-* Sync compatibility verified
-* Conflict handling verified
+validators/
 
-## Testing
+Screen logic belongs in:
 
-* Unit tests
-* Integration tests
-* Permission tests
-* Ownership tests
-* Transaction tests
-* Failure tests
-* E2E tests
+hooks/
 
-## Verification
+---
 
-* Code verification
-* Architecture verification
-* Live database verification
+# STATE MANAGEMENT RULES
 
-If any item is missing:
+Zustand is only allowed for:
 
-MODULE STATUS = NOT APPROVED
+* Authentication State
+* User State
+* Permission State
+* Theme State
+* Network State
+* Sync State
 
-Do not move to next module.
+Never store:
+
+* Orders
+* Shops
+* Visits
+* Products
+* Inventory
+
+inside Zustand.
+
+Those belong to WatermelonDB.
+
+Never duplicate persistent data.
+
+---
+
+# TANSTACK QUERY RULES
+
+Used only for:
+
+* API communication
+* Server synchronization
+* Cache management
+* Background refresh
+
+Never use TanStack Query as local storage.
+
+Never use TanStack Query instead of WatermelonDB.
+
+WatermelonDB remains local source of truth while offline.
+
+Backend remains global source of truth.
+
+---
+
+# WATERMELONDB GOVERNANCE
+
+Mandatory Collections:
+
+users
+products
+shops
+visits
+orders
+order_items
+locations
+notifications
+sync_queue
+
+Every schema change must include:
+
+* Collection update
+* Migration
+* Sync compatibility review
+* Verification report
+
+Never bypass WatermelonDB for offline-capable modules.
+
+---
+
+# OFFLINE FIRST GOVERNANCE
+
+Offline support is mandatory.
+
+Critical offline features:
+
+* Shop Creation
+* Visit Creation
+* Visit Completion
+* Order Creation
+* Order Editing
+* Location Tracking
+* Verification Image Capture
+
+Every offline action must:
+
+* Create local record
+* Create sync queue entry
+* Support retries
+* Support idempotency
+* Support failure recovery
+
+Never create online-only workflows unless documentation explicitly allows it.
+
+---
+
+# NAVIGATION GOVERNANCE
+
+Root Navigation Flow:
+
+Splash
+↓
+Auth Check
+↓
+Role Check
+↓
+Role Navigator
+
+Supported Navigators:
+
+Auth Navigator
+
+Pending Approval Navigator
+
+Salesman Navigator
+
+Distributor Navigator
+
+Manufacturer Navigator
+
+Never add screens outside documented navigation.
+
+Never bypass approval restrictions.
+
+Never expose restricted tabs.
+
+---
+
+# API GOVERNANCE
+
+All APIs must comply with:
+
+07_API_Contracts_And_Sync_Specification.md
+
+Frontend must validate:
+
+* Request structure
+* Response structure
+* Error structure
+* Authentication requirements
+* Sync requirements
+
+Never invent endpoints.
+
+Never invent payloads.
+
+Never invent response fields.
+
+---
+
+# SOCKET.IO GOVERNANCE
+
+Socket.IO allowed only for:
+
+* Order Updates
+* Notification Updates
+* Approval Updates
+* Dashboard Updates
+* Sync Updates
+
+All socket events must:
+
+* Have reconnection strategy
+* Have cleanup logic
+* Have offline handling
+* Have lifecycle management
+
+No orphan socket subscriptions.
+
+---
+
+# FIREBASE GOVERNANCE
+
+FCM is mandatory.
+
+Notifications include:
+
+* New Orders
+* Order Updates
+* Approval Updates
+* Backorders
+* Sync Results
+* System Alerts
+
+Every notification must support:
+
+* Foreground handling
+* Background handling
+* Navigation routing
+* Deep linking
+
+---
+
+# UI GOVERNANCE
+
+Design authority:
+
+06_Design_System_And_QA.md
+
+Mandatory characteristics:
+
+* Mobile First
+* Fast
+* Modern
+* Clean
+* Field Friendly
+
+Avoid:
+
+* ERP style UI
+* Dense layouts
+* Excessive colors
+* Complex tables
+* Small touch targets
+
+Minimum touch target:
+
+48px
+
+Preferred:
+
+56px
+
+---
+
+# FORM GOVERNANCE
+
+All forms must use:
+
+React Hook Form
+
+Validation:
+
+Zod
+
+No uncontrolled business forms.
+
+No custom validation logic outside validators.
+
+---
+
+# IMAGE GOVERNANCE
+
+Mandatory image processing:
+
+Before upload:
+
+* Compress Image
+* Resize Large Images
+* Remove Metadata
+
+Required image:
+
+Shop Verification Photo
+
+Shop creation must fail without image.
+
+Never bypass verification photo requirements.
+
+---
+
+# ROLE GOVERNANCE
+
+Pending User:
+
+Can:
+
+* Login
+* View Catalogues
+* View Manufacturers
+* Complete Profile
+
+Cannot:
+
+* Create Orders
+* Create Shops
+* Check In
+* Start Visits
+* Manage Inventory
+
+Salesman:
+
+Field operations only.
+
+Distributor:
+
+Operational management.
+
+Manufacturer:
+
+Analytics and approvals.
+
+Never expose unauthorized functionality.
 
 ---
 
@@ -236,117 +618,131 @@ Do not move to next module.
 
 These rules are non-negotiable.
 
-## Visit Centric Architecture
+## Visit Centric Rule
 
-Every order belongs to a visit.
+Orders can only be created inside visits.
 
-Orders can never exist without visits.
-
-Never create shortcuts around visits.
+Frontend must never expose order creation outside active visits.
 
 ---
 
-## Inventory Rule
+## Inventory Visibility Rule
 
-Inventory reduces only on dispatch.
+Salesmen must never see:
 
-Inventory never reduces on order creation.
-
-Inventory never reduces on reservation.
-
-Inventory never reduces on draft orders.
-
----
-
-## Salesman Visibility Rule
-
-Salesmen must never see inventory quantities.
+* Inventory
+* Available Quantity
+* Reserved Quantity
+* Stock Levels
 
 This applies to:
 
+* Screens
 * APIs
-* Mobile responses
-* Sync responses
-* Socket events
+* Cached Data
+* Sync Data
+* Search Results
 
 ---
 
-## Shop Verification Rule
+## Verification Rule
 
 Shop verification image is mandatory.
 
-Shop creation is invalid without verification image.
+No image.
+
+No shop creation.
 
 ---
 
 ## Approval Rule
 
-Pending users have catalogue-only access.
+Pending users receive catalogue-only experience.
 
-Pending users cannot perform operational actions.
+Operational actions must be hidden and blocked.
 
 ---
 
 ## Offline Rule
 
-All sync operations must be idempotent.
+Offline functionality is mandatory.
 
-Duplicate sync submissions must never create duplicate business records.
+No critical workflow may depend on active internet.
 
 ---
 
 ## Ownership Rule
 
-Manufacturer:
-Can only access linked ecosystem.
+Salesmen only access assigned distributor ecosystem.
 
-Distributor:
-Can only access own data.
+Distributors only access own ecosystem.
 
-Salesman:
-Can only access assigned distributor data.
+Manufacturers only access linked ecosystem.
 
-Never grant global visibility unless documentation explicitly allows it.
+Never expose global visibility.
 
 ---
 
-# IMPLEMENTATION ORDER
+# PERFORMANCE GOVERNANCE
 
-Modules must be implemented in this order:
+Mandatory:
 
-1. Auth
-2. Users
-3. Roles
-4. Permissions
-5. Manufacturers
-6. Distributors
-7. Salesmen
-8. Approval
-9. Products
-10. Inventory
-11. Shops
-12. Working Days
-13. Location Tracking
-14. Visits
-15. Orders
-16. Fulfillment
-17. Backorders
-18. Notifications
-19. Offline Sync
-20. Analytics
+* FlatList virtualization
+* Memoization where justified
+* Lazy loading
+* Query optimization
+* Image optimization
+* Render minimization
 
-Never skip ahead.
+Avoid:
 
-Never start a new module until the current module is approved.
+* Unbounded lists
+* Heavy rerenders
+* Large global state
+* Business logic inside render cycle
 
 ---
 
-# REQUIRED REPORT TYPES
+# TESTING GOVERNANCE
+
+Every module requires:
+
+Unit Tests
+
+Component Tests
+
+Integration Tests
+
+Navigation Tests
+
+Offline Tests
+
+Sync Tests
+
+Permission Tests
+
+Role Tests
+
+Approval Tests
+
+Error Handling Tests
+
+Realtime Tests
+
+Notification Tests
+
+Performance Verification
+
+No module is complete without testing.
+
+---
+
+# REQUIRED REPORTS
 
 Before implementation:
 
-1. Architecture Understanding Report
-2. Blueprint Report
+1. Documentation Understanding Report
+2. Frontend Blueprint Report
 
 After implementation:
 
@@ -354,118 +750,60 @@ After implementation:
 4. Compliance Report
 5. Gap Analysis Report
 
-For rejected modules:
+Rejected implementation:
 
 6. Remediation Plan
 
 ---
 
-# MANDATORY VERIFICATION CHECKLIST
-
-For every module verify:
-
-Database:
-
-* Tables
-* Indexes
-* Constraints
-* Transactions
-
-Security:
-
-* JWT
-* Roles
-* Ownership
-* Approval status
-
-Audit:
-
-* Audit events
-* Audit payloads
-
-Notifications:
-
-* Records
-* Push notifications
-
-Realtime:
-
-* Socket events
-* Room routing
-
-Offline:
-
-* Idempotency
-* Sync compatibility
-
-Testing:
-
-* Unit
-* Integration
-* E2E
-
-Architecture:
-
-* Documentation compliance
-* Dependency compliance
-
----
-
-# WHEN ANALYSING EXISTING CODE
-
-Never trust previous reports.
-
-Always inspect actual code.
-
-Always inspect actual entities.
-
-Always inspect actual DTOs.
-
-Always inspect actual services.
-
-Always inspect actual controllers.
-
-Always inspect actual migrations.
-
-Always inspect actual tests.
-
-Evidence beats assumptions.
-
----
-
 # RESPONSE RULES
 
-When reporting:
+When reviewing code:
 
 Separate findings into:
 
-* COMPLIANT
-* PARTIAL
-* MISSING
-* CRITICAL GAP
+COMPLIANT
 
-Never use vague language such as:
+PARTIAL
+
+MISSING
+
+CRITICAL GAP
+
+Never use:
 
 * Looks good
 * Seems fine
 * Probably works
 * Appears correct
 
-Every statement must be backed by:
+Every finding must reference:
 
-* Documentation reference
-* Code reference
-* Database reference
+* Documentation
+* Screen
+* Navigation
+* API Contract
+* Sync Contract
+* Component
+* Code Evidence
+
+Evidence beats assumptions.
 
 ---
 
 # FINAL GOVERNANCE RULE
 
-If a module fails verification:
+If implementation violates:
+
+* Product Specification
+* UX Specification
+* Navigation Specification
+* Offline Specification
+* API Contract
+* Design System
+* Business Rules
 
 STOP.
-
-Do not continue to the next module.
 
 Generate:
 
@@ -473,4 +811,4 @@ Remediation Plan
 
 Wait for approval.
 
-Only after successful remediation and re-verification may development continue.
+Only after remediation and re-verification may development continue.
