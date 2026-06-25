@@ -4,17 +4,21 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { NavigationContainer } from '@react-navigation/native';
 
+import '@/i18n'; // initialise i18next (side effect)
 import { queryClient } from '@/lib/queryClient';
 import { ErrorBoundary } from '@/components';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
 
 export default function App() {
-  const hydrate = useAuthStore((s) => s.hydrate);
+  const hydrateAuth = useAuthStore((s) => s.hydrate);
+  const hydrateLanguage = useLanguageStore((s) => s.hydrate);
 
   useEffect(() => {
-    void hydrate();
-  }, [hydrate]);
+    void hydrateLanguage();
+    void hydrateAuth();
+  }, [hydrateAuth, hydrateLanguage]);
 
   return (
     <ErrorBoundary>

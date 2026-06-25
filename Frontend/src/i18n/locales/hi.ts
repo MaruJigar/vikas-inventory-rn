@@ -1,0 +1,90 @@
+import type { TranslationResources } from '@/i18n/locales/en';
+
+export const hi: TranslationResources = {
+  common: {
+    appName: 'Qera',
+    loading: 'लोड हो रहा है…',
+    retry: 'पुनः प्रयास करें',
+    cancel: 'रद्द करें',
+    submit: 'जमा करें',
+    continue: 'आगे बढ़ें',
+    back: 'वापस',
+    language: 'भाषा',
+    english: 'English',
+    hindi: 'हिन्दी',
+  },
+  auth: {
+    login: {
+      title: 'वापसी पर स्वागत है',
+      subtitle: 'जारी रखने के लिए साइन इन करें',
+      emailOrPhone: 'ईमेल या फ़ोन',
+      emailOrPhonePlaceholder: 'you@example.com या 9876543210',
+      password: 'पासवर्ड',
+      passwordPlaceholder: 'अपना पासवर्ड दर्ज करें',
+      submit: 'साइन इन करें',
+      forgot: 'पासवर्ड भूल गए?',
+      noAccount: 'खाता नहीं है?',
+      register: 'पंजीकरण करें',
+    },
+    roleSelect: {
+      title: 'अपना खाता बनाएं',
+      subtitle: 'आप Qera का उपयोग कैसे करेंगे?',
+      salesman: 'मैं एक सेल्समैन हूँ',
+      salesmanDesc: 'दुकानों पर जाएं और वितरक के लिए ऑर्डर दें',
+      distributor: 'मैं एक वितरक हूँ',
+      distributorDesc: 'निर्माताओं से स्टॉक ऑर्डर करें और दुकानें प्रबंधित करें',
+    },
+    register: {
+      salesmanTitle: 'सेल्समैन पंजीकरण',
+      distributorTitle: 'वितरक पंजीकरण',
+      fullName: 'पूरा नाम',
+      email: 'ईमेल',
+      phone: 'फ़ोन',
+      password: 'पासवर्ड',
+      distributorId: 'वितरक आईडी',
+      businessName: 'व्यवसाय का नाम',
+      gstNumber: 'जीएसटी नंबर',
+      submit: 'खाता बनाएं',
+      haveAccount: 'पहले से खाता है?',
+      signIn: 'साइन इन करें',
+      successTitle: 'पंजीकरण जमा हो गया',
+      successMessage:
+        'आपका खाता एडमिन की मंज़ूरी के लिए लंबित है। मंज़ूरी मिलने पर आप साइन इन कर सकते हैं।',
+      goToLogin: 'लॉगिन पर जाएं',
+    },
+    forgot: {
+      title: 'पासवर्ड रीसेट करें',
+      subtitle: 'OTP प्राप्त करने के लिए अपना ईमेल या फ़ोन दर्ज करें',
+      emailOrPhone: 'ईमेल या फ़ोन',
+      sendOtp: 'OTP भेजें',
+      unavailable:
+        'पासवर्ड रीसेट अभी उपलब्ध नहीं है। कृपया अपने एडमिन से संपर्क करें।',
+      backToLogin: 'लॉगिन पर वापस जाएं',
+    },
+    waiting: {
+      title: 'मंज़ूरी की प्रतीक्षा',
+      message:
+        'आपका खाता समीक्षाधीन है। एडमिन की मंज़ूरी मिलने पर आप ऑर्डर देना शुरू कर सकते हैं।',
+      catalogHint: 'आप अभी भी कैटलॉग और अपनी प्रोफ़ाइल देख सकते हैं।',
+      rejectedTitle: 'पंजीकरण अस्वीकृत',
+      rejectedMessage:
+        'आपका पंजीकरण स्वीकृत नहीं हुआ। कृपया अपने एडमिन से संपर्क करें।',
+      logout: 'लॉग आउट',
+      refresh: 'स्थिति ताज़ा करें',
+    },
+  },
+  validation: {
+    required: 'यह फ़ील्ड आवश्यक है',
+    email: 'एक मान्य ईमेल दर्ज करें',
+    phone: 'एक मान्य 10-अंकों का फ़ोन नंबर दर्ज करें',
+    emailOrPhone: 'ईमेल या फ़ोन आवश्यक है',
+    gst: 'एक मान्य 15-अंकों का जीएसटी नंबर दर्ज करें',
+    passwordMin: 'पासवर्ड कम से कम 6 अक्षरों का होना चाहिए',
+  },
+  errors: {
+    network: 'नेटवर्क त्रुटि। सर्वर तक नहीं पहुँच सकते।',
+    timeout: 'कनेक्शन का समय समाप्त। अपना इंटरनेट जांचें और पुनः प्रयास करें।',
+    invalidCredentials: 'अमान्य ईमेल/फ़ोन या पासवर्ड।',
+    generic: 'कुछ गलत हो गया। कृपया पुनः प्रयास करें।',
+  },
+};

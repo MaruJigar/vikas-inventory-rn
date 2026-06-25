@@ -1,45 +1,50 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { colors, typography } from '@/theme';
-import { Spinner } from '@/components';
+import { colors, spacing, typography } from '@/theme';
+import { Screen, Button, Spinner, LanguageToggle } from '@/components';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { RootStackParamList } from '@/navigation/types';
+import { useMe } from '@/features/auth/hooks';
+import { AuthNavigator } from '@/navigation/AuthNavigator';
+import { WaitingApprovalScreen } from '@/features/auth/screens/WaitingApprovalScreen';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
-
-/** Temporary landing screen — replaced by the auth/role flow in Phase 1–2. */
-function PlaceholderScreen() {
-  const status = useAuthStore((s) => s.status);
+/** Temporary post-approval landing — replaced by role dashboards in Phase 2. */
+function ApprovedPlaceholder() {
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   return (
-    <View style={styles.container}>
-      <Text style={typography.h1}>Qera</Text>
-      <Text style={styles.subtitle}>Foundation ready · auth status: {status}</Text>
-    </View>
+    <Screen>
+      <LanguageToggle />
+      <View style={styles.center}>
+        <Text style={typography.h1}>{user?.full_name ?? 'Qera'}</Text>
+        <Text style={styles.muted}>Role: {user?.role}</Text>
+        <Text style={styles.muted}>Approved ✓ — dashboards land in Phase 2.</Text>
+      </View>
+      <Button label="Log out" variant="danger" onPress={() => void logout()} />
+    </Screen>
   );
 }
 
 export function RootNavigator() {
   const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
 
-  // Block on initial token hydration so we don't flash the wrong screen.
+  // On cold start the token is restored but the user isn't — fetch it once.
+  const needsUser = status === 'authenticated' && !user;
+  useMe(needsUser);
+
   if (status === 'loading') return <Spinner />;
+  if (status === 'unauthenticated') return <AuthNavigator />;
+  if (needsUser) return <Spinner />;
 
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Placeholder" component={PlaceholderScreen} />
-    </Stack.Navigator>
+  return user?.approval_status === 'APPROVED' ? (
+    <ApprovedPlaceholder />
+  ) : (
+    <WaitingApprovalScreen />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    gap: 8,
-  },
-  subtitle: { ...typography.caption, color: colors.textMuted },
+  center: { flex: 1, justifyContent: 'center', gap: spacing.sm },
+  muted: { ...typography.body, color: colors.textMuted },
 });

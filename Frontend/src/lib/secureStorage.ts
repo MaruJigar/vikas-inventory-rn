@@ -1,15 +1,25 @@
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-/** Thin typed wrapper over expo-secure-store (used for JWT tokens). */
+/**
+ * Token storage. Native uses expo-secure-store (Keychain/Keystore).
+ * Web has no SecureStore implementation, so we fall back to AsyncStorage
+ * (localStorage) — acceptable for the web build.
+ */
+const isWeb = Platform.OS === 'web';
+
 export const secureStorage = {
   async get(key: string): Promise<string | null> {
-    return SecureStore.getItemAsync(key);
+    return isWeb ? AsyncStorage.getItem(key) : SecureStore.getItemAsync(key);
   },
   async set(key: string, value: string): Promise<void> {
-    await SecureStore.setItemAsync(key, value);
+    if (isWeb) await AsyncStorage.setItem(key, value);
+    else await SecureStore.setItemAsync(key, value);
   },
   async remove(key: string): Promise<void> {
-    await SecureStore.deleteItemAsync(key);
+    if (isWeb) await AsyncStorage.removeItem(key);
+    else await SecureStore.deleteItemAsync(key);
   },
 };
 
