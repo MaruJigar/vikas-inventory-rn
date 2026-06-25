@@ -1,0 +1,45 @@
+/** Mirrors the backend user/role/approval contract (Backend/src/user, /auth). */
+
+export type Role = 'SALESMAN' | 'DISTRIBUTOR' | 'MANUFACTURER' | 'ADMIN';
+
+export type ApprovalStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+
+export interface User {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string;
+  role: Role;
+  approval_status: ApprovalStatus;
+  is_active?: boolean;
+}
+
+export interface AuthTokens {
+  access_token: string;
+  refresh_token: string;
+}
+
+/** POST /v1/auth/login */
+export interface LoginPayload {
+  email_or_phone: string;
+  password: string;
+}
+
+/** POST /v1/auth/register/distributor */
+export interface RegisterDistributorPayload {
+  full_name: string;
+  email: string;
+  phone: string;
+  password: string;
+  business_name: string;
+  gst_number: string;
+}
+
+/** POST /v1/auth/register/salesman */
+export interface RegisterSalesmanPayload {
+  full_name: string;
+  email: string;
+  phone: string;
+  password: string;
+  distributor_id: string;
+}
