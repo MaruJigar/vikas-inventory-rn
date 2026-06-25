@@ -5,3 +5,5 @@ export { Card } from '@/components/Card';
 export { EmptyState } from '@/components/EmptyState';
 export { Spinner } from '@/components/Spinner';
 export { ErrorBoundary } from '@/components/ErrorBoundary';
+export { LanguageToggle } from '@/components/LanguageToggle';
+export { ControlledInput } from '@/components/ControlledInput';

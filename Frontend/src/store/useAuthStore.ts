@@ -26,15 +26,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
 
   hydrate: async () => {
-    const [accessToken, refreshToken] = await Promise.all([
-      secureStorage.get(STORAGE_KEYS.accessToken),
-      secureStorage.get(STORAGE_KEYS.refreshToken),
-    ]);
-    set({
-      accessToken,
-      refreshToken,
-      status: accessToken ? 'authenticated' : 'unauthenticated',
-    });
+    try {
+      const [accessToken, refreshToken] = await Promise.all([
+        secureStorage.get(STORAGE_KEYS.accessToken),
+        secureStorage.get(STORAGE_KEYS.refreshToken),
+      ]);
+      set({
+        accessToken,
+        refreshToken,
+        status: accessToken ? 'authenticated' : 'unauthenticated',
+      });
+    } catch (err) {
+      // Never leave the app stuck on the loading spinner.
+      if (__DEV__) console.warn('Auth hydrate failed:', err);
+      set({ status: 'unauthenticated' });
+    }
   },
 
   setTokens: async ({ access_token, refresh_token }) => {
