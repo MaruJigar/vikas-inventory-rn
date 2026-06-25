@@ -42,7 +42,9 @@
   },
   "devDependencies": {
     "@babel/core": "^7.22.0",
-    "@types/react": "~18.2.0"
+    "@types/react": "~18.2.0",
+    "babel-plugin-module-resolver": "^5.0.0",
+    "typescript": "^5.9.3"
   },
   "private": true
 }
