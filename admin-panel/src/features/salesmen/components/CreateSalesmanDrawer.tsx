@@ -131,7 +131,7 @@ export function CreateSalesmanDrawer({ isOpen, onClose }: CreateSalesmanDrawerPr
                   </option>
                   {distributors.map((distributor) => (
                     <option key={distributor.id} value={distributor.id}>
-                      {distributor.name || distributor.id}
+                      {distributor.business_name || distributor.id}
                     </option>
                   ))}
                   {!isLoadingDistributors && distributors.length === 0 && (

@@ -4,6 +4,11 @@ import { useSalesmanQuery } from '@/hooks/salesmen/useSalesmanQuery';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDate } from '@/lib/utils';
 import { User, Phone, Mail, Building2, Calendar, FileText, CheckCircle } from 'lucide-react';
+import { SalesmanDto } from '@/types/api/salesman.types';
+
+type SalesmanWithRelations = SalesmanDto & {
+  distributor?: { business_name: string };
+};
 
 interface SalesmanDetailsDrawerProps {
   salesmanId?: string | null;
@@ -79,8 +84,8 @@ export function SalesmanDetailsDrawer({ salesmanId, isOpen, onClose }: SalesmanD
                 <div className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Distributor ID</p>
-                    <p className="text-sm font-medium break-all">{salesman.distributor_id}</p>
+                    <p className="text-xs text-muted-foreground">Distributor</p>
+                    <p className="text-sm font-medium break-all">{(salesman as SalesmanWithRelations).distributor?.business_name || salesman.distributor_id}</p>
                   </div>
                 </div>
               </div>

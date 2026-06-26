@@ -84,6 +84,14 @@ export class DistributorService {
       );
     }
 
+    if (queryDto.status) {
+      if (queryDto.status === 'active') {
+        qb.andWhere('distributor.is_active = :isActive', { isActive: true });
+      } else if (queryDto.status === 'inactive') {
+        qb.andWhere('distributor.is_active = :isActive', { isActive: false });
+      }
+    }
+
     const allowedSortFields = ['created_at', 'updated_at', 'business_name'];
     if (sortBy && allowedSortFields.includes(sortBy)) {
       qb.orderBy(`distributor.${sortBy}`, sortOrder);
@@ -173,7 +181,7 @@ export class DistributorService {
       const distributor = queryRunner.manager.create(Distributor, {
         user_id: user.id,
         business_name: dto.business_name,
-        contact_person: dto.contact_person,
+        owner_name: dto.contact_person,
         phone: dto.phone,
         email: dto.email,
         address: dto.address,
@@ -215,7 +223,15 @@ export class DistributorService {
         { new_values: distributor },
       );
 
-      return { user, profile: distributor };
+      const {
+        password_hash,
+        hashed_refresh_token,
+        reset_password_token_hash,
+        reset_password_expires_at,
+        ...safeUser
+      } = user;
+
+      return { user: safeUser, profile: distributor };
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -230,19 +246,86 @@ export class DistributorService {
     id: string,
     dto: UpdateDistributorAdminDto,
   ) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // We can use the existing getDistributorById for validation, but we need it inside the transaction scope ideally
+      // or we just fetch it, verify ownership, then do transaction
+      const distributor = await this.getDistributorById(actorUserId, role, id);
+      const oldValues = { ...distributor };
+      Object.assign(distributor, dto);
+      const updated = await queryRunner.manager.save(distributor);
+
+      if (distributor.user_id) {
+        const user = await queryRunner.manager.findOne(User, {
+          where: { id: distributor.user_id },
+        });
+        if (user) {
+          if (dto.email !== undefined) user.email = dto.email;
+          if (dto.phone !== undefined) user.phone = dto.phone;
+          // Note: The entity uses owner_name but the user requested contact_person logic, we will check both or just owner_name
+          if (dto.owner_name !== undefined || dto.business_name !== undefined) {
+            user.full_name =
+              dto.owner_name || dto.business_name || user.full_name;
+          }
+          if (typeof dto.is_active === 'boolean') {
+            user.is_active = dto.is_active;
+          }
+          await queryRunner.manager.save(user);
+        }
+      }
+
+      await queryRunner.commitTransaction();
+
+      await this.auditLogService.logAction(
+        'DISTRIBUTOR_UPDATED',
+        'DISTRIBUTOR',
+        updated.id,
+        actorUserId,
+        { old_values: oldValues, new_values: updated },
+      );
+
+      return updated;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async deleteDistributorAdmin(actorUserId: string, role: string, id: string) {
     const distributor = await this.getDistributorById(actorUserId, role, id);
-    const oldValues = { ...distributor };
-    Object.assign(distributor, dto);
-    const updated = await this.distributorRepo.save(distributor);
 
-    await this.auditLogService.logAction(
-      'DISTRIBUTOR_UPDATED',
-      'DISTRIBUTOR',
-      updated.id,
-      actorUserId,
-      { old_values: oldValues, new_values: updated },
-    );
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    return updated;
+    try {
+      await queryRunner.manager.softDelete(Distributor, { id });
+
+      if (distributor.user_id) {
+        await queryRunner.manager.softDelete(User, { id: distributor.user_id });
+      }
+
+      await queryRunner.commitTransaction();
+
+      await this.auditLogService.logAction(
+        'DISTRIBUTOR_DELETED',
+        'DISTRIBUTOR',
+        id,
+        actorUserId,
+        { old_values: distributor },
+      );
+
+      return { message: 'Distributor deleted successfully' };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 }

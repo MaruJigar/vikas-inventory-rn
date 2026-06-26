@@ -24,6 +24,10 @@ export class ProductCategory {
   @ApiPropertyOptional({ description: 'Parent id' })
   parent_id: string;
 
+  @Column({ type: 'text', nullable: true })
+  @ApiPropertyOptional({ description: 'Description' })
+  description: string;
+
   @ManyToOne(() => ProductCategory)
   @JoinColumn({ name: 'parent_id' })
   parent: ProductCategory;

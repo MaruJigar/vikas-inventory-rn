@@ -4,6 +4,15 @@ export interface CreateManufacturerDto {
   phone?: string;
   email?: string;
   gst_number?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+}
+
+export interface CreateManufacturerAdminDto extends CreateManufacturerDto {
+  password?: string;
+  is_active?: boolean;
 }
 
 export interface UpdateManufacturerDto {

@@ -3,7 +3,6 @@ import { useManufacturerQuery } from '@/hooks/manufacturers/useManufacturerQuery
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDate } from '@/lib/utils';
 import { ManufacturerStatusBadge } from './ManufacturerStatusBadge';
-import { usePendingApprovalsQuery } from '@/hooks/approvals/usePendingApprovalsQuery';
 
 interface ManufacturerDetailsDrawerProps {
   manufacturerId?: string;
@@ -13,15 +12,7 @@ interface ManufacturerDetailsDrawerProps {
 
 export function ManufacturerDetailsDrawer({ manufacturerId, isOpen, onClose }: ManufacturerDetailsDrawerProps) {
   const { data: response, isLoading, isError } = useManufacturerQuery(manufacturerId);
-  const { data: pendingApprovals } = usePendingApprovalsQuery();
   const manufacturer = response?.data;
-
-  const isPending = !!(
-    manufacturer &&
-    pendingApprovals?.data?.some(
-      (req) => req.manufacturer_id === manufacturer.id && req.status === 'PENDING_APPROVAL'
-    )
-  );
 
   return (
     <EntityFormDrawer
@@ -79,7 +70,7 @@ export function ManufacturerDetailsDrawer({ manufacturerId, isOpen, onClose }: M
             <div className="grid grid-cols-3 border-b pb-3 gap-4">
               <span className="text-muted-foreground font-medium">Status</span>
               <span className="col-span-2">
-                <ManufacturerStatusBadge isPending={isPending} isActive={manufacturer.is_active} />
+                <ManufacturerStatusBadge isActive={manufacturer.is_active} />
               </span>
             </div>
 

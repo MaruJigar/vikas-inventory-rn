@@ -6,8 +6,11 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Distributor } from '../distributor/distributor.entity';
 
 @Entity('salesmen')
 @Index('idx_salesmen_dist_status', ['distributor_id', 'approval_status'])
@@ -24,6 +27,11 @@ export class Salesman {
   @Column({ type: 'uuid' })
   @ApiProperty({ description: 'Distributor id' })
   distributor_id: string;
+
+  @ManyToOne(() => Distributor)
+  @JoinColumn({ name: 'distributor_id' })
+  @ApiPropertyOptional({ description: 'Distributor relation' })
+  distributor?: Distributor;
 
   @Column({ type: 'varchar', length: 150 })
   @ApiProperty({ description: 'Full name' })

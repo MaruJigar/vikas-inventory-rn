@@ -41,7 +41,9 @@ export class NotificationQueueService {
           removeOnFail: 1000,
         },
       );
-      this.logger.debug(`Enqueued notification of type ${type} for user ${userId}`);
+      this.logger.debug(
+        `Enqueued notification of type ${type} for user ${userId}`,
+      );
     } catch (err) {
       // We log but do NOT throw to ensure business flows don't crash
       this.logger.error(

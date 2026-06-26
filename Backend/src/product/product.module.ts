@@ -11,6 +11,7 @@ import { ProductPricingModule } from '../product-pricing/product-pricing.module'
 import { ShopImageModule } from '../shop-image/shop-image.module';
 import { Distributor } from '../distributor/distributor.entity';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
+import { UploadedFile } from '../shop-image/uploaded-file.entity';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { Manufacturer } from '../manufacturer/manufacturer.entity';
       ProductCategory,
       Distributor,
       Manufacturer,
+      UploadedFile,
     ]),
     ProductPricingModule,
     ShopImageModule,

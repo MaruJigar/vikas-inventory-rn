@@ -10,7 +10,7 @@ export const CreateProductSchema = z.object({
   sku: z.string().max(100).optional(),
   unit: z.string().max(50).optional(),
   description: z.string().optional(),
-  product_image_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  product_image_url: z.string().optional().or(z.literal('')),
   mrp: z.coerce.number().min(0, 'MRP must be positive'),
   gst_percent: z.coerce.number().min(0).max(100).optional(),
   distributor_discount_percent: z.coerce.number().min(0).max(100).optional(),

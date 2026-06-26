@@ -78,7 +78,8 @@ Table-based
 Audit-friendly
 Permission-controlled
 Clean and professional
-
+Human Readability Governance: End users must never see raw UUIDs or technical identifiers.
+Pagination & Query Efficiency Governance: Frontend must never fetch unbounded collections. All list queries must be server-side paginated, and DataTables must provide pagination controls.
 ⸻
 
 3. Recommended Technology Stack

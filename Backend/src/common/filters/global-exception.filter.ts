@@ -21,8 +21,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<RequestWithId>();
-    const isProduction =
-      this.configService.get('app.env') === 'production';
+    const isProduction = this.configService.get('app.env') === 'production';
 
     const requestId = request.requestId || null;
     const path = request.url;

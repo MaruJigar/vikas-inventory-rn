@@ -22,7 +22,7 @@ export class UploadedFile {
 
   @Column({ type: 'uuid', nullable: true })
   @ApiPropertyOptional({ description: 'Entity id' })
-  entity_id: string;
+  entity_id: string | null;
 
   @Column({ type: 'varchar', length: 80, nullable: true })
   @ApiPropertyOptional({ description: 'File type' })
@@ -59,4 +59,8 @@ export class UploadedFile {
   @CreateDateColumn()
   @ApiProperty({ description: 'Created at' })
   created_at: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  @ApiPropertyOptional({ description: 'Cleanup after date' })
+  cleanup_after: Date | null;
 }

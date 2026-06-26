@@ -41,4 +41,9 @@ export class UpdateManufacturerDto {
   @IsString()
   @ApiPropertyOptional({ description: 'State' })
   state?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'Country' })
+  country?: string;
 }

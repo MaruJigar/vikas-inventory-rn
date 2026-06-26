@@ -11,6 +11,7 @@ import { User } from '../user/user.entity';
 import { Distributor } from '../distributor/distributor.entity';
 import { ApprovalRequest } from '../approval/approval-request.entity';
 import { RegisterSalesmanDto } from './dto/register-salesman.dto';
+import { CreateSalesmanAdminDto } from './dto/create-salesman-admin.dto';
 import { UpdateSalesmanDto } from './dto/update-salesman.dto';
 import * as bcrypt from 'bcrypt';
 import { ListQueryDto } from '../common/dto/list-query.dto';
@@ -95,6 +96,102 @@ export class SalesmanService {
     }
   }
 
+  async createSalesmanAdmin(
+    dto: CreateSalesmanAdminDto,
+    userRole: string,
+    userId: string,
+  ) {
+    const existingUser = await this.userRepo.findOne({
+      where: [{ email: dto.email }, { phone: dto.phone }],
+    });
+    if (existingUser) {
+      throw new BadRequestException('User with this email or phone already exists');
+    }
+
+    const targetDistributorId = dto.distributor_id;
+
+    if (userRole === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.distributorRepo.findOne({
+        where: { user_id: userId },
+      });
+      if (!dist) throw new ForbiddenException('Distributor profile not found');
+      if (targetDistributorId !== dist.id) {
+        throw new ForbiddenException('Cannot create salesman for another distributor');
+      }
+    } else if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfrResult = await this.dataSource.query(
+        `SELECT id FROM manufacturers WHERE user_id = $1`,
+        [userId],
+      );
+      if (!mfrResult.length)
+        throw new ForbiddenException('Manufacturer profile not found');
+      
+      const link = await this.dataSource.query(
+        `SELECT id FROM manufacturer_distributors WHERE manufacturer_id = $1 AND distributor_id = $2`,
+        [mfrResult[0].id, targetDistributorId],
+      );
+      if (!link.length) {
+        throw new ForbiddenException('Distributor not linked to your manufacturer network');
+      }
+    } else if (userRole !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Unauthorized role');
+    }
+
+    const distributor = await this.distributorRepo.findOne({
+      where: { id: targetDistributorId },
+    });
+    if (!distributor) {
+      throw new BadRequestException('Invalid distributor ID');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const password_hash = await bcrypt.hash(dto.password, 10);
+
+      const user = queryRunner.manager.create(User, {
+        full_name: dto.full_name,
+        phone: dto.phone,
+        email: dto.email,
+        password_hash,
+        role: 'SALESMAN',
+        approval_status: 'APPROVED',
+        is_active: true,
+      });
+      const savedUser = await queryRunner.manager.save(user);
+
+      const salesman = queryRunner.manager.create(Salesman, {
+        user_id: savedUser.id,
+        distributor_id: distributor.id,
+        full_name: dto.full_name,
+        phone: dto.phone,
+        email: dto.email,
+        approval_status: 'APPROVED',
+        is_active: true,
+      });
+      const savedSalesman = await queryRunner.manager.save(salesman);
+
+      await queryRunner.commitTransaction();
+
+      const {
+        password_hash: _,
+        hashed_refresh_token,
+        reset_password_token_hash,
+        reset_password_expires_at,
+        ...userWithoutPassword
+      } = savedUser;
+
+      return { user: userWithoutPassword, salesman: savedSalesman };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   async getSalesmen(
     userRole: string,
     userId: string,
@@ -112,7 +209,8 @@ export class SalesmanService {
     } = queryDto;
     const skip = (page - 1) * limit;
 
-    const qb = this.salesmanRepo.createQueryBuilder('salesman');
+    const qb = this.salesmanRepo.createQueryBuilder('salesman')
+      .leftJoinAndSelect('salesman.distributor', 'distributor');
 
     if (userRole === 'SUPER_ADMIN') {
       // Global
@@ -186,6 +284,7 @@ export class SalesmanService {
   async getSalesmanById(id: string, userRole: string, userId: string) {
     const qb = this.salesmanRepo
       .createQueryBuilder('salesman')
+      .leftJoinAndSelect('salesman.distributor', 'distributor')
       .where('salesman.id = :id', { id });
 
     if (userRole === 'SUPER_ADMIN') {

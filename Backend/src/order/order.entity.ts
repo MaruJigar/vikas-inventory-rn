@@ -6,9 +6,11 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   Index,
 } from 'typeorm';
+import { OrderItem } from './order-item.entity';
 import { ShopVisit } from '../visit/shop-visit.entity';
 import { Shop } from '../shop/shop.entity';
 import { Salesman } from '../salesman/salesman.entity';
@@ -22,7 +24,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 @Index('idx_orders_salesman_status', ['salesman_id', 'status'])
 @Index('idx_orders_dist_status', ['distributor_id', 'status'])
 @Index('idx_orders_created_at', ['created_at'])
-@Index('idx_orders_idempotency_key', ['idempotency_key'], { unique: true, where: "idempotency_key IS NOT NULL" })
+@Index('idx_orders_idempotency_key', ['idempotency_key'], {
+  unique: true,
+  where: 'idempotency_key IS NOT NULL',
+})
 export class Order {
   @PrimaryGeneratedColumn('uuid')
   @ApiProperty({ description: 'Id' })
@@ -139,6 +144,9 @@ export class Order {
   @Column({ type: 'text', nullable: true })
   @ApiPropertyOptional({ description: 'Cancellation reason' })
   cancellation_reason: string;
+
+  @OneToMany(() => OrderItem, (item) => item.order)
+  items: OrderItem[];
 
   @CreateDateColumn()
   @ApiProperty({ description: 'Created at' })

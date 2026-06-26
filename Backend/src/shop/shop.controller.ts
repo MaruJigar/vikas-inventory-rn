@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   Patch,
+  Delete,
   UseGuards,
   Request,
   Query,
@@ -42,7 +43,7 @@ export class ShopController {
     private readonly duplicateDetectionService: ShopDuplicateDetectionService,
   ) {}
 
-  @Roles('DISTRIBUTOR_ADMIN', 'SALESMAN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
   @Post('check-duplicate')
   @ApiOperation({ summary: 'Check Duplicate' })
   @ApiBearerAuth('bearer')
@@ -57,7 +58,7 @@ export class ShopController {
     );
   }
 
-  @Roles('DISTRIBUTOR_ADMIN', 'SALESMAN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
   @Post()
   @ApiOperation({ summary: 'Create Shop' })
   @ApiBearerAuth('bearer')
@@ -92,5 +93,13 @@ export class ShopController {
     @Request() req,
   ) {
     return this.shopService.updateShop(id, dto, req.user.userId, req.user.role);
+  }
+
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete Shop' })
+  @ApiBearerAuth('bearer')
+  deleteShop(@Param('id') id: string, @Request() req) {
+    return this.shopService.deleteShop(id, req.user.userId, req.user.role);
   }
 }

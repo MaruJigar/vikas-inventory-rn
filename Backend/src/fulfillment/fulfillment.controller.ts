@@ -33,7 +33,7 @@ export class FulfillmentController {
   constructor(private readonly fulfillmentService: FulfillmentService) {}
 
   @Patch(':id/confirm')
-  @Roles('DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @ApiOperation({ summary: 'Confirm' })
   @ApiBearerAuth('bearer')
   confirm(
@@ -45,7 +45,7 @@ export class FulfillmentController {
   }
 
   @Patch(':id/processing')
-  @Roles('DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @ApiOperation({ summary: 'Processing' })
   @ApiBearerAuth('bearer')
   processing(
@@ -57,7 +57,7 @@ export class FulfillmentController {
   }
 
   @Patch(':id/packed')
-  @Roles('DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @ApiOperation({ summary: 'Packed' })
   @ApiBearerAuth('bearer')
   packed(
@@ -69,7 +69,7 @@ export class FulfillmentController {
   }
 
   @Patch(':id/dispatch')
-  @Roles('DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @ApiOperation({ summary: 'Dispatch' })
   @ApiBearerAuth('bearer')
   dispatch(
@@ -81,7 +81,7 @@ export class FulfillmentController {
   }
 
   @Patch(':id/deliver')
-  @Roles('DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @ApiOperation({ summary: 'Deliver' })
   @ApiBearerAuth('bearer')
   deliver(
@@ -93,7 +93,7 @@ export class FulfillmentController {
   }
 
   @Patch(':id/partial-dispatch')
-  @Roles('DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @ApiOperation({ summary: 'Partial Dispatch' })
   @ApiBearerAuth('bearer')
   partialDispatch(
@@ -109,7 +109,7 @@ export class FulfillmentController {
   }
 
   @Patch(':id/partial-deliver')
-  @Roles('DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @ApiOperation({ summary: 'Partial Deliver' })
   @ApiBearerAuth('bearer')
   partialDeliver(

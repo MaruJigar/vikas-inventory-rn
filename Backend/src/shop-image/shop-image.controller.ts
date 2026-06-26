@@ -7,6 +7,7 @@ import {
   Request,
   Param,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
@@ -27,7 +28,26 @@ export class ShopImageController {
   ) {}
 
   @Post(':shopId/upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB
+      },
+      fileFilter: (req, file, cb) => {
+        const allowedMimeTypes = [
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'image/webp',
+        ];
+        if (allowedMimeTypes.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new BadRequestException('Invalid file type'), false);
+        }
+      },
+    }),
+  )
   @ApiOperation({ summary: 'Upload Shop Image' })
   @ApiBearerAuth('bearer')
   async uploadShopImage(

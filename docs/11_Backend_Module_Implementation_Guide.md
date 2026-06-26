@@ -70,7 +70,8 @@ Shop verification photo is mandatory.
 All images must be compressed before upload.
 Pending users can only view catalogues.
 All critical actions must create audit logs.
-
+Human Readability Governance: API DTOs must never expose raw UUIDs where human-readable names are required.
+Pagination & Query Efficiency Governance: All list endpoints must use paginated queries with a default limit of 20 and a maximum limit of 100. Unbounded queries are an architectural defect.
 ⸻
 
 4. Recommended NestJS Project Structure

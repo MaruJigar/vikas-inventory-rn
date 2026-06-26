@@ -21,6 +21,8 @@ import { RegisterDistributorDto } from './dto/register-distributor.dto';
 import { RegisterSalesmanDto } from './dto/register-salesman.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -100,5 +102,40 @@ export class AuthController {
   @Get('me')
   getProfile(@Request() req) {
     return this.authService.getProfile(req.user.userId);
+  }
+
+  @ApiOperation({
+    summary: 'Forgot Password',
+    description: 'Requests a password reset email.',
+  })
+  @ApiCreatedResponse({
+    description: 'If an account exists, a password reset link has been sent.',
+  })
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @ApiOperation({
+    summary: 'Validate Reset Token',
+    description:
+      'Validates if a password reset token is valid and not expired.',
+  })
+  @ApiOkResponse({ description: 'Returns validity of the token.' })
+  @Get('reset-password/validate')
+  async validateResetToken(@Request() req) {
+    const token = req.query.token as string;
+    return this.authService.validateResetToken(token);
+  }
+
+  @ApiOperation({
+    summary: 'Reset Password',
+    description: 'Resets the password using a valid token.',
+  })
+  @ApiCreatedResponse({ description: 'Password reset successful.' })
+  @ApiBadRequestResponse({ description: 'Validation failed or invalid token.' })
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }

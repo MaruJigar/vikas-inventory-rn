@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { SalesmanService } from './salesman.service';
 import { RegisterSalesmanDto } from './dto/register-salesman.dto';
+import { CreateSalesmanAdminDto } from './dto/create-salesman-admin.dto';
 import { UpdateSalesmanDto } from './dto/update-salesman.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
@@ -40,6 +41,19 @@ export class SalesmanController {
   @ApiOperation({ summary: 'Register' })
   register(@Body() dto: RegisterSalesmanDto) {
     return this.salesmanService.register(dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Post()
+  @ApiOperation({ summary: 'Create Salesman (Admin)' })
+  @ApiBearerAuth('bearer')
+  createSalesmanAdmin(@Body() dto: CreateSalesmanAdminDto, @Request() req) {
+    return this.salesmanService.createSalesmanAdmin(
+      dto,
+      req.user.role,
+      req.user.userId,
+    );
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

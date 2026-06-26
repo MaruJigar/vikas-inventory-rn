@@ -5,6 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Edit, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { SalesmanStatusBadge } from './components/SalesmanStatusBadge';
 
+type SalesmanRowData = SalesmanDto & {
+  distributor?: { business_name: string };
+};
+
 interface SalesmenColumnsProps {
   onViewDetails: (salesman: SalesmanDto) => void;
   onEdit: (salesman: SalesmanDto) => void;
@@ -34,13 +38,16 @@ export const getSalesmenColumns = ({ onViewDetails, onEdit, onReview }: Salesmen
     ),
   },
   {
-    accessorKey: 'distributor_id',
+    id: 'distributor',
     header: 'Distributor',
-    cell: ({ row }) => (
-      <div className="text-slate-600 text-sm truncate max-w-[120px]" title={row.original.distributor_id}>
-        {row.original.distributor_id || '-'}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const data = row.original as SalesmanRowData;
+      return (
+        <div className="text-slate-600 text-sm truncate max-w-[120px]">
+          {data.distributor?.business_name || '-'}
+        </div>
+      );
+    },
   },
   {
     accessorKey: 'approval_status',

@@ -4,6 +4,7 @@ import {
   Post,
   Put,
   Patch,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -39,7 +40,7 @@ import { Distributor } from './distributor.entity';
 export class DistributorController {
   constructor(private distributorService: DistributorService) {}
 
-  @Roles('DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Get('profile')
   @ApiOperation({ summary: 'Get Profile' })
   @ApiBearerAuth('bearer')
@@ -47,7 +48,7 @@ export class DistributorController {
     return this.distributorService.getProfile(req.user.userId);
   }
 
-  @Roles('DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Put('profile')
   @ApiOperation({ summary: 'Update Profile' })
   @ApiBearerAuth('bearer')
@@ -109,6 +110,17 @@ export class DistributorController {
       req.user.role,
       id,
       dto,
+    );
+  }
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete Distributor' })
+  @ApiBearerAuth('bearer')
+  deleteDistributorAdmin(@Request() req, @Param('id') id: string) {
+    return this.distributorService.deleteDistributorAdmin(
+      req.user.userId,
+      req.user.role,
+      id,
     );
   }
 }

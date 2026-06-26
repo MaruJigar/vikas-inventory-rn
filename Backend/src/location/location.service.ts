@@ -282,7 +282,9 @@ export class LocationService {
     });
     if (!salesman) throw new BadRequestException('Salesman not found');
 
-    if (userRole === 'DISTRIBUTOR_ADMIN') {
+    if (userRole === 'SUPER_ADMIN') {
+      // Global access, no checks
+    } else if (userRole === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
       if (!dist || dist.id !== salesman.distributor_id) {
         throw new ForbiddenException('Cannot access location of this salesman');
@@ -321,7 +323,9 @@ export class LocationService {
     });
     if (!salesman) throw new BadRequestException('Salesman not found');
 
-    if (userRole === 'DISTRIBUTOR_ADMIN') {
+    if (userRole === 'SUPER_ADMIN') {
+      // Global access
+    } else if (userRole === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
       if (!dist || dist.id !== salesman.distributor_id) {
         throw new ForbiddenException(

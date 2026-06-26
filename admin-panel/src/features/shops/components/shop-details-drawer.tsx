@@ -5,6 +5,11 @@ import { ShopStatusBadge } from './shop-status-badge';
 import Image from 'next/image';
 import { EntityFormDrawer } from '@/components/shared/EntityFormDrawer';
 
+type ShopWithRelations = ShopDto & {
+  distributor?: { business_name: string };
+  created_by_salesman?: { full_name: string };
+};
+
 interface ShopDetailsDrawerProps {
   shop: ShopDto | null;
   isOpen: boolean;
@@ -82,11 +87,11 @@ export function ShopDetailsDrawer({ shop, isOpen, onClose }: ShopDetailsDrawerPr
           <div className="grid grid-cols-2 gap-y-4 gap-x-6">
             <div>
               <div className="text-sm font-medium text-slate-500 mb-1">Latitude</div>
-              <div className="text-sm text-slate-900">{shop.latitude ?? '-'}</div>
+              <div className="text-sm text-slate-900">{shop.location?.coordinates?.[1] ?? '-'}</div>
             </div>
             <div>
               <div className="text-sm font-medium text-slate-500 mb-1">Longitude</div>
-              <div className="text-sm text-slate-900">{shop.longitude ?? '-'}</div>
+              <div className="text-sm text-slate-900">{shop.location?.coordinates?.[0] ?? '-'}</div>
             </div>
           </div>
         </div>
@@ -96,12 +101,12 @@ export function ShopDetailsDrawer({ shop, isOpen, onClose }: ShopDetailsDrawerPr
           <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-4 border-b pb-2">Ownership</h3>
           <div className="grid grid-cols-2 gap-y-4 gap-x-6">
             <div>
-              <div className="text-sm font-medium text-slate-500 mb-1">Distributor ID</div>
-              <div className="text-sm text-slate-900 break-all">{shop.distributor_id || '-'}</div>
+              <div className="text-sm font-medium text-slate-500 mb-1">Distributor</div>
+              <div className="text-sm text-slate-900 break-all">{(shop as ShopWithRelations).distributor?.business_name || shop.distributor_id || '-'}</div>
             </div>
             <div>
-              <div className="text-sm font-medium text-slate-500 mb-1">Salesman ID</div>
-              <div className="text-sm text-slate-900 break-all">{shop.created_by_salesman_id || '-'}</div>
+              <div className="text-sm font-medium text-slate-500 mb-1">Created By Salesman</div>
+              <div className="text-sm text-slate-900 break-all">{(shop as ShopWithRelations).created_by_salesman?.full_name || shop.created_by_user_id || '-'}</div>
             </div>
           </div>
         </div>

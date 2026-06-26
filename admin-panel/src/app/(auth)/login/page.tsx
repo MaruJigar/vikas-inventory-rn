@@ -10,6 +10,7 @@ import { authService } from '@/services/auth.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import Link from 'next/link';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -121,6 +122,14 @@ export default function LoginPage() {
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
               )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end">
+            <div className="text-sm">
+              <Link href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
+                Forgot Password?
+              </Link>
             </div>
           </div>
 

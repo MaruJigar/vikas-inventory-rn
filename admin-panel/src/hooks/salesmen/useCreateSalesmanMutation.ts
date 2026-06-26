@@ -1,3 +1,4 @@
+import { handleSuccessToast, handleUnexpectedToast } from '@/lib/utils/toast-helpers';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { salesmanService } from '@/services/salesman.service';
 import { salesmenKeys } from '@/lib/query-keys/salesmen';
@@ -7,8 +8,12 @@ export function useCreateSalesmanMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: RegisterSalesmanDto) => salesmanService.register(data),
+    mutationFn: (data: RegisterSalesmanDto) => salesmanService.createSalesmanAdmin(data),
+    onError: (error) => {
+      handleUnexpectedToast(error);
+    },
     onSuccess: () => {
+      handleSuccessToast('Create Salesman successful');
       queryClient.invalidateQueries({ queryKey: salesmenKeys.all });
     },
   });

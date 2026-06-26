@@ -31,7 +31,7 @@ import {
 export class WorkingDayController {
   constructor(private readonly wdService: WorkingDayService) {}
 
-  @Roles('SALESMAN')
+  @Roles('SUPER_ADMIN', 'SALESMAN')
   @Post('check-in')
   @ApiOperation({ summary: 'Check In' })
   @ApiBearerAuth('bearer')
@@ -39,7 +39,7 @@ export class WorkingDayController {
     return this.wdService.checkIn(req.user.userId, dto);
   }
 
-  @Roles('SALESMAN')
+  @Roles('SUPER_ADMIN', 'SALESMAN')
   @Post('check-out')
   @ApiOperation({ summary: 'Check Out' })
   @ApiBearerAuth('bearer')

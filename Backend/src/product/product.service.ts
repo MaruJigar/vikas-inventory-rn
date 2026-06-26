@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { Product } from './product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -14,6 +14,7 @@ import { Distributor } from '../distributor/distributor.entity';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
+import { UploadedFile } from '../shop-image/uploaded-file.entity';
 
 @Injectable()
 export class ProductService {
@@ -23,20 +24,23 @@ export class ProductService {
     private distributorRepo: Repository<Distributor>,
     @InjectRepository(Manufacturer)
     private manufacturerRepo: Repository<Manufacturer>,
+    @InjectRepository(UploadedFile)
+    private fileRepo: Repository<UploadedFile>,
     private pricingService: ProductPricingService,
   ) {}
 
-  async createProduct(userId: string, dto: CreateProductDto) {
-    if (dto.product_source === 'MANUFACTURER_CREATED') {
-      const profile = await this.manufacturerRepo.findOne({
+  async createProduct(userId: string, role: string, dto: CreateProductDto) {
+    if (role !== 'SUPER_ADMIN') {
+      if (dto.product_source === 'MANUFACTURER_CREATED') {
+        const profile = await this.manufacturerRepo.findOne({
         where: { user_id: userId },
       });
       if (!profile || profile.id !== dto.manufacturer_id)
         throw new ForbiddenException(
           'Cannot create product for another manufacturer',
         );
-    } else if (dto.product_source === 'DISTRIBUTOR_CREATED') {
-      const profile = await this.distributorRepo.findOne({
+      } else if (dto.product_source === 'DISTRIBUTOR_CREATED') {
+        const profile = await this.distributorRepo.findOne({
         where: { user_id: userId },
       });
       if (!profile || profile.id !== dto.distributor_id)
@@ -47,10 +51,27 @@ export class ProductService {
         throw new BadRequestException(
           'Distributor products must define external manufacturer name',
         );
+      }
     }
 
     const product = this.productRepo.create(dto);
-    return this.productRepo.save(product);
+    const savedProduct = await this.productRepo.save(product);
+
+    if (savedProduct.product_image_url) {
+      const file = await this.fileRepo.findOne({
+        where: {
+          entity_type: 'PRODUCT',
+          entity_id: IsNull(),
+          file_url: savedProduct.product_image_url,
+        },
+      });
+      if (file) {
+        file.entity_id = savedProduct.id;
+        await this.fileRepo.save(file);
+      }
+    }
+
+    return savedProduct;
   }
 
   async getProducts(
@@ -67,7 +88,10 @@ export class ProductService {
     } = queryDto;
     const skip = (page - 1) * limit;
 
-    const qb = this.productRepo.createQueryBuilder('product');
+    const qb = this.productRepo.createQueryBuilder('product')
+      .leftJoinAndSelect('product.manufacturer', 'manufacturer')
+      .leftJoinAndSelect('product.distributor', 'distributor')
+      .leftJoinAndSelect('product.category', 'category');
 
     // Ownership Enforcement
     if (role === 'MANUFACTURER_ADMIN') {
@@ -131,6 +155,7 @@ export class ProductService {
 
   async updateProduct(
     userId: string,
+    role: string,
     productId: string,
     dto: UpdateProductDto,
   ) {
@@ -140,18 +165,20 @@ export class ProductService {
     if (!product) throw new NotFoundException('Product not found');
 
     // Verify ownership
-    if (product.product_source === 'MANUFACTURER_CREATED') {
-      const profile = await this.manufacturerRepo.findOne({
+    if (role !== 'SUPER_ADMIN') {
+      if (product.product_source === 'MANUFACTURER_CREATED') {
+        const profile = await this.manufacturerRepo.findOne({
         where: { user_id: userId },
       });
-      if (!profile || profile.id !== product.manufacturer_id)
-        throw new ForbiddenException('Unauthorized to modify this product');
-    } else if (product.product_source === 'DISTRIBUTOR_CREATED') {
-      const profile = await this.distributorRepo.findOne({
+        if (!profile || profile.id !== product.manufacturer_id)
+          throw new ForbiddenException('Unauthorized to modify this product');
+      } else if (product.product_source === 'DISTRIBUTOR_CREATED') {
+        const profile = await this.distributorRepo.findOne({
         where: { user_id: userId },
       });
-      if (!profile || profile.id !== product.distributor_id)
-        throw new ForbiddenException('Unauthorized to modify this product');
+        if (!profile || profile.id !== product.distributor_id)
+          throw new ForbiddenException('Unauthorized to modify this product');
+      }
     }
 
     // Check if price history needs logging
@@ -175,7 +202,75 @@ export class ProductService {
       );
     }
 
+    const oldImageUrl = product.product_image_url;
+
     Object.assign(product, dto);
-    return this.productRepo.save(product);
+    const savedProduct = await this.productRepo.save(product);
+
+    if (
+      dto.product_image_url !== undefined &&
+      dto.product_image_url !== oldImageUrl &&
+      oldImageUrl
+    ) {
+      const oldFile = await this.fileRepo.findOne({
+        where: {
+          entity_type: 'PRODUCT',
+          entity_id: product.id,
+          file_url: oldImageUrl,
+        },
+      });
+      if (oldFile) {
+        const cleanupDate = new Date();
+        cleanupDate.setDate(cleanupDate.getDate() + 7);
+        oldFile.cleanup_after = cleanupDate;
+        await this.fileRepo.save(oldFile);
+      }
+    }
+
+    return savedProduct;
+  }
+
+  async deleteProduct(userId: string, role: string, productId: string) {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+    });
+    if (!product) throw new NotFoundException('Product not found');
+
+    // Verify ownership
+    if (role !== 'SUPER_ADMIN') {
+      if (product.product_source === 'MANUFACTURER_CREATED') {
+        const profile = await this.manufacturerRepo.findOne({
+        where: { user_id: userId },
+      });
+        if (!profile || profile.id !== product.manufacturer_id)
+          throw new ForbiddenException('Unauthorized to delete this product');
+      } else if (product.product_source === 'DISTRIBUTOR_CREATED') {
+        const profile = await this.distributorRepo.findOne({
+        where: { user_id: userId },
+      });
+        if (!profile || profile.id !== product.distributor_id)
+          throw new ForbiddenException('Unauthorized to delete this product');
+      }
+    }
+
+    await this.productRepo.softDelete(productId);
+
+    if (product.product_image_url) {
+      const file = await this.fileRepo.findOne({
+        where: {
+          entity_type: 'PRODUCT',
+          entity_id: product.id,
+          file_url: product.product_image_url,
+        },
+      });
+      if (file) {
+        const cleanupDate = new Date();
+        cleanupDate.setDate(cleanupDate.getDate() + 7);
+        file.cleanup_after = cleanupDate;
+        await this.fileRepo.save(file);
+      }
+    }
+
+    return { message: 'Product deleted successfully' };
   }
 }

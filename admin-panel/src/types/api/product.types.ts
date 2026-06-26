@@ -16,6 +16,24 @@ export interface ProductDto {
   category_id?: string;
 }
 
+export interface CategoryDto {
+  id: string;
+  name: string;
+  description?: string;
+  parent_id?: string;
+  created_at: string;
+  updated_at: string;
+  parent?: CategoryDto;
+}
+
+export interface CreateCategoryDto {
+  name: string;
+  description?: string;
+  parent_id?: string;
+}
+
+export type UpdateCategoryDto = Partial<CreateCategoryDto>;
+
 export interface CreateProductDto {
   product_source: 'MANUFACTURER_CREATED' | 'DISTRIBUTOR_CREATED';
   manufacturer_id?: string;

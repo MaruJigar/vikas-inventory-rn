@@ -57,7 +57,10 @@ export function ReviewSalesmanApprovalDialog({
 
   // Find the approval request corresponding to this salesman
   const approvalRequest = pendingResponse?.data?.find(
-    (req) => req.salesman_id === salesman?.id && req.status === 'PENDING_APPROVAL'
+    (req: unknown) => {
+      const r = req as { salesman_id: string; status: string };
+      return r.salesman_id === salesman?.id && r.status === 'PENDING_APPROVAL';
+    }
   );
 
   const onSubmit = async (data?: RejectionFormValues) => {
@@ -73,7 +76,7 @@ export function ReviewSalesmanApprovalDialog({
     try {
       await reviewMutation.mutateAsync({
         id: approvalRequest.id,
-        dto: {
+        data: {
           status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
           rejection_reason: action === 'REJECT' ? data?.reason : undefined,
         },

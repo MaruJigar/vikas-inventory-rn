@@ -50,6 +50,14 @@ export class User {
   @ApiPropertyOptional({ description: 'Last login at' })
   last_login_at: Date;
 
+  @Column({ type: 'text', nullable: true })
+  @ApiPropertyOptional({ description: 'Hashed reset password token' })
+  reset_password_token_hash: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  @ApiPropertyOptional({ description: 'Reset password expiration' })
+  reset_password_expires_at: Date | null;
+
   @CreateDateColumn()
   @ApiProperty({ description: 'Created at' })
   created_at: Date;

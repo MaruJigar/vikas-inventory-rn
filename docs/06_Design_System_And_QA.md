@@ -697,7 +697,8 @@ Validation
 Navigation
 Permissions
 Offline Behavior
-
+Human Readability Governance: End users must never see raw UUIDs or technical identifiers.
+Pagination Governance: Ensure no list queries exceed max limit of 100, and all DataTables paginate natively using server-side endpoints.
 ⸻
 
 20. Authentication QA

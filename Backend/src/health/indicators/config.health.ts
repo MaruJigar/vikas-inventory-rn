@@ -14,7 +14,7 @@ export class ConfigHealthIndicator extends HealthIndicator {
 
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
     const isConfigLoaded = !!this.configService.get('app.port');
-    
+
     const result = this.getStatus(key, isConfigLoaded, {
       loaded: isConfigLoaded,
     });
@@ -22,7 +22,7 @@ export class ConfigHealthIndicator extends HealthIndicator {
     if (isConfigLoaded) {
       return result;
     }
-    
+
     throw new HealthCheckError('Config check failed', result);
   }
 }

@@ -1,3 +1,4 @@
+import { handleSuccessToast, handleUnexpectedToast } from '@/lib/utils/toast-helpers';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { productService } from '@/services/product.service';
 import { productsKeys } from '@/lib/query-keys/products';
@@ -8,7 +9,11 @@ export function useCreateCategoryMutation() {
 
   return useMutation({
     mutationFn: (data: CreateCategoryDto) => productService.createCategory(data),
+    onError: (error) => {
+      handleUnexpectedToast(error);
+    },
     onSuccess: () => {
+      handleSuccessToast('Create Category successful');
       // Invalidate categories list to refetch
       queryClient.invalidateQueries({ queryKey: productsKeys.categories() });
     },

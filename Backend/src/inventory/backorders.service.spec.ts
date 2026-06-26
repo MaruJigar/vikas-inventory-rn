@@ -113,7 +113,10 @@ describe('BackordersService', () => {
         { provide: DataSource, useValue: mockDataSource },
         { provide: AuditLogService, useValue: mockAuditLogService },
         { provide: AppSocketGateway, useValue: mockSocketGateway },
-        { provide: NotificationQueueService, useValue: mockNotificationService },
+        {
+          provide: NotificationQueueService,
+          useValue: mockNotificationService,
+        },
       ],
     }).compile();
 

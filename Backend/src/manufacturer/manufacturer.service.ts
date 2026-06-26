@@ -52,7 +52,19 @@ export class ManufacturerService {
   async updateProfile(userId: string, dto: UpdateManufacturerDto) {
     const profile = await this.getProfile(userId);
     Object.assign(profile, dto);
-    return this.manufacturerRepo.save(profile);
+    const updated = await this.manufacturerRepo.save(profile);
+
+    if (dto.email || dto.phone || dto.contact_person) {
+      const userRepo = this.dataSource.getRepository(User);
+      const user = await userRepo.findOne({ where: { id: userId } });
+      if (user) {
+        if (dto.email) user.email = dto.email;
+        if (dto.phone) user.phone = dto.phone;
+        if (dto.contact_person) user.full_name = dto.contact_person;
+        await userRepo.save(user);
+      }
+    }
+    return updated;
   }
 
   async getManufacturers(
@@ -74,6 +86,14 @@ export class ManufacturerService {
         '(manufacturer.company_name ILIKE :search OR manufacturer.contact_person ILIKE :search)',
         { search: `%${search}%` },
       );
+    }
+
+    if (queryDto.status) {
+      if (queryDto.status === 'active') {
+        qb.andWhere('manufacturer.is_active = :isActive', { isActive: true });
+      } else if (queryDto.status === 'inactive') {
+        qb.andWhere('manufacturer.is_active = :isActive', { isActive: false });
+      }
     }
 
     const allowedSortFields = ['created_at', 'updated_at', 'company_name'];
@@ -157,7 +177,14 @@ export class ManufacturerService {
         { new_values: manufacturer },
       );
 
-      return { user, profile: manufacturer };
+      const {
+        password_hash,
+        hashed_refresh_token,
+        reset_password_token_hash,
+        reset_password_expires_at,
+        ...safeUser
+      } = user;
+      return { user: safeUser, profile: manufacturer };
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -178,7 +205,10 @@ export class ManufacturerService {
 
     if (
       manufacturer.user_id &&
-      (dto.email || dto.phone || dto.contact_person)
+      (dto.email ||
+        dto.phone ||
+        dto.contact_person ||
+        typeof dto.is_active === 'boolean')
     ) {
       const userRepo = this.dataSource.getRepository(User);
       const user = await userRepo.findOne({
@@ -188,6 +218,7 @@ export class ManufacturerService {
         if (dto.email) user.email = dto.email;
         if (dto.phone) user.phone = dto.phone;
         if (dto.contact_person) user.full_name = dto.contact_person;
+        if (typeof dto.is_active === 'boolean') user.is_active = dto.is_active;
         await userRepo.save(user);
       }
     }
@@ -226,6 +257,41 @@ export class ManufacturerService {
       await queryRunner.manager.save(link);
       await queryRunner.commitTransaction();
       return link;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async deleteManufacturer(actorUserId: string, id: string) {
+    const manufacturer = await this.getManufacturerById(id);
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await queryRunner.manager.softDelete(Manufacturer, { id });
+
+      if (manufacturer.user_id) {
+        await queryRunner.manager.softDelete(User, {
+          id: manufacturer.user_id,
+        });
+      }
+
+      await queryRunner.commitTransaction();
+
+      await this.auditLogService.logAction(
+        'MANUFACTURER_DELETED',
+        'MANUFACTURER',
+        id,
+        actorUserId,
+        { old_values: manufacturer },
+      );
+
+      return { message: 'Manufacturer deleted successfully' };
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;

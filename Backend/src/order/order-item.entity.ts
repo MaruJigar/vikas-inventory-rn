@@ -21,7 +21,7 @@ export class OrderItem {
   @ApiProperty({ description: 'Order id' })
   order_id: string;
 
-  @ManyToOne(() => Order)
+  @ManyToOne(() => Order, (order) => order.items)
   @JoinColumn({ name: 'order_id' })
   order: Order;
 

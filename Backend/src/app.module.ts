@@ -43,6 +43,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { McpToolsModule } from './mcp-tools/mcp-tools.module';
 import { VisitModule } from './visit/visit.module';
 import { QueueModule } from './queue/queue.module';
+import { EmailModule } from './email/email.module';
 
 import { appConfig } from './config/app.config';
 import { databaseConfig } from './config/database.config';
@@ -72,7 +73,14 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,
-      load: [appConfig, databaseConfig, jwtConfig, rateLimitConfig, metricsConfig, queueConfig],
+      load: [
+        appConfig,
+        databaseConfig,
+        jwtConfig,
+        rateLimitConfig,
+        metricsConfig,
+        queueConfig,
+      ],
     }),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
@@ -139,6 +147,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     McpToolsModule,
     VisitModule,
     QueueModule.forRoot(),
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [

@@ -2,6 +2,7 @@ import {
   Injectable,
   ForbiddenException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -11,8 +12,14 @@ import { Salesman } from '../salesman/salesman.entity';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { ShopDuplicateDetectionService } from '../shop-duplicate-detection/shop-duplicate-detection.service';
+import { AuditLogService } from '../audit-log/audit-log.service';
+import { UploadedFile } from '../shop-image/uploaded-file.entity';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
+import * as fs from 'fs';
+import { promises as fsPromises } from 'fs';
+import { join } from 'path';
+import { getUploadRoot } from '../common/utils/upload-path.util';
 
 @Injectable()
 export class ShopService {
@@ -21,6 +28,7 @@ export class ShopService {
     @InjectRepository(Distributor) private distRepo: Repository<Distributor>,
     @InjectRepository(Salesman) private salesmanRepo: Repository<Salesman>,
     private duplicateDetectionService: ShopDuplicateDetectionService,
+    private auditLogService: AuditLogService,
     private dataSource: DataSource,
   ) {}
 
@@ -28,7 +36,12 @@ export class ShopService {
     let distributorId: string;
     let salesmanId: string | undefined = undefined;
 
-    if (userRole === 'SALESMAN') {
+    if (userRole === 'SUPER_ADMIN') {
+      if (!dto.distributor_id) {
+        throw new BadRequestException('SUPER_ADMIN must provide a distributor_id');
+      }
+      distributorId = dto.distributor_id;
+    } else if (userRole === 'SALESMAN') {
       const salesman = await this.salesmanRepo.findOne({
         where: { user_id: userId },
       });
@@ -41,7 +54,7 @@ export class ShopService {
       distributorId = dist.id;
     } else {
       throw new ForbiddenException(
-        'Only distributors and salesmen can create shops',
+        'Only SUPER_ADMIN, DISTRIBUTOR_ADMIN, and SALESMAN can create shops',
       );
     }
 
@@ -114,10 +127,14 @@ export class ShopService {
       startDate,
       endDate,
       status,
-    } = queryDto;
+      verification_status,
+      is_active,
+    } = queryDto as any;
     const skip = (page - 1) * limit;
 
-    const qb = this.shopRepo.createQueryBuilder('shop');
+    const qb = this.shopRepo.createQueryBuilder('shop')
+      .leftJoinAndSelect('shop.distributor', 'distributor')
+      .leftJoinAndSelect('shop.created_by_salesman', 'created_by_salesman');
 
     if (userRole === 'SUPER_ADMIN') {
       // Global
@@ -161,6 +178,16 @@ export class ShopService {
     if (status) {
       qb.andWhere('shop.verification_status = :status', { status });
     }
+    if (verification_status) {
+      qb.andWhere('shop.verification_status = :vStatus', { vStatus: verification_status });
+    }
+    if (is_active !== undefined) {
+      if (is_active === 'true' || is_active === true) {
+        qb.andWhere('shop.is_active = :isActive', { isActive: true });
+      } else if (is_active === 'false' || is_active === false) {
+        qb.andWhere('shop.is_active = :isActive', { isActive: false });
+      }
+    }
 
     if (startDate)
       qb.andWhere('shop.created_at >= :startDate', {
@@ -197,6 +224,8 @@ export class ShopService {
   async getShopById(id: string, userId: string, userRole: string) {
     const qb = this.shopRepo
       .createQueryBuilder('shop')
+      .leftJoinAndSelect('shop.distributor', 'distributor')
+      .leftJoinAndSelect('shop.created_by_salesman', 'created_by_salesman')
       .where('shop.id = :id', { id });
 
     if (userRole === 'SUPER_ADMIN') {
@@ -249,6 +278,10 @@ export class ShopService {
       throw new ForbiddenException('Manufacturers cannot edit shops');
     }
 
+    if (userRole === 'SALESMAN' && shop.created_by_user_id !== userId) {
+      throw new ForbiddenException('You can only modify shops you created');
+    }
+
     if (dto.latitude !== undefined && dto.longitude !== undefined) {
       shop.location = {
         type: 'Point',
@@ -261,5 +294,58 @@ export class ShopService {
     delete (shop as any).longitude;
 
     return this.shopRepo.save(shop);
+  }
+
+  async deleteShop(id: string, userId: string, userRole: string) {
+    const shop = await this.getShopById(id, userId, userRole);
+
+    if (userRole === 'MANUFACTURER_ADMIN') {
+      throw new ForbiddenException('Manufacturers cannot delete shops');
+    }
+
+    if (userRole === 'SALESMAN' && shop.created_by_user_id !== userId) {
+      throw new ForbiddenException('You can only delete shops you created');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Find UploadedFile rows
+      const oldFiles = await queryRunner.manager.find(UploadedFile, {
+        where: { entity_type: 'SHOP', entity_id: shop.id },
+      });
+
+      // 2. Mark for cleanup after 7 days
+      const cleanupDate = new Date();
+      cleanupDate.setDate(cleanupDate.getDate() + 7);
+
+      for (const oldFile of oldFiles) {
+        oldFile.cleanup_after = cleanupDate;
+        await queryRunner.manager.save(UploadedFile, oldFile);
+      }
+
+      // 3. Then soft delete shop
+      await queryRunner.manager.softDelete(Shop, shop.id);
+      
+      await this.auditLogService.logAction(
+        'SHOP_DELETED',
+        'SHOP',
+        shop.id,
+        userId,
+        {
+          deleted_shop_name: shop.name,
+        },
+      );
+
+      await queryRunner.commitTransaction();
+      return { message: 'Shop deleted successfully' };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 }

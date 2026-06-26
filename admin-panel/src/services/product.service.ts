@@ -12,4 +12,11 @@ export const productService = {
   createCategory: (data: CreateCategoryDto) => api.post<ApiResponse<CategoryDto>>('/product-categories', data).then(res => res.data),
   
   getPricingHistory: (id: string) => api.get<ApiResponse<PricingHistoryDto[]>>(`/product-pricing/products/${id}/history`).then(res => res.data),
+
+  uploadProductImage: (formData: FormData) => 
+    api.post<{ url: string }>('/uploads/products', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(res => res.data),
+
+  deleteProduct: (id: string) => api.delete<ApiResponse<void>>(`/products/${id}`).then(res => res.data),
 };

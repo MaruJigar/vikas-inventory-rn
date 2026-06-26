@@ -6,5 +6,6 @@ export function useManufacturersQuery(filters: Record<string, unknown> = {}) {
   return useQuery({
     queryKey: manufacturersKeys.list(filters),
     queryFn: () => manufacturerService.getManufacturers(filters),
+    placeholderData: (previousData) => previousData,
   });
 }

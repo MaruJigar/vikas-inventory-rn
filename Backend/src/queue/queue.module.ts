@@ -14,7 +14,7 @@ export class QueueModule {
 
     if (isQueueEnabled) {
       logger.log('Queue infrastructure is ENABLED. Booting BullMQ with Redis.');
-      
+
       return {
         module: QueueModule,
         imports: [
@@ -58,7 +58,9 @@ export class QueueModule {
     }
 
     // QUEUE IS DISABLED - Mock Strategy
-    logger.warn('Queue infrastructure is DISABLED. Queue injections will safely no-op.');
+    logger.warn(
+      'Queue infrastructure is DISABLED. Queue injections will safely no-op.',
+    );
 
     const mockQueue = {
       add: async (name: string, data: any) => {

@@ -60,7 +60,7 @@ export class BackordersController {
   }
 
   @Post(':id/allocate')
-  @Roles('DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @ApiOperation({ summary: 'Allocate Backorder' })
   @ApiBearerAuth('bearer')
   async allocateBackorder(

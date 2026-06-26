@@ -7,5 +7,5 @@ export function getImageUrl(url?: string | null): string {
     return url;
   }
 
-  return `${process.env.NEXT_PUBLIC_API_URL}${url}`;
+  return `${process.env.NEXT_PUBLIC_BACKEND_URL}${url}`;
 }

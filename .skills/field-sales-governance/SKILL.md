@@ -82,6 +82,325 @@ Admin:
 
 ---
 
+# DOCUMENTATION GOVERNANCE
+
+Documentation is a first-class deliverable.
+
+Documentation and code must remain synchronized.
+
+Whenever any of the following change:
+
+* Architecture
+* Entity Structure
+* Database Schema
+* DTOs
+* API Contracts
+* Upload Flows
+* Approval Flows
+* RBAC Rules
+* Business Rules
+* Offline Logic
+* Sync Logic
+* Navigation
+* Screens
+* Permissions
+* Ownership Rules
+* Cleanup Jobs
+* Cron Jobs
+* Retention Policies
+* Admin Panel Workflows
+* Mobile App Workflows
+
+The corresponding document inside `/docs` MUST be updated.
+
+No module may be marked COMPLETE or READY TO FREEZE until documentation is updated.
+
+Required outputs:
+
+1. Documentation Understanding Report
+2. Documentation Update Report
+
+Documentation must remain synchronized with code.
+
+---
+
+# BACKEND + ADMIN + MOBILE CO-EVOLUTION GOVERNANCE
+
+This project is developed simultaneously across:
+
+* Backend (NestJS)
+* Admin Panel (Next.js)
+* Mobile App (React Native)
+
+Whenever a feature is proposed:
+
+Step 1:
+Identify Backend Impact.
+
+Step 2:
+Identify Admin Panel Impact.
+
+Step 3:
+Identify Mobile App Impact.
+
+Step 4:
+Identify Database Impact.
+
+Step 5:
+Identify Documentation Impact.
+
+Generate a Change Impact Matrix before implementation.
+
+No feature may be implemented in only one layer if it affects multiple layers.
+
+Every implementation report must include:
+
+* Backend Impact
+* Admin Impact
+* Mobile Impact
+* Documentation Impact
+
+---
+
+# FREEZE GOVERNANCE
+
+No module may be frozen until all required verification passes.
+
+Mandatory Freeze Verification:
+
+1. Backend Build
+2. Admin Build
+3. Mobile Build (if impacted)
+4. API Contract Verification
+5. DTO Verification
+6. RBAC Verification
+7. Ownership Verification
+8. Upload Lifecycle Verification
+9. Offline Verification
+10. Sync Verification
+11. Documentation Verification
+
+Only then may the module be marked:
+
+READY TO FREEZE
+
+If documentation is not updated:
+
+FREEZE MUST FAIL.
+
+---
+
+# FILE LIFECYCLE GOVERNANCE
+
+Every uploaded file must have:
+
+* Ownership Mapping
+* Cleanup Strategy
+* Retention Policy
+* Replacement Strategy
+* Abandoned Upload Strategy
+
+No uploaded file may remain permanently orphaned.
+
+Every upload flow must document:
+
+1. Upload
+2. Ownership Linkage
+3. Replacement
+4. Delete
+5. Cleanup
+6. Recovery
+
+Required verification:
+
+* Upload Success
+* Ownership Linking
+* Replacement Cleanup
+* Delete Cleanup
+* Retention Validation
+* Recovery Validation
+
+All upload architecture changes must update:
+
+/docs/UPLOAD_ARCHITECTURE.md
+
+---
+
+# GLOBAL RBAC GOVERNANCE
+
+Supported Roles:
+
+* SUPER_ADMIN
+* MANUFACTURER_ADMIN
+* DISTRIBUTOR_ADMIN
+* SALESMAN
+* PENDING_USER
+
+SUPER_ADMIN is the highest authority.
+
+SUPER_ADMIN inherits all permissions of:
+
+* MANUFACTURER_ADMIN
+* DISTRIBUTOR_ADMIN
+* SALESMAN
+
+SUPER_ADMIN bypasses ownership restrictions.
+
+If ownership context is required:
+
+UI must request explicit context selection.
+
+Examples:
+
+* Manufacturer
+* Distributor
+* Territory
+
+Admin Panel must never expose functionality that the user cannot execute.
+
+Buttons, menus, actions, drawers and routes must respect RBAC before API execution.
+
+Unauthorized functionality must be hidden, not merely blocked.
+
+All RBAC changes must update:
+
+/docs/RBAC.md
+
+---
+
+# ADMIN PANEL GOVERNANCE
+
+The Admin Panel is a production application.
+
+Mandatory technologies:
+
+* Next.js
+* TypeScript
+* TanStack Query
+* React Hook Form
+* Zod
+* Tailwind
+* shadcn/ui
+
+Requirements:
+
+* Type Safety
+* API Contract Compliance
+* Permission Driven UI
+* Role Based Visibility
+* Consistent Toasts
+* Build Safety
+
+Never expose actions the user cannot execute.
+
+Never expose routes the user cannot access.
+
+Every admin module must provide:
+
+* List
+* Details
+* Create
+* Edit
+* Delete (when business rules allow)
+
+Required verification:
+
+* Page Access
+* Permission Validation
+* API Validation
+* Error Handling
+* Success Handling
+* Build Validation
+
+All Admin changes must update:
+
+/docs/FRONTEND_ARCHITECTURE.md
+
+---
+
+# DEVELOPMENT DATA GOVERNANCE
+
+Every completed module must support development seed data.
+
+Minimum:
+
+20 records per entity type.
+
+Include:
+
+* Active
+* Inactive
+* Approved
+* Pending
+* Rejected
+
+Relationships must be valid.
+
+Seed data must exercise all business paths.
+
+Required coverage:
+
+* Manufacturers
+* Distributors
+* Salesmen
+* Shops
+* Products
+* Categories
+* Visits
+* Orders
+* Inventory
+* Approvals
+* Notifications
+
+Seed generation scripts must be documented.
+
+All seed changes must update:
+
+/docs/DEVELOPMENT_DATA.md
+
+---
+
+# DOCUMENTATION UPDATE REQUIREMENT
+
+Whenever a module changes:
+
+Update the relevant document.
+
+Minimum required documents:
+
+/docs/ARCHITECTURE.md
+/docs/RBAC.md
+/docs/API_CONTRACTS.md
+/docs/UPLOAD_ARCHITECTURE.md
+/docs/APPROVAL_WORKFLOW.md
+/docs/PRODUCT_MODULE.md
+/docs/SHOP_MODULE.md
+/docs/INVENTORY_MODULE.md
+/docs/ORDER_MODULE.md
+/docs/VISIT_MODULE.md
+/docs/WORKING_DAY_MODULE.md
+/docs/FRONTEND_ARCHITECTURE.md
+/docs/DEPLOYMENT.md
+
+Create missing files if they do not exist.
+
+Every module document must contain:
+
+1. Module Overview
+2. Entity Definitions
+3. API Endpoints
+4. DTO Contracts
+5. RBAC Matrix
+6. Ownership Rules
+7. Upload Architecture (if applicable)
+8. Approval Workflow (if applicable)
+9. Cleanup / Retention Lifecycle
+10. Frontend Integration Requirements
+11. Known Limitations
+12. Freeze Status
+13. Last Updated Date
+
+
 # ABSOLUTE DOCUMENT AUTHORITY ORDER
 
 Every frontend decision must be sourced from documentation.
@@ -513,6 +832,154 @@ Every notification must support:
 
 # UI GOVERNANCE
 
+## Human Readability Rule
+
+End users must never see raw UUIDs, foreign keys, database identifiers, technical references, or internal system keys.
+
+Always display business-readable values.
+
+Examples:
+
+GOOD:
+
+* Distributor Name
+* Manufacturer Name
+* Salesman Name
+* Shop Name
+* Product Name
+* Category Name
+* Order Number
+* Visit Number
+
+BAD:
+
+* distributor_id
+* manufacturer_id
+* salesman_id
+* shop_id
+* product_id
+* category_id
+* order_id
+* visit_id
+
+All tables, drawers, detail pages, filters, search results, exports, dashboards, reports, PDFs, CSV exports, notifications, activity logs, and admin interfaces must display human-readable values.
+
+UUIDs are allowed only in:
+
+* Debug screens
+* Audit logs
+* Developer tools
+* Copy ID actions
+* System administration diagnostics
+
+Human readability always takes precedence over technical identifiers.
+
+Backend Requirements:
+
+* TypeORM relations must be loaded whenever human-readable information is required.
+* APIs must expose relation objects needed by the UI.
+* DTOs must contain business-readable fields.
+* Avoid exposing foreign keys as primary UI data.
+
+Frontend Requirements:
+
+* Never render foreign keys directly.
+* Prefer relation.name, relation.business_name, relation.company_name, relation.full_name, relation.order_number, etc.
+* Filters must use names instead of IDs.
+* Search must support business-readable values.
+* Drawers and details pages must display names instead of UUIDs.
+
+---
+
+## Pagination & Query Efficiency Rule
+
+The system must never load complete datasets into memory when server-side pagination is available.
+
+All list endpoints must support:
+
+* page
+* limit
+* search
+* sorting
+* filtering
+
+Required defaults:
+
+page = 1
+
+limit = 20
+
+Maximum allowed limit:
+
+limit = 100
+
+Any request exceeding 100 records must be rejected or capped to 100.
+
+The frontend must never request:
+
+* limit=1000
+* limit=5000
+* limit=10000
+* unbounded collections
+
+Bad:
+
+GET /products
+
+GET /products?limit=10000
+
+Fetch all records then filter client-side.
+
+Good:
+
+GET /products?page=1&limit=20
+
+GET /products?page=2&limit=20
+
+GET /products?page=1&limit=20&search=cement
+
+GET /products?page=1&limit=20&sortBy=name&sortOrder=asc
+
+Requirements:
+
+Backend:
+
+* Enforce default page size 20.
+* Enforce hard max page size 100.
+* Perform filtering server-side.
+* Perform searching server-side.
+* Perform sorting server-side.
+
+Frontend:
+
+* Never fetch complete datasets.
+* Never perform large collection filtering client-side.
+* Never perform large collection searching client-side.
+* Use paginated queries.
+* Include page and limit in React Query cache keys.
+
+DataTable Requirements:
+
+* Page selector
+* Page size selector
+* Total count
+* Previous page
+* Next page
+* Empty state
+* Loading state
+
+Scalability Rule:
+
+Development datasets are not representative of production.
+
+Every implementation must assume:
+
+* 100,000+ products
+* 1,000,000+ visits
+* 100,000+ shops
+* 100,000+ orders
+
+Implementations that only work with small datasets are considered architectural defects.
 Design authority:
 
 06_Design_System_And_QA.md
@@ -738,6 +1205,90 @@ No module is complete without testing.
 ---
 
 # REQUIRED REPORTS
+
+## Human Readability Audit
+
+Before any module can be marked COMPLETE, VERIFIED, READY FOR QA, READY FOR UAT, READY TO FREEZE, or PRODUCTION READY:
+
+Generate:
+
+Human_Readability_Audit.md
+
+Audit Requirements:
+
+Verify:
+
+* No UUIDs exposed to end users
+* No foreign keys rendered directly
+* No database identifiers shown in UI
+* No technical references visible in UX
+* All relationships resolved into business-readable values
+* Filters use names instead of IDs
+* Search uses business-readable fields
+* Drawers display names instead of IDs
+* Tables display names instead of IDs
+* Exports display names instead of IDs
+* Notifications display names instead of IDs
+
+Classification:
+
+* COMPLIANT
+* PARTIAL
+* MISSING
+* CRITICAL GAP
+
+Freeze Rule:
+
+Any module containing human-readability violations automatically fails freeze review.
+
+A module cannot be marked:
+
+* COMPLETE
+* VERIFIED
+* READY FOR QA
+* READY FOR UAT
+* READY TO FREEZE
+* PRODUCTION READY
+
+until all Human Readability violations are resolved.
+
+## Pagination Audit
+
+Before any module is marked:
+
+* COMPLETE
+* VERIFIED
+* READY FOR QA
+* READY FOR UAT
+* READY TO FREEZE
+* PRODUCTION READY
+
+Generate:
+
+Pagination_Audit.md
+
+Verify:
+
+* Server-side pagination
+* Server-side filtering
+* Server-side search
+* Server-side sorting
+* Default limit = 20
+* Max limit = 100
+* No unbounded queries
+* React Query cache key correctness
+* DataTable pagination controls
+
+Classification:
+
+* COMPLIANT
+* PARTIAL
+* MISSING
+* CRITICAL GAP
+
+Freeze Rule:
+
+Any module failing Pagination Audit automatically fails freeze review.
 
 Before implementation:
 

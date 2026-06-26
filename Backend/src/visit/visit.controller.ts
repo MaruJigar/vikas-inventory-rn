@@ -38,7 +38,7 @@ export class VisitController {
   constructor(private readonly visitService: VisitService) {}
 
   @Post('start')
-  @Roles('SALESMAN')
+  @Roles('SUPER_ADMIN', 'SALESMAN')
   @ApiOperation({ summary: 'Start Visit' })
   @ApiBearerAuth('bearer')
   startVisit(@Request() req, @Body() dto: StartVisitDto) {
@@ -46,7 +46,7 @@ export class VisitController {
   }
 
   @Post('end')
-  @Roles('SALESMAN')
+  @Roles('SUPER_ADMIN', 'SALESMAN')
   @ApiOperation({ summary: 'End Visit' })
   @ApiBearerAuth('bearer')
   endVisit(@Request() req, @Body() dto: EndVisitDto) {
@@ -54,7 +54,7 @@ export class VisitController {
   }
 
   @Post('no-order')
-  @Roles('SALESMAN')
+  @Roles('SUPER_ADMIN', 'SALESMAN')
   @ApiOperation({ summary: 'No Order Visit' })
   @ApiBearerAuth('bearer')
   noOrderVisit(@Request() req, @Body() dto: NoOrderVisitDto) {

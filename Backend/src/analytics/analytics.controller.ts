@@ -1,8 +1,9 @@
-import { Controller, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request, Query } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
+import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -54,12 +55,13 @@ export class AnalyticsController {
 
   @Get('orders')
   @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
-  @ApiOperation({ summary: 'Get Orders' })
+  @ApiOperation({ summary: 'Get Orders Analytics' })
   @ApiBearerAuth('bearer')
-  async getOrders(@Request() req) {
+  async getOrders(@Request() req, @Query() query: AnalyticsQueryDto) {
     return this.analyticsService.getOrdersAnalytics(
       req.user.role,
       req.user.userId,
+      query,
     );
   }
 

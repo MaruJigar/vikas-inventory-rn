@@ -12,7 +12,7 @@ export class MetricsAuthGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const token = this.configService.get<string>('metrics.token');
-    
+
     // If no token is configured in environment, allow public access
     if (!token) {
       return true;

@@ -9,6 +9,7 @@ import { ApprovalRequest } from '../approval/approval-request.entity';
 import { WorkingDay } from '../working-day/working-day.entity';
 import { Notification } from '../notification/notification.entity';
 import { InventoryMovement } from '../inventory/inventory-movement.entity';
+import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 
 @Injectable()
 export class AnalyticsService {
@@ -185,38 +186,12 @@ export class AnalyticsService {
     };
   }
 
-  async getOrdersAnalytics(userRole: string, userId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-
-    const qb = this.orderRepo
-      .createQueryBuilder('order')
-      .select('COUNT(order.id)', 'total')
-      .addSelect(
-        'SUM(CASE WHEN order.created_at >= :today THEN 1 ELSE 0 END)',
-        'orders_today',
-      )
-      .addSelect(
-        'SUM(CASE WHEN order.created_at >= :firstDay THEN 1 ELSE 0 END)',
-        'orders_month',
-      )
-      .addSelect(
-        'SUM(CASE WHEN order.created_at >= :today THEN order.total_amount ELSE 0 END)',
-        'value_today',
-      )
-      .addSelect(
-        'SUM(CASE WHEN order.created_at >= :firstDay THEN order.total_amount ELSE 0 END)',
-        'value_month',
-      )
-      .addSelect('AVG(order.total_amount)', 'avg_value')
-      .addSelect(
-        "SUM(CASE WHEN order.status = 'CANCELLED' THEN 1 ELSE 0 END)",
-        'cancelled_orders',
-      )
-      .setParameter('today', today)
-      .setParameter('firstDay', firstDay);
+  async getOrdersAnalytics(
+    userRole: string,
+    userId: string,
+    query: AnalyticsQueryDto = {},
+  ) {
+    const qb = this.orderRepo.createQueryBuilder('order');
 
     this.applyOwnership(
       qb,
@@ -226,14 +201,89 @@ export class AnalyticsService {
       userRole === 'SALESMAN' ? 'salesman_id' : 'distributor_id',
     );
 
-    const result = await qb.getRawOne();
+    if (query.startDate) {
+      qb.andWhere('order.created_at >= :startDate', { startDate: query.startDate });
+    }
+    if (query.endDate) {
+      qb.andWhere('order.created_at <= :endDate', { endDate: query.endDate });
+    }
+
+    // 1. Overall Totals
+    const totalsQb = qb.clone();
+    totalsQb
+      .select('COUNT(order.id)', 'total_orders')
+      .addSelect('SUM(order.total_amount)', 'total_revenue')
+      .addSelect('AVG(order.total_amount)', 'average_order_value');
+    const totalsResult = await totalsQb.getRawOne();
+
+    // 2. Status Distribution
+    const statusQb = qb.clone();
+    statusQb
+      .select('order.status', 'status')
+      .addSelect('COUNT(order.id)', 'count')
+      .groupBy('order.status');
+    const statusDistribution = await statusQb.getRawMany();
+
+    // 3. Revenue Trends (Daily)
+    const trendsQb = qb.clone();
+    trendsQb
+      .select('DATE(order.created_at)', 'date')
+      .addSelect('COUNT(order.id)', 'order_count')
+      .addSelect('SUM(order.total_amount)', 'revenue')
+      .groupBy('DATE(order.created_at)')
+      .orderBy('date', 'ASC');
+    const trends = await trendsQb.getRawMany();
+
+    // 4. Salesman Performance (Top 5)
+    const salesmanQb = qb.clone();
+    salesmanQb
+      .leftJoin('order.salesman', 'salesman')
+      .leftJoin('salesman.user', 'user')
+      .select('user.full_name', 'salesman_name')
+      .addSelect('COUNT(order.id)', 'order_count')
+      .addSelect('SUM(order.total_amount)', 'revenue')
+      .groupBy('user.id')
+      .orderBy('revenue', 'DESC')
+      .limit(5);
+    const topSalesmen = await salesmanQb.getRawMany();
+
+    // 5. Distributor Performance (Top 5)
+    const distQb = qb.clone();
+    distQb
+      .leftJoin('order.distributor', 'distributor')
+      .select('distributor.business_name', 'distributor_name')
+      .addSelect('COUNT(order.id)', 'order_count')
+      .addSelect('SUM(order.total_amount)', 'revenue')
+      .groupBy('distributor.id')
+      .orderBy('revenue', 'DESC')
+      .limit(5);
+    const topDistributors = await distQb.getRawMany();
+
     return {
-      ordersToday: Number(result?.orders_today || 0),
-      ordersThisMonth: Number(result?.orders_month || 0),
-      orderValueToday: Number(result?.value_today || 0),
-      orderValueThisMonth: Number(result?.value_month || 0),
-      averageOrderValue: Number(result?.avg_value || 0).toFixed(2),
-      cancelledOrders: Number(result?.cancelled_orders || 0),
+      totals: {
+        totalOrders: Number(totalsResult?.total_orders || 0),
+        totalRevenue: Number(totalsResult?.total_revenue || 0),
+        averageOrderValue: Number(totalsResult?.average_order_value || 0).toFixed(2),
+      },
+      statusDistribution: statusDistribution.map((s) => ({
+        status: s.status,
+        count: Number(s.count),
+      })),
+      trends: trends.map((t) => ({
+        date: t.date,
+        orderCount: Number(t.order_count),
+        revenue: Number(t.revenue),
+      })),
+      topSalesmen: topSalesmen.map((s) => ({
+        name: s.salesman_name,
+        orderCount: Number(s.order_count),
+        revenue: Number(s.revenue),
+      })),
+      topDistributors: topDistributors.map((d) => ({
+        name: d.distributor_name,
+        orderCount: Number(d.order_count),
+        revenue: Number(d.revenue),
+      })),
     };
   }
 

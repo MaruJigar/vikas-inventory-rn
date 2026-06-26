@@ -27,15 +27,17 @@ import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto, CancelOrderDto } from './dto/update-order.dto';
+import { OrderListQueryDto } from './dto/order-list-query.dto';
+import { BackorderListQueryDto } from './dto/backorder-list-query.dto';
+import { ResolveBackorderDto } from './dto/resolve-backorder.dto';
+import {
+  UpdateOrderStatusDto,
+  ALLOWED_STATUS_TRANSITIONS,
+} from './dto/update-order-status.dto';
+import * as ExcelJS from 'exceljs';
+import * as stream from 'stream';
 
-const ORDER_STATUSES = [
-  'CREATED',
-  'CONFIRMED',
-  'PROCESSING',
-  'PACKED',
-  'DISPATCHED',
-  'DELIVERED',
-];
+// ─── Status constants ─────────────────────────────────────────────────────────
 const PRE_DISPATCH_STATUSES = ['CREATED', 'CONFIRMED', 'PROCESSING', 'PACKED'];
 
 @Injectable()
@@ -151,6 +153,9 @@ export class OrderService {
   }
 
   // ─── createOrder ─────────────────────────────────────────────────────────
+  // Architecture Decision: Only SALESMAN role can create orders.
+  // Orders require a salesman profile context (distributor_id, salesman_id).
+  // SUPER_ADMIN is removed from @Roles() in the controller.
 
   async createOrder(userId: string, dto: CreateOrderDto) {
     const salesman = await this.getSalesmanOrFail(userId);
@@ -216,7 +221,7 @@ export class OrderService {
           );
           const netLineAmount = grossLineAmount - itemDiscountAmount;
 
-          grossOrderAmount += netLineAmount; // Sum of net line amounts
+          grossOrderAmount += netLineAmount;
           totalProductDiscountAmount += itemDiscountAmount;
           totalQuantity += Number(p.quantity);
 
@@ -305,7 +310,6 @@ export class OrderService {
 
           const inv = inventoryActions[i];
           if (inv.reservable > 0 || inv.backorder > 0) {
-            // Update inventory record
             if (inv.inventoryId) {
               await manager
                 .getRepository(DistributorInventory)
@@ -325,7 +329,6 @@ export class OrderService {
               }
             }
 
-            // Inventory movement — reserved
             if (inv.reservable > 0) {
               await manager.getRepository(InventoryMovement).save({
                 distributor_id: salesman.distributor_id,
@@ -338,7 +341,6 @@ export class OrderService {
               });
             }
 
-            // Inventory movement + backorder record
             if (inv.backorder > 0) {
               await manager.getRepository(InventoryMovement).save({
                 distributor_id: salesman.distributor_id,
@@ -384,7 +386,6 @@ export class OrderService {
       },
     );
 
-    // Audit + Socket (outside transaction)
     await this.auditLogService.logAction(
       'ORDER_CREATED',
       'ORDER',
@@ -437,6 +438,9 @@ export class OrderService {
   }
 
   // ─── updateOrder ─────────────────────────────────────────────────────────
+  // Architecture Decision: Only SALESMAN role can edit orders.
+  // Editing requires the original salesman's context for inventory re-allocation.
+  // SUPER_ADMIN is removed from @Roles() in the controller.
 
   async updateOrder(userId: string, orderId: string, dto: UpdateOrderDto) {
     const salesman = await this.getSalesmanOrFail(userId);
@@ -553,7 +557,7 @@ export class OrderService {
                 );
               await manager.getRepository(Backorder).save({
                 order_id: order.id,
-                order_item_id: null, // will be updated after item save
+                order_item_id: null,
                 product_id: p.productId,
                 distributor_id: order.distributor_id,
                 quantity: backorderQty,
@@ -593,7 +597,6 @@ export class OrderService {
       );
       const finalOrderAmount = grossOrderAmount - billDiscountAmount;
 
-      // Revision count
       const revisionCount = await manager
         .getRepository(OrderRevision)
         .count({ where: { order_id: order.id } });
@@ -664,8 +667,10 @@ export class OrderService {
     if (order.status === 'DELIVERED')
       throw new BadRequestException('Cannot cancel a delivered order');
 
-    // Salesman: only pre-dispatch
-    if (role === 'SALESMAN') {
+    // Role-based access control
+    if (role === 'SUPER_ADMIN') {
+      // SUPER_ADMIN can cancel any order at any status (except already CANCELLED/DELIVERED)
+    } else if (role === 'SALESMAN') {
       const salesman = await this.salesmanRepo.findOne({
         where: { user_id: userId },
       });
@@ -788,14 +793,171 @@ export class OrderService {
     return this.orderRepo.findOne({ where: { id: order.id } });
   }
 
-  // ─── Fulfillment transitions ──────────────────────────────────────────────
+  // ─── updateOrderStatus ───────────────────────────────────────────────────
+  // Phase 3: Full status lifecycle transitions.
+  // Roles: SUPER_ADMIN, DISTRIBUTOR_ADMIN (own orders only), MANUFACTURER_ADMIN (ecosystem only).
+  // SALESMAN cannot drive status transitions — they use cancel and edit.
+
+  async updateOrderStatus(
+    userId: string,
+    role: string,
+    orderId: string,
+    dto: UpdateOrderStatusDto,
+  ) {
+    const order = await this.orderRepo.findOne({ where: { id: orderId } });
+    if (!order) throw new NotFoundException('Order not found');
+
+    // Verify ownership (SUPER_ADMIN, DISTRIBUTOR_ADMIN, MANUFACTURER_ADMIN)
+    await this.verifyOrderOwnership(order, role, userId);
+
+    // Validate transition
+    const allowed = ALLOWED_STATUS_TRANSITIONS[order.status] ?? [];
+    if (!allowed.includes(dto.status)) {
+      throw new BadRequestException(
+        `Cannot transition order from ${order.status} to ${dto.status}. ` +
+          `Allowed: [${allowed.join(', ') || 'none'}]`,
+      );
+    }
+
+    const oldStatus = order.status;
+
+    await this.dataSource.transaction(async (manager) => {
+      // Inventory: on DISPATCHED, release reserved → deduct from available
+      if (dto.status === 'DISPATCHED') {
+        const items = await manager
+          .getRepository(OrderItem)
+          .find({ where: { order_id: order.id } });
+
+        for (const item of items) {
+          if (item.reserved_quantity > 0) {
+            // Release reserved hold
+            await manager.getRepository(DistributorInventory).decrement(
+              {
+                distributor_id: order.distributor_id,
+                product_id: item.product_id,
+              },
+              'reserved_quantity',
+              item.reserved_quantity,
+            );
+            // Deduct from available (stock leaves the warehouse)
+            await manager.getRepository(DistributorInventory).decrement(
+              {
+                distributor_id: order.distributor_id,
+                product_id: item.product_id,
+              },
+              'available_quantity',
+              item.reserved_quantity,
+            );
+            await manager.getRepository(InventoryMovement).save({
+              distributor_id: order.distributor_id,
+              product_id: item.product_id,
+              order_id: order.id,
+              movement_type: 'ORDER_DISPATCHED',
+              quantity_change: item.reserved_quantity,
+              changed_by_user_id: userId,
+              reason: `Order dispatched: ${order.order_number}`,
+            });
+          }
+          // Update dispatched_quantity on item
+          await manager
+            .getRepository(OrderItem)
+            .update(item.id, {
+              dispatched_quantity: item.reserved_quantity,
+              status: 'DISPATCHED',
+            });
+        }
+      }
+
+      // Inventory: on DELIVERED, update delivered_quantity on items
+      if (dto.status === 'DELIVERED') {
+        const items = await manager
+          .getRepository(OrderItem)
+          .find({ where: { order_id: order.id } });
+        for (const item of items) {
+          await manager
+            .getRepository(OrderItem)
+            .update(item.id, {
+              delivered_quantity: item.dispatched_quantity,
+              status: 'DELIVERED',
+            });
+        }
+      }
+
+      // Update order status
+      await manager.getRepository(Order).update(order.id, {
+        status: dto.status,
+      });
+
+      // OrderStatusHistory record
+      await manager.getRepository(OrderStatusHistory).save({
+        order_id: order.id,
+        old_status: oldStatus,
+        new_status: dto.status,
+        changed_by_user_id: userId,
+        reason: dto.notes || undefined,
+      });
+
+      // FulfillmentLog record
+      await manager.getRepository(FulfillmentLog).save({
+        order_id: order.id,
+        distributor_id: order.distributor_id,
+        action: dto.status,
+        old_status: oldStatus,
+        new_status: dto.status,
+        performed_by_user_id: userId,
+        notes: dto.notes || undefined,
+      });
+    });
+
+    await this.auditLogService.logAction(
+      'ORDER_STATUS_UPDATED',
+      'ORDER',
+      order.id,
+      userId,
+      { from: oldStatus, to: dto.status },
+    );
+
+    // Emit websocket events per status
+    const socketEvent = `ORDER_${dto.status}`;
+    this.socketGateway.broadcastToRoom(
+      `distributor:${order.distributor_id}`,
+      socketEvent,
+      {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        from: oldStatus,
+        to: dto.status,
+        timestamp: new Date(),
+      },
+    );
+    this.socketGateway.broadcastToRoom(
+      `salesman:${order.salesman_id}`,
+      socketEvent,
+      {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        from: oldStatus,
+        to: dto.status,
+        timestamp: new Date(),
+      },
+    );
+
+    // Re-fetch with relations for consistent response
+    return this.orderRepo.createQueryBuilder('order')
+      .leftJoinAndSelect('order.shop', 'shop')
+      .leftJoinAndSelect('order.salesman', 'salesman')
+      .leftJoinAndSelect('order.distributor', 'distributor')
+      .where('order.id = :orderId', { orderId: order.id })
+      .getOne();
+  }
 
   // ─── getOrders ────────────────────────────────────────────────────────────
+  // Phase 4: Expanded search. Phase 5: Typed OrderListQueryDto (no `as any`).
 
   async getOrders(
     userId: string,
     role: string,
-    queryDto: ListQueryDto,
+    queryDto: OrderListQueryDto,
   ): Promise<PaginatedResponse<Order>> {
     const {
       page = 1,
@@ -803,14 +965,21 @@ export class OrderService {
       search,
       sortBy,
       sortOrder = 'DESC',
-      ...filters
-    } = queryDto as any;
+      status,
+      salesman_id,
+      shop_id,
+      startDate,
+      endDate,
+    } = queryDto;
     const skip = (page - 1) * limit;
 
-    const qb = this.orderRepo.createQueryBuilder('order');
+    const qb = this.orderRepo.createQueryBuilder('order')
+      .leftJoinAndSelect('order.shop', 'shop')
+      .leftJoinAndSelect('order.salesman', 'salesman')
+      .leftJoinAndSelect('order.distributor', 'distributor');
 
     if (role === 'SUPER_ADMIN') {
-      // no-op, sees all
+      // No restriction — sees all orders globally
     } else if (role === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.getDistributorOrFail(userId);
       qb.andWhere('order.distributor_id = :distId', { distId: dist.id });
@@ -847,32 +1016,37 @@ export class OrderService {
       throw new ForbiddenException('Unauthorized role');
     }
 
+    // Phase 4: Multi-field search via joins (no N+1 — joins already done above)
     if (search) {
-      qb.andWhere('order.order_number ILIKE :search', {
-        search: `%${search}%`,
-      });
+      qb.andWhere(
+        '(order.order_number ILIKE :search ' +
+          'OR shop.name ILIKE :search ' +
+          'OR salesman.full_name ILIKE :search ' +
+          'OR distributor.business_name ILIKE :search)',
+        { search: `%${search}%` },
+      );
     }
 
-    if (filters.status)
-      qb.andWhere('order.status = :status', { status: filters.status });
-    if (filters.salesman_id)
-      qb.andWhere('order.salesman_id = :sId', { sId: filters.salesman_id });
-    if (filters.shop_id)
-      qb.andWhere('order.shop_id = :shId', { shId: filters.shop_id });
-
-    if (filters.startDate)
+    // Phase 5: Validated typed filters (no `as any`)
+    if (status)
+      qb.andWhere('order.status = :status', { status });
+    if (salesman_id)
+      qb.andWhere('order.salesman_id = :sId', { sId: salesman_id });
+    if (shop_id)
+      qb.andWhere('order.shop_id = :shId', { shId: shop_id });
+    if (startDate)
       qb.andWhere('order.created_at >= :startDate', {
-        startDate: new Date(filters.startDate),
+        startDate: new Date(startDate),
       });
-    if (filters.endDate)
+    if (endDate)
       qb.andWhere('order.created_at <= :endDate', {
-        endDate: new Date(filters.endDate),
+        endDate: new Date(endDate),
       });
 
     const allowedSortFields = [
       'created_at',
       'updated_at',
-      'total_amount',
+      'final_order_amount',
       'order_number',
     ];
     if (sortBy && allowedSortFields.includes(sortBy)) {
@@ -898,23 +1072,393 @@ export class OrderService {
   }
 
   // ─── getOrderById ─────────────────────────────────────────────────────────
+  // Phase 2: Now includes order_items via leftJoinAndSelect (no N+1 queries).
 
   async getOrderById(userId: string, role: string, orderId: string) {
-    const order = await this.orderRepo.findOne({ where: { id: orderId } });
+    const order = await this.orderRepo.createQueryBuilder('order')
+      .leftJoinAndSelect('order.shop', 'shop')
+      .leftJoinAndSelect('order.salesman', 'salesman')
+      .leftJoinAndSelect('order.distributor', 'distributor')
+      .leftJoinAndSelect('order.items', 'items')
+      .where('order.id = :orderId', { orderId })
+      .getOne();
     if (!order) throw new NotFoundException('Order not found');
     await this.verifyOrderOwnership(order, role, userId);
     return order;
   }
 
   // ─── getOrderRevisions ────────────────────────────────────────────────────
+  // Phase 6: Paginated revision history.
 
-  async getOrderRevisions(userId: string, role: string, orderId: string) {
+  async getOrderRevisions(
+    userId: string,
+    role: string,
+    orderId: string,
+    queryDto: ListQueryDto,
+  ): Promise<PaginatedResponse<OrderRevision>> {
+    const { page = 1, limit = 20 } = queryDto;
+    const skip = (page - 1) * limit;
+
     const order = await this.orderRepo.findOne({ where: { id: orderId } });
     if (!order) throw new NotFoundException('Order not found');
     await this.verifyOrderOwnership(order, role, userId);
-    return this.revisionRepo.find({
+
+    const [data, total] = await this.revisionRepo.findAndCount({
       where: { order_id: orderId },
+      relations: { changed_by_user: true },
       order: { revision_number: 'ASC' },
+      skip,
+      take: limit,
     });
+
+    const totalPages = Math.ceil(total / limit);
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+
+  // ─── getOrderStatusHistory ────────────────────────────────────────────────
+  // New: Paginated status history endpoint.
+
+  async getOrderStatusHistory(
+    userId: string,
+    role: string,
+    orderId: string,
+    queryDto: ListQueryDto,
+  ): Promise<PaginatedResponse<OrderStatusHistory>> {
+    const { page = 1, limit = 20 } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const order = await this.orderRepo.findOne({ where: { id: orderId } });
+    if (!order) throw new NotFoundException('Order not found');
+    await this.verifyOrderOwnership(order, role, userId);
+
+    const [data, total] = await this.statusHistoryRepo.findAndCount({
+      where: { order_id: orderId },
+      relations: { changed_by_user: true },
+      order: { created_at: 'ASC' },
+      skip,
+      take: limit,
+    });
+
+    const totalPages = Math.ceil(total / limit);
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+
+  // ─── Query Builder for Exports ───────────────────────────────────────────
+
+  private async buildOrdersQuery(userId: string, role: string, queryDto: OrderListQueryDto) {
+    const qb = this.orderRepo.createQueryBuilder('order')
+      .leftJoinAndSelect('order.shop', 'shop')
+      .leftJoinAndSelect('order.salesman', 'salesman')
+      .leftJoinAndSelect('order.distributor', 'distributor');
+
+    if (role === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.getDistributorOrFail(userId);
+      qb.andWhere('order.distributor_id = :distId', { distId: dist.id });
+    } else if (role === 'MANUFACTURER_ADMIN') {
+      const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
+      if (mfr) {
+        const links = await this.mfrDistRepo.find({ where: { manufacturer_id: mfr.id } });
+        const distIds = links.map((l) => l.distributor_id);
+        if (distIds.length > 0) {
+          qb.andWhere('order.distributor_id IN (:...distIds)', { distIds });
+        } else {
+          qb.andWhere('1 = 0');
+        }
+      } else {
+        qb.andWhere('1 = 0');
+      }
+    } else if (role === 'SALESMAN') {
+      const salesman = await this.getSalesmanOrFail(userId);
+      qb.andWhere('order.salesman_id = :smId', { smId: salesman.id });
+    }
+
+    if (queryDto.status) {
+      qb.andWhere('order.status = :status', { status: queryDto.status });
+    }
+    if (queryDto.salesman_id) {
+      qb.andWhere('order.salesman_id = :salesman_id', { salesman_id: queryDto.salesman_id });
+    }
+    if (queryDto.shop_id) {
+      qb.andWhere('order.shop_id = :shop_id', { shop_id: queryDto.shop_id });
+    }
+    if (queryDto.startDate) {
+      qb.andWhere('order.created_at >= :startDate', { startDate: queryDto.startDate });
+    }
+    if (queryDto.endDate) {
+      qb.andWhere('order.created_at <= :endDate', { endDate: queryDto.endDate });
+    }
+    if (queryDto.search) {
+      qb.andWhere(
+        '(order.order_number ILIKE :search OR shop.shop_name ILIKE :search OR distributor.business_name ILIKE :search)',
+        { search: `%${queryDto.search}%` },
+      );
+    }
+    
+    qb.orderBy('order.created_at', 'DESC');
+    return qb;
+  }
+
+  // ─── Exports ─────────────────────────────────────────────────────────────
+
+  async exportOrdersCsv(
+    userId: string,
+    role: string,
+    query: OrderListQueryDto,
+  ): Promise<stream.PassThrough> {
+    const qb = await this.buildOrdersQuery(userId, role, query);
+    qb.take(10000);
+
+    const orders = await qb.getMany();
+    
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Orders');
+
+    sheet.columns = [
+      { header: 'Order Number', key: 'order_number', width: 20 },
+      { header: 'Shop Name', key: 'shop_name', width: 25 },
+      { header: 'Salesman Name', key: 'salesman_name', width: 25 },
+      { header: 'Distributor Name', key: 'distributor_name', width: 25 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Final Amount', key: 'final_amount', width: 15 },
+      { header: 'Created Date', key: 'created_at', width: 20 },
+    ];
+
+    orders.forEach(o => {
+      sheet.addRow({
+        order_number: o.order_number,
+        shop_name: o.shop?.name,
+        salesman_name: o.salesman?.full_name,
+        distributor_name: o.distributor?.business_name,
+        status: o.status,
+        final_amount: o.final_order_amount,
+        created_at: o.created_at.toISOString(),
+      });
+    });
+
+    const passThrough = new stream.PassThrough();
+    workbook.csv.write(passThrough).catch(() => {});
+    return passThrough;
+  }
+
+  async exportOrdersXlsx(
+    userId: string,
+    role: string,
+    query: OrderListQueryDto,
+  ): Promise<stream.PassThrough> {
+    const qb = await this.buildOrdersQuery(userId, role, query);
+    qb.take(10000);
+
+    const orders = await qb.getMany();
+    
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Orders');
+
+    sheet.columns = [
+      { header: 'Order Number', key: 'order_number', width: 20 },
+      { header: 'Shop Name', key: 'shop_name', width: 25 },
+      { header: 'Salesman Name', key: 'salesman_name', width: 25 },
+      { header: 'Distributor Name', key: 'distributor_name', width: 25 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Final Amount', key: 'final_amount', width: 15 },
+      { header: 'Created Date', key: 'created_at', width: 20 },
+    ];
+
+    orders.forEach(o => {
+      sheet.addRow({
+        order_number: o.order_number,
+        shop_name: o.shop?.name,
+        salesman_name: o.salesman?.full_name,
+        distributor_name: o.distributor?.business_name,
+        status: o.status,
+        final_amount: o.final_order_amount,
+        created_at: o.created_at.toISOString(),
+      });
+    });
+
+    const passThrough = new stream.PassThrough();
+    workbook.xlsx.write(passThrough).catch(() => {});
+    return passThrough;
+  }
+
+  // ─── Backorders ──────────────────────────────────────────────────────────
+
+  async getBackorders(
+    userId: string,
+    role: string,
+    query: BackorderListQueryDto,
+  ): Promise<PaginatedResponse<Backorder>> {
+    const { page = 1, limit = 20, search, status, distributor_id, salesman_id } = query;
+    const skip = (page - 1) * limit;
+
+    const qb = this.backorderRepo
+      .createQueryBuilder('backorder')
+      .leftJoinAndSelect('backorder.product', 'product')
+      .leftJoinAndSelect('backorder.distributor', 'distributor')
+      .leftJoinAndSelect('backorder.order', 'order')
+      .leftJoinAndSelect('order.salesman', 'salesman')
+      .orderBy('backorder.created_at', 'DESC');
+
+    // Role filtering
+    if (role === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.distRepo.findOne({ where: { user_id: userId } });
+      if (!dist) throw new ForbiddenException();
+      qb.andWhere('backorder.distributor_id = :distId', { distId: dist.id });
+    } else if (role === 'SALESMAN') {
+      const sm = await this.salesmanRepo.findOne({ where: { user_id: userId } });
+      if (!sm) throw new ForbiddenException();
+      qb.andWhere('order.salesman_id = :smId', { smId: sm.id });
+    } else if (role === 'MANUFACTURER_ADMIN') {
+      const userDistributors = await this.mfrDistRepo
+        .createQueryBuilder('md')
+        .innerJoin('md.manufacturer', 'm')
+        .where('m.user_id = :userId', { userId })
+        .getMany();
+      const distIds = userDistributors.map((md) => md.distributor_id);
+      if (distIds.length === 0) {
+        qb.andWhere('1 = 0');
+      } else {
+        qb.andWhere('backorder.distributor_id IN (:...distIds)', { distIds });
+      }
+    }
+
+    if (status) {
+      qb.andWhere('backorder.status = :status', { status });
+    }
+    if (distributor_id) {
+      qb.andWhere('backorder.distributor_id = :distributor_id', { distributor_id });
+    }
+    if (salesman_id) {
+      qb.andWhere('order.salesman_id = :salesman_id', { salesman_id });
+    }
+    if (search) {
+      qb.andWhere(
+        '(product.name ILIKE :search OR distributor.business_name ILIKE :search OR salesman.full_name ILIKE :search)',
+        { search: `%${query.search}%` },
+      );
+    }
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+
+    const totalPages = Math.ceil(total / limit);
+    return {
+      data,
+      meta: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+
+  async getBackorderById(
+    userId: string,
+    role: string,
+    id: string,
+  ): Promise<Backorder> {
+    const qb = this.backorderRepo
+      .createQueryBuilder('backorder')
+      .leftJoinAndSelect('backorder.product', 'product')
+      .leftJoinAndSelect('backorder.distributor', 'distributor')
+      .leftJoinAndSelect('backorder.order', 'order')
+      .leftJoinAndSelect('order.salesman', 'salesman')
+      .where('backorder.id = :id', { id });
+
+    // Role filtering
+    if (role === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.distRepo.findOne({ where: { user_id: userId } });
+      qb.andWhere('backorder.distributor_id = :distId', { distId: dist?.id });
+    } else if (role === 'SALESMAN') {
+      const sm = await this.salesmanRepo.findOne({ where: { user_id: userId } });
+      qb.andWhere('order.salesman_id = :smId', { smId: sm?.id });
+    }
+
+    const backorder = await qb.getOne();
+    if (!backorder) throw new NotFoundException('Backorder not found or access denied');
+    return backorder;
+  }
+
+  async resolveBackorder(
+    userId: string,
+    role: string,
+    id: string,
+    dto: ResolveBackorderDto,
+  ): Promise<Backorder> {
+    if (role !== 'SUPER_ADMIN' && role !== 'DISTRIBUTOR_ADMIN') {
+      throw new ForbiddenException();
+    }
+    const backorder = await this.getBackorderById(userId, role, id);
+    if (backorder.status === 'RESOLVED' || backorder.status === 'CANCELLED') {
+      throw new BadRequestException('Backorder is already resolved or cancelled');
+    }
+
+    const newResolved = Number(backorder.resolved_quantity) + dto.resolved_quantity;
+    if (newResolved > backorder.quantity) {
+      throw new BadRequestException('Resolved quantity cannot exceed backorder quantity');
+    }
+
+    backorder.resolved_quantity = newResolved;
+    backorder.status = newResolved === Number(backorder.quantity) ? 'RESOLVED' : 'PARTIALLY_ALLOCATED';
+
+    await this.backorderRepo.save(backorder);
+    return this.getBackorderById(userId, role, id);
+  }
+
+  // ─── Fulfillment Logs ──────────────────────────────────────────────────────
+  
+  async getFulfillmentLogs(
+    userId: string,
+    role: string,
+    orderId: string,
+    queryDto: ListQueryDto,
+  ): Promise<PaginatedResponse<FulfillmentLog>> {
+    // Basic access check
+    await this.getOrderById(userId, role, orderId);
+
+    const { page = 1, limit = 20 } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.fulfillmentLogRepo.findAndCount({
+      where: { order_id: orderId },
+      relations: { performed_by_user: true, distributor: true },
+      order: { created_at: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    const totalPages = Math.ceil(total / limit);
+    return {
+      data,
+      meta: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 }

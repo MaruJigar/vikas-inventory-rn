@@ -16,6 +16,7 @@ import { AppSocketGateway } from '../socket-gateway/socket.gateway';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
 import { Distributor } from '../distributor/distributor.entity';
 import { Salesman } from '../salesman/salesman.entity';
+import { Shop } from '../shop/shop.entity';
 import { NotificationQueueService } from '../notification/notification-queue.service';
 
 @Injectable()
@@ -67,7 +68,27 @@ export class ApprovalService {
         const mfg = await queryRunner.manager.findOne(Manufacturer, {
           where: { user_id: currentUser.userId },
         });
-        if (!mfg || request.manufacturer_id !== mfg.id) {
+        if (!mfg) {
+          throw new ForbiddenException(
+            'You do not have permission to approve this request',
+          );
+        }
+
+        let hasAccess = request.manufacturer_id === mfg.id;
+
+        if (!hasAccess && request.distributor_id) {
+          const link = await queryRunner.manager.findOne('manufacturer_distributors', {
+            where: {
+              manufacturer_id: mfg.id,
+              distributor_id: request.distributor_id,
+            },
+          });
+          if (link) {
+            hasAccess = true;
+          }
+        }
+
+        if (!hasAccess) {
           throw new ForbiddenException(
             'You do not have permission to approve this request',
           );
@@ -158,6 +179,7 @@ export class ApprovalService {
         }
       }
 
+
       await queryRunner.commitTransaction();
 
       // Post Transaction: Audit Logs & Socket
@@ -187,12 +209,14 @@ export class ApprovalService {
       if (request.requester_user_id) {
         let notifType = 'REQUEST_APPROVED';
         let rolePrefix = 'USER';
-        if (request.request_type === 'SALESMAN_REGISTRATION')
+        let entityName = 'Entity';
+        if (request.request_type === 'SALESMAN_APPROVAL')
           rolePrefix = 'SALESMAN';
-        else if (request.request_type === 'DISTRIBUTOR_REGISTRATION')
+        else if (request.request_type === 'DISTRIBUTOR_APPROVAL')
           rolePrefix = 'DISTRIBUTOR';
-        else if (request.request_type === 'MANUFACTURER_REGISTRATION')
+        else if (request.request_type === 'MANUFACTURER_APPROVAL')
           rolePrefix = 'MANUFACTURER';
+
         else if (request.request_type === 'LINK_REQUEST')
           rolePrefix = 'LINK_REQUEST';
 
@@ -284,8 +308,54 @@ export class ApprovalService {
     const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
     const totalPages = Math.ceil(total / limit);
 
+    const enhancedData = await Promise.all(
+      data.map(async (item) => {
+        const raw = { ...item } as any;
+
+        if (item.requester_user_id) {
+          const user = await this.userRepo.findOne({
+            where: { id: item.requester_user_id },
+            select: { full_name: true },
+          });
+          raw.requester_name = user?.full_name || null;
+        }
+
+        if (item.salesman_id) {
+          const salesman = await this.dataSource
+            .getRepository(Salesman)
+            .findOne({
+              where: { id: item.salesman_id },
+              select: { full_name: true },
+            });
+          raw.salesman_name = salesman?.full_name || null;
+        }
+
+        if (item.distributor_id) {
+          const dist = await this.dataSource
+            .getRepository(Distributor)
+            .findOne({
+              where: { id: item.distributor_id },
+              select: { business_name: true },
+            });
+          raw.distributor_name = dist?.business_name || null;
+        }
+
+        if (item.manufacturer_id) {
+          const mfg = await this.dataSource
+            .getRepository(Manufacturer)
+            .findOne({
+              where: { id: item.manufacturer_id },
+              select: { company_name: true },
+            });
+          raw.manufacturer_name = mfg?.company_name || null;
+        }
+
+        return raw;
+      }),
+    );
+
     return {
-      data,
+      data: enhancedData,
       meta: {
         page: Number(page),
         limit: Number(limit),

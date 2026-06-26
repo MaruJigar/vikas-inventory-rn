@@ -19,8 +19,9 @@ export class NotificationProcessor extends WorkerHost {
     this.logger.debug(`Processing notification job ${job.id}`);
 
     if (job.name === 'create-notification') {
-      const { userId, role, title, message, type, entityType, entityId } = job.data;
-      
+      const { userId, role, title, message, type, entityType, entityId } =
+        job.data;
+
       // Execute the original synchronous logic safely in the background
       await this.notificationService.createNotification(
         userId,
@@ -49,9 +50,9 @@ export class NotificationProcessor extends WorkerHost {
   onFailed(job: Job, error: Error) {
     const type = job.data?.type || 'unknown';
     this.metricsService.notificationJobsTotal.labels(type, 'failed').inc();
-    
+
     const maxAttempts = job.opts.attempts || 1;
-    
+
     // Check if this is the final attempt
     if (job.attemptsMade >= maxAttempts) {
       this.metricsService.notificationFailuresTotal.labels(type).inc();
@@ -60,7 +61,9 @@ export class NotificationProcessor extends WorkerHost {
         { targetUserId: job.data?.userId, payload: job.data },
       );
     } else {
-      this.logger.warn(`Notification job ${job.id} failed, will retry. Attempt ${job.attemptsMade}/${maxAttempts}. Error: ${error.message}`);
+      this.logger.warn(
+        `Notification job ${job.id} failed, will retry. Attempt ${job.attemptsMade}/${maxAttempts}. Error: ${error.message}`,
+      );
     }
   }
 }

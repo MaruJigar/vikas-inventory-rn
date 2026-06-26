@@ -33,7 +33,7 @@ export class LocationController {
   constructor(private readonly locationService: LocationService) {}
 
   @Post()
-  @Roles('SALESMAN')
+  @Roles('SUPER_ADMIN', 'SALESMAN')
   @ApiOperation({ summary: 'Upload Location' })
   @ApiBearerAuth('bearer')
   async uploadLocation(
@@ -47,7 +47,7 @@ export class LocationController {
   }
 
   @Post('batch')
-  @Roles('SALESMAN')
+  @Roles('SUPER_ADMIN', 'SALESMAN')
   @ApiOperation({ summary: 'Batch Upload Locations' })
   @ApiBearerAuth('bearer')
   async batchUploadLocations(

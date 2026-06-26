@@ -22,6 +22,11 @@ export class DuplicateBypassDto {
 
 export class CreateShopDto {
   @IsString()
+  @IsOptional()
+  @ApiPropertyOptional({ description: 'Distributor ID (required for SUPER_ADMIN)' })
+  distributor_id?: string;
+
+  @IsString()
   @IsNotEmpty()
   @ApiProperty({ description: 'Name' })
   name: string;

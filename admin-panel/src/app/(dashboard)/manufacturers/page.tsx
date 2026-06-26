@@ -6,36 +6,40 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable } from '@/components/data-table/DataTable';
 import { useDataTable } from '@/hooks/table/useDataTable';
 import { useManufacturersQuery } from '@/hooks/manufacturers/useManufacturersQuery';
-import { usePendingApprovalsQuery } from '@/hooks/approvals/usePendingApprovalsQuery';
 import { getManufacturersColumns } from '@/features/manufacturers/manufacturers-columns';
 import { ManufacturerFilters } from '@/features/manufacturers/ManufacturerFilters';
 import { ManufacturerDetailsDrawer } from '@/features/manufacturers/components/ManufacturerDetailsDrawer';
+import { CreateManufacturerDrawer } from '@/features/manufacturers/components/CreateManufacturerDrawer';
+import { EditManufacturerDrawer } from '@/features/manufacturers/components/EditManufacturerDrawer';
 import { ManufacturerDto } from '@/types/api/manufacturer.types';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { useDeleteManufacturerMutation } from '@/hooks/manufacturers/useDeleteManufacturerMutation';
 
 function ManufacturersPageContent() {
   const { queryState, setPage, setLimit, setSearch } = useDataTable();
   
   const [selectedManufacturer, setSelectedManufacturer] = useState<ManufacturerDto | null>(null);
+  const [editingManufacturerId, setEditingManufacturerId] = useState<string | null>(null);
+  const [deletingManufacturer, setDeletingManufacturer] = useState<ManufacturerDto | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  const [status, setStatus] = useState<string>('all');
 
   // ── Queries ──────────────────────────────────────────────────
-  const { data: response, isLoading, isError, error } = useManufacturersQuery(queryState);
+  const { data: response, isLoading, isError, error } = useManufacturersQuery({
+    ...queryState,
+    status: status !== 'all' ? status : undefined,
+  });
   
-  // Fetch pending approvals for mapping status
-  const { data: pendingApprovalsResponse } = usePendingApprovalsQuery();
-
-  const pendingApprovals = pendingApprovalsResponse?.data || [];
-
-  // Compute pending manufacturer IDs for quick lookup in columns
-  const pendingManufacturerIds = new Set(
-    pendingApprovals
-      .filter((req) => req.status === 'PENDING_APPROVAL' && req.manufacturer_id)
-      .map((req) => req.manufacturer_id as string)
-  );
+  const { mutate: deleteManufacturer, isPending: isDeleting } = useDeleteManufacturerMutation();
 
   // ── Columns ──────────────────────────────────────────────────
   const columns = getManufacturersColumns({
     onViewDetails: (manufacturer) => setSelectedManufacturer(manufacturer),
-    pendingManufacturerIds,
+    onEdit: (manufacturer) => setEditingManufacturerId(manufacturer.id),
+    onDelete: (manufacturer) => setDeletingManufacturer(manufacturer),
   });
 
   return (
@@ -49,19 +53,24 @@ function ManufacturersPageContent() {
               Manage and view registered manufacturers.
             </p>
           </div>
-          {/* Create button will go here in Phase 2 */}
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Manufacturer
+          </Button>
         </div>
 
-        {/* Toolbar: Search */}
+        {/* Toolbar: Search & Filter */}
         <ManufacturerFilters
           searchQuery={queryState.search || ''}
           onSearchChange={setSearch}
+          statusFilter={status}
+          onStatusChange={setStatus}
         />
 
         {/* DataTable */}
         <DataTable
           columns={columns ?? []}
-          data={response ?? undefined}
+          data={response}
           isLoading={isLoading}
           isError={isError}
           error={error as Error | null}
@@ -74,6 +83,36 @@ function ManufacturersPageContent() {
           manufacturerId={selectedManufacturer?.id}
           isOpen={!!selectedManufacturer}
           onClose={() => setSelectedManufacturer(null)}
+        />
+
+        {/* Create Drawer */}
+        <CreateManufacturerDrawer
+          isOpen={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+        />
+
+        {/* Edit Drawer */}
+        <EditManufacturerDrawer
+          manufacturerId={editingManufacturerId}
+          isOpen={!!editingManufacturerId}
+          onClose={() => setEditingManufacturerId(null)}
+        />
+
+        {/* Delete Confirmation */}
+        <ConfirmDialog
+          open={!!deletingManufacturer}
+          onOpenChange={(open) => !open && setDeletingManufacturer(null)}
+          title="Delete Manufacturer"
+          description="Are you sure you want to delete this manufacturer? This action will remove the manufacturer and associated user account from active records."
+          confirmLabel="Delete"
+          intent="destructive"
+          isLoading={isDeleting}
+          onConfirm={() => {
+            if (!deletingManufacturer) return;
+            deleteManufacturer(deletingManufacturer.id, {
+              onSuccess: () => setDeletingManufacturer(null),
+            });
+          }}
         />
       </div>
     </AppLayout>

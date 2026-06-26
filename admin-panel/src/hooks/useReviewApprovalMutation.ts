@@ -1,3 +1,4 @@
+import { handleSuccessToast, handleUnexpectedToast } from '@/lib/utils/toast-helpers';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { approvalService } from '@/services/approval.service';
 import { approvalsKeys } from '@/lib/query-keys/approvals';
@@ -8,8 +9,12 @@ export const useReviewApprovalMutation = () => {
 
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: ReviewApprovalDto }) =>
-      approvalService.reviewRequest(id, dto),
+      approvalService.reviewApproval(id, dto),
+    onError: (error) => {
+      handleUnexpectedToast(error);
+    },
     onSuccess: () => {
+      handleSuccessToast('Review Approval successful');
       queryClient.invalidateQueries({ queryKey: approvalsKeys.all });
     },
   });

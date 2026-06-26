@@ -1,3 +1,4 @@
+import { handleSuccessToast, handleUnexpectedToast } from '@/lib/utils/toast-helpers';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { productService } from '@/services/product.service';
 import { productsKeys } from '@/lib/query-keys/products';
@@ -8,7 +9,11 @@ export function useUpdateProductMutation(id: string) {
 
   return useMutation({
     mutationFn: (data: UpdateProductDto) => productService.updateProduct(id, data),
+    onError: (error) => {
+      handleUnexpectedToast(error);
+    },
     onSuccess: () => {
+      handleSuccessToast('Update Product successful');
       // Invalidate both the list and the specific detail view
       queryClient.invalidateQueries({ queryKey: productsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: productsKeys.detail(id) });

@@ -43,4 +43,12 @@ export class RegisterDistributorDto {
   @IsOptional()
   @IsString()
   gst_number?: string;
+
+  @ApiProperty({
+    description: 'Manufacturer ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsNotEmpty()
+  @IsString()
+  manufacturer_id: string;
 }

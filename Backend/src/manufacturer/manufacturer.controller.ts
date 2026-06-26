@@ -4,6 +4,7 @@ import {
   Post,
   Put,
   Patch,
+  Delete,
   Body,
   UseGuards,
   Request,
@@ -40,7 +41,7 @@ import { Manufacturer } from './manufacturer.entity';
 export class ManufacturerController {
   constructor(private manufacturerService: ManufacturerService) {}
 
-  @Roles('MANUFACTURER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
   @Post('profile')
   @ApiOperation({ summary: 'Create Profile' })
   @ApiBearerAuth('bearer')
@@ -48,7 +49,7 @@ export class ManufacturerController {
     return this.manufacturerService.createProfile(req.user.userId, dto);
   }
 
-  @Roles('MANUFACTURER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
   @Get('profile')
   @ApiOperation({ summary: 'Get Profile' })
   @ApiBearerAuth('bearer')
@@ -56,7 +57,7 @@ export class ManufacturerController {
     return this.manufacturerService.getProfile(req.user.userId);
   }
 
-  @Roles('MANUFACTURER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
   @Put('profile')
   @ApiOperation({ summary: 'Update Profile' })
   @ApiBearerAuth('bearer')
@@ -111,7 +112,15 @@ export class ManufacturerController {
     );
   }
 
-  @Roles('MANUFACTURER_ADMIN')
+  @Roles('SUPER_ADMIN')
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete Manufacturer' })
+  @ApiBearerAuth('bearer')
+  deleteManufacturer(@Request() req, @Param('id') id: string) {
+    return this.manufacturerService.deleteManufacturer(req.user.userId, id);
+  }
+
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
   @Post('profile/distributors/:distributorId')
   @ApiOperation({ summary: 'Link Distributor' })
   @ApiBearerAuth('bearer')

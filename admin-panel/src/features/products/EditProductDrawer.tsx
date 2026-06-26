@@ -9,9 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UpdateProductSchema, UpdateProductFormValues } from '@/lib/validation/products/schema';
 import { useUpdateProductMutation } from '@/hooks/products/useUpdateProductMutation';
-import { useCategoriesQuery } from '@/hooks/products/useCategoriesQuery';
+import { useGetCategories } from '@/hooks/categories/useCategories';
+import { useUploadProductImageMutation } from '@/hooks/products/useUploadProductImageMutation';
 import { ProductDto } from '@/types/api/product.types';
 import { z } from 'zod';
+import { useState } from 'react';
+import { UploadCloud, X, Loader2 } from 'lucide-react';
+import { getImageUrl } from '@/lib/utils/image';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface EditProductDrawerProps {
   open: boolean;
@@ -21,17 +26,24 @@ interface EditProductDrawerProps {
 
 export function EditProductDrawer({ open, onOpenChange, product }: EditProductDrawerProps) {
   const updateMutation = useUpdateProductMutation(product?.id ?? '');
-  const { data: categoriesResponse } = useCategoriesQuery();
+  const { data: categoriesResponse } = useGetCategories();
   const categories = categoriesResponse?.data ?? [];
+
+  const uploadMutation = useUploadProductImageMutation();
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<z.input<typeof UpdateProductSchema>, unknown, UpdateProductFormValues>({
     resolver: zodResolver(UpdateProductSchema),
   });
+
+  const categoryId = watch('category_id');
 
   // Prefill form when product changes
   useEffect(() => {
@@ -48,12 +60,20 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
         special_discount_percent: product.special_discount_percent ?? 0,
         category_id: product.category_id ?? '',
       });
+      if (product.product_image_url) {
+        setImagePreview(getImageUrl(product.product_image_url));
+      } else {
+        setImagePreview(null);
+      }
     }
   }, [product, reset]);
 
   // Reset on close
   useEffect(() => {
-    if (!open) reset();
+    if (!open) {
+      reset();
+      setImagePreview(null);
+    }
   }, [open, reset]);
 
   // Auto-close on success
@@ -65,6 +85,31 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
 
   const onSubmit = (values: UpdateProductFormValues) => {
     updateMutation.mutate(values);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImagePreview(URL.createObjectURL(file));
+    uploadMutation.mutate(file, {
+      onSuccess: (data) => {
+        setValue('product_image_url', data.url, { shouldValidate: true });
+      },
+      onError: () => {
+        // Revert to original if it fails
+        if (product?.product_image_url) {
+          setImagePreview(getImageUrl(product.product_image_url));
+        } else {
+          setImagePreview(null);
+        }
+      }
+    });
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    setValue('product_image_url', '');
   };
 
   const isPending = isSubmitting || updateMutation.isPending;
@@ -88,21 +133,65 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
       }
     >
       <form id="edit-product-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        
+        {/* Image Upload */}
+        <div className="space-y-2">
+          <Label>Product Image</Label>
+          <input type="hidden" {...register('product_image_url')} />
+          {imagePreview ? (
+            <div className="relative w-32 h-32 rounded-lg border overflow-hidden bg-slate-50">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imagePreview} alt="Preview" className="object-cover w-full h-full" />
+              {uploadMutation.isPending && (
+                <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              )}
+              {!uploadMutation.isPending && (
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-sm transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/jpg,image/webp"
+                onChange={handleImageUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={uploadMutation.isPending}
+              />
+              <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
+                <UploadCloud className="h-8 w-8 text-slate-400 mb-2" />
+                <span className="text-sm text-slate-600 font-medium">Click to replace image</span>
+                <span className="text-xs text-slate-500 mt-1">JPEG, PNG, WEBP (Max 5MB)</span>
+              </div>
+            </div>
+          )}
+          {errors.product_image_url && <p className="text-xs text-destructive">{errors.product_image_url.message}</p>}
+        </div>
+
         {/* Category */}
         <div className="space-y-1">
           <Label htmlFor="edit-category_id">Category</Label>
-          <select
-            id="edit-category_id"
-            {...register('category_id')}
-            className="w-full h-8 rounded-md border border-input bg-transparent px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">— Select Category —</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+          <Select value={categoryId || 'none'} onValueChange={(val: string | null) => setValue('category_id', val === 'none' || val === null ? undefined : val)}>
+            <SelectTrigger>
+              <SelectValue placeholder="— Select Category —" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Name */}

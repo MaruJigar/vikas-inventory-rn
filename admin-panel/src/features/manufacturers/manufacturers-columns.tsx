@@ -2,15 +2,16 @@ import { ColumnDef } from '@tanstack/react-table';
 import { ManufacturerDto } from '@/types/api/manufacturer.types';
 import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
+import { Edit, Eye, Trash2 } from 'lucide-react';
 import { ManufacturerStatusBadge } from './components/ManufacturerStatusBadge';
 
 interface ManufacturersColumnsProps {
   onViewDetails: (manufacturer: ManufacturerDto) => void;
-  pendingManufacturerIds: Set<string>;
+  onEdit: (manufacturer: ManufacturerDto) => void;
+  onDelete: (manufacturer: ManufacturerDto) => void;
 }
 
-export const getManufacturersColumns = ({ onViewDetails, pendingManufacturerIds }: ManufacturersColumnsProps): ColumnDef<ManufacturerDto>[] => [
+export const getManufacturersColumns = ({ onViewDetails, onEdit, onDelete }: ManufacturersColumnsProps): ColumnDef<ManufacturerDto>[] => [
   {
     accessorKey: 'company_name',
     header: 'Company Name',
@@ -40,11 +41,24 @@ export const getManufacturersColumns = ({ onViewDetails, pendingManufacturerIds 
     ),
   },
   {
+    accessorKey: 'city',
+    header: 'City',
+    cell: ({ row }) => (
+      <div className="text-slate-600">{row.original.city || '-'}</div>
+    ),
+  },
+  {
+    accessorKey: 'state',
+    header: 'State',
+    cell: ({ row }) => (
+      <div className="text-slate-600">{row.original.state || '-'}</div>
+    ),
+  },
+  {
     id: 'status',
     header: 'Status',
     cell: ({ row }) => {
-      const isPending = pendingManufacturerIds.has(row.original.id);
-      return <ManufacturerStatusBadge isPending={isPending} isActive={row.original.is_active} />;
+      return <ManufacturerStatusBadge isActive={row.original.is_active} />;
     },
   },
   {
@@ -63,10 +77,27 @@ export const getManufacturersColumns = ({ onViewDetails, pendingManufacturerIds 
         <Button
           variant="ghost"
           size="sm"
+          onClick={() => onEdit(row.original)}
+        >
+          <Edit className="w-4 h-4 mr-2" />
+          Edit
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => onViewDetails(row.original)}
         >
           <Eye className="w-4 h-4 mr-2" />
           View
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onDelete(row.original)}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete
         </Button>
       </div>
     ),

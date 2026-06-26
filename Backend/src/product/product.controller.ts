@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -37,12 +38,12 @@ import { Product } from './product.entity';
 export class ProductController {
   constructor(private productService: ProductService) {}
 
-  @Roles('MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Post()
   @ApiOperation({ summary: 'Create Product' })
   @ApiBearerAuth('bearer')
   createProduct(@Request() req, @Body() dto: CreateProductDto) {
-    return this.productService.createProduct(req.user.userId, dto);
+    return this.productService.createProduct(req.user.userId, req.user.role, dto);
   }
 
   @Get()
@@ -57,7 +58,7 @@ export class ProductController {
     );
   }
 
-  @Roles('MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Put(':id')
   @ApiOperation({ summary: 'Update Product' })
   @ApiBearerAuth('bearer')
@@ -66,6 +67,14 @@ export class ProductController {
     @Param('id') id: string,
     @Body() dto: UpdateProductDto,
   ) {
-    return this.productService.updateProduct(req.user.userId, id, dto);
+    return this.productService.updateProduct(req.user.userId, req.user.role, id, dto);
+  }
+
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete Product' })
+  @ApiBearerAuth('bearer')
+  deleteProduct(@Request() req, @Param('id') id: string) {
+    return this.productService.deleteProduct(req.user.userId, req.user.role, id);
   }
 }

@@ -19,7 +19,11 @@ import { MetricsModule } from '../metrics/metrics.module';
     MetricsModule,
   ],
   controllers: [NotificationController],
-  providers: [NotificationService, NotificationQueueService, NotificationProcessor],
+  providers: [
+    NotificationService,
+    NotificationQueueService,
+    NotificationProcessor,
+  ],
   exports: [NotificationService, NotificationQueueService],
 })
 export class NotificationModule {}

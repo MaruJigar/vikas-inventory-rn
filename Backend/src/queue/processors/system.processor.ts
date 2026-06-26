@@ -21,7 +21,9 @@ export class SystemProcessor extends WorkerHost {
   }
 
   private async handleAuditLogEnrichment(data: any) {
-    this.logger.debug(`Simulating audit log enrichment for payload: ${JSON.stringify(data)}`);
+    this.logger.debug(
+      `Simulating audit log enrichment for payload: ${JSON.stringify(data)}`,
+    );
     // Simulate async work
     await new Promise((resolve) => setTimeout(resolve, 500));
     this.logger.debug('Audit log enrichment completed successfully.');

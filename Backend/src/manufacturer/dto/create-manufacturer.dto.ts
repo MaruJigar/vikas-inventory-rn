@@ -31,4 +31,19 @@ export class CreateManufacturerDto {
   @IsString()
   @ApiPropertyOptional({ description: 'Address' })
   address?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'City' })
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'State' })
+  state?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'Country' })
+  country?: string;
 }

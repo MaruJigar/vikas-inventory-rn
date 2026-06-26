@@ -6,11 +6,13 @@ import { ShopService } from './shop.service';
 import { Distributor } from '../distributor/distributor.entity';
 import { Salesman } from '../salesman/salesman.entity';
 import { ShopDuplicateDetectionModule } from '../shop-duplicate-detection/shop-duplicate-detection.module';
+import { AuditLogModule } from '../audit-log/audit-log.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Shop, Distributor, Salesman]),
     ShopDuplicateDetectionModule,
+    AuditLogModule,
   ],
   controllers: [ShopController],
   providers: [ShopService],

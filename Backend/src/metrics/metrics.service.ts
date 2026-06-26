@@ -6,8 +6,12 @@ import { AppDataSource } from '../database/data-source';
 export class MetricsService implements OnModuleInit {
   private readonly registry: client.Registry;
 
-  public readonly httpRequestTotal: client.Counter<'method' | 'route' | 'statusCode'>;
-  public readonly httpRequestDurationSeconds: client.Histogram<'method' | 'route'>;
+  public readonly httpRequestTotal: client.Counter<
+    'method' | 'route' | 'statusCode'
+  >;
+  public readonly httpRequestDurationSeconds: client.Histogram<
+    'method' | 'route'
+  >;
   public readonly httpErrorsTotal: client.Counter<'route' | 'statusCode'>;
   public readonly appHealthStatus: client.Gauge<'service'>;
 
@@ -76,7 +80,10 @@ export class MetricsService implements OnModuleInit {
     // we query TypeORM's initialization state.
     setInterval(() => {
       const isHealthy = AppDataSource && AppDataSource.isInitialized ? 1 : 0;
-      this.appHealthStatus.set({ service: 'vikas-inventory-backend' }, isHealthy);
+      this.appHealthStatus.set(
+        { service: 'vikas-inventory-backend' },
+        isHealthy,
+      );
     }, 10000); // Check every 10s
   }
 

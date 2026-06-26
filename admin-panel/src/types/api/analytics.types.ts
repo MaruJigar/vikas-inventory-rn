@@ -73,3 +73,41 @@ export interface FulfillmentResponse {
 export interface ApprovalsResponse {
   pendingApprovals: number;
 }
+
+// ── Module 10: Orders Analytics ──────────────────────────────────────────────
+
+export interface AnalyticsQueryParams {
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface OrdersAnalyticsTotals {
+  totalOrders: number;
+  totalRevenue: number;
+  averageOrderValue: string; // toFixed(2) from backend
+}
+
+export interface OrdersAnalyticsStatusItem {
+  status: string;
+  count: number;
+}
+
+export interface OrdersAnalyticsTrendItem {
+  date: string;       // 'YYYY-MM-DD'
+  orderCount: number;
+  revenue: number;
+}
+
+export interface OrdersAnalyticsLeaderboardItem {
+  name: string;       // user.full_name or distributor.business_name — never an ID
+  orderCount: number;
+  revenue: number;
+}
+
+export interface OrdersAnalyticsDto {
+  totals: OrdersAnalyticsTotals;
+  statusDistribution: OrdersAnalyticsStatusItem[];
+  trends: OrdersAnalyticsTrendItem[];
+  topSalesmen: OrdersAnalyticsLeaderboardItem[];
+  topDistributors: OrdersAnalyticsLeaderboardItem[];
+}

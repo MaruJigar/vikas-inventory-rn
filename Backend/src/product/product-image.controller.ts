@@ -36,7 +36,7 @@ export class ProductImageController {
    * Consumes: multipart/form-data  field: image
    * Returns: { url: string }
    */
-  @Roles('MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Post()
   @UseInterceptors(FileInterceptor('image'))
   @ApiOperation({ summary: 'Upload Product Image' })
@@ -94,7 +94,7 @@ export class ProductImageController {
       file,
       req.user.userId,
       'PRODUCT',
-      'pending', // No product id at upload time; URL is stored on the product record after creation
+      null, // No product id at upload time; URL is stored on the product record after creation
     );
 
     return { url: uploaded.file_url };

@@ -5,6 +5,7 @@ import { UploadedFile } from './uploaded-file.entity';
 import { v4 as uuidv4 } from 'uuid';
 import { join } from 'path';
 import { promises as fsPromises } from 'fs';
+import * as fs from 'fs';
 
 import { getUploadRoot } from '../common/utils/upload-path.util';
 
@@ -29,7 +30,7 @@ export class UploadService {
     file: Express.Multer.File,
     userId: string,
     entityType: string,
-    entityId: string,
+    entityId: string | null,
   ): Promise<UploadedFile> {
     if (!file) throw new BadRequestException('No file uploaded');
 
@@ -59,6 +60,30 @@ export class UploadService {
     await fsPromises.mkdir(dirPath, { recursive: true });
     // Write file to disk
     await fsPromises.writeFile(filePath, file.buffer);
+
+    // If uploading for a shop, cleanup existing files
+    if (entityType === 'SHOP' && entityId) {
+      const oldFiles = await this.fileRepo.find({
+        where: { entity_type: 'SHOP', entity_id: entityId },
+      });
+
+      for (const oldFile of oldFiles) {
+        if (oldFile.file_url) {
+          // file_url is e.g. /uploads/shops/misc_UUID.jpg
+          // We need to resolve the local path from getUploadRoot() + rest
+          const oldRelativePath = oldFile.file_url.replace('/uploads/', '');
+          const oldFilePath = join(getUploadRoot(), oldRelativePath);
+          try {
+            if (fs.existsSync(oldFilePath)) {
+              await fsPromises.unlink(oldFilePath);
+            }
+          } catch (err) {
+            console.error('Failed to delete old file:', err);
+          }
+        }
+        await this.fileRepo.delete(oldFile.id);
+      }
+    }
 
     // Ensure POSIX-style URL separators even on Windows
     const fileUrl = `/uploads/${relativePath.replace(/\\/g, '/')}`;
