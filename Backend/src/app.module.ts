@@ -22,12 +22,8 @@ import { InventoryModule } from './inventory/inventory.module';
 import { ShopModule } from './shop/shop.module';
 import { ShopImageModule } from './shop-image/shop-image.module';
 import { ShopDuplicateDetectionModule } from './shop-duplicate-detection/shop-duplicate-detection.module';
-import { ShopVisitModule } from './shop-visit/shop-visit.module';
 import { OrderModule } from './order/order.module';
-import { OrderRevisionModule } from './order-revision/order-revision.module';
 import { BillingModule } from './billing/billing.module';
-import { BackorderModule } from './backorder/backorder.module';
-import { FulfillmentModule } from './fulfillment/fulfillment.module';
 import { LocationModule } from './location/location.module';
 import { WorkingDayModule } from './working-day/working-day.module';
 import { OfflineSyncModule } from './offline-sync/offline-sync.module';
@@ -126,12 +122,8 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     ShopModule,
     ShopImageModule,
     ShopDuplicateDetectionModule,
-    ShopVisitModule,
     OrderModule,
-    OrderRevisionModule,
     BillingModule,
-    BackorderModule,
-    FulfillmentModule,
     LocationModule,
     WorkingDayModule,
     OfflineSyncModule,

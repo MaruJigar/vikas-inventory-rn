@@ -3756,279 +3756,6 @@
         ]
       }
     },
-    "/v1/orders/{id}/confirm": {
-      "patch": {
-        "operationId": "FulfillmentController_confirm_v1",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FulfillOrderDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Confirm",
-        "tags": [
-          "Fulfillment"
-        ]
-      }
-    },
-    "/v1/orders/{id}/processing": {
-      "patch": {
-        "operationId": "FulfillmentController_processing_v1",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FulfillOrderDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Processing",
-        "tags": [
-          "Fulfillment"
-        ]
-      }
-    },
-    "/v1/orders/{id}/packed": {
-      "patch": {
-        "operationId": "FulfillmentController_packed_v1",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FulfillOrderDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Packed",
-        "tags": [
-          "Fulfillment"
-        ]
-      }
-    },
-    "/v1/orders/{id}/dispatch": {
-      "patch": {
-        "operationId": "FulfillmentController_dispatch_v1",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FulfillOrderDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Dispatch",
-        "tags": [
-          "Fulfillment"
-        ]
-      }
-    },
-    "/v1/orders/{id}/deliver": {
-      "patch": {
-        "operationId": "FulfillmentController_deliver_v1",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FulfillOrderDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Deliver",
-        "tags": [
-          "Fulfillment"
-        ]
-      }
-    },
-    "/v1/orders/{id}/partial-dispatch": {
-      "patch": {
-        "operationId": "FulfillmentController_partialDispatch_v1",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PartialDispatchDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Partial Dispatch",
-        "tags": [
-          "Fulfillment"
-        ]
-      }
-    },
-    "/v1/orders/{id}/partial-deliver": {
-      "patch": {
-        "operationId": "FulfillmentController_partialDeliver_v1",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PartialDeliverDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Partial Deliver",
-        "tags": [
-          "Fulfillment"
-        ]
-      }
-    },
     "/v1/locations": {
       "post": {
         "operationId": "LocationController_uploadLocation_v1",
@@ -6950,53 +6677,6 @@
           "status"
         ]
       },
-      "FulfillOrderDto": {
-        "type": "object",
-        "properties": {
-          "notes": {
-            "type": "string",
-            "description": "Notes"
-          }
-        }
-      },
-      "PartialDispatchDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "description": "Items",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "notes": {
-            "type": "string",
-            "description": "Notes"
-          }
-        },
-        "required": [
-          "items"
-        ]
-      },
-      "PartialDeliverDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "description": "Items",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "notes": {
-            "type": "string",
-            "description": "Notes"
-          }
-        },
-        "required": [
-          "items"
-        ]
-      },
       "CreateLocationDto": {
         "type": "object",
         "properties": {
@@ -7193,7 +6873,7 @@
           "reason"
         ]
       },
-      "ShopVisit": {
+      "WorkingDay": {
         "type": "object",
         "properties": {
           "id": {
@@ -7208,13 +6888,111 @@
             "type": "string",
             "description": "Distributor id"
           },
+          "check_in_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Check in at"
+          },
+          "check_out_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Check out at"
+          },
+          "check_in_location": {
+            "type": "object",
+            "description": "Check in location"
+          },
+          "check_out_location": {
+            "type": "object",
+            "description": "Check out location"
+          },
+          "status": {
+            "type": "string",
+            "description": "Status"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "Device id"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Idempotency key"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Created at"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Updated at"
+          }
+        },
+        "required": [
+          "id",
+          "salesman_id",
+          "distributor_id",
+          "check_in_at",
+          "status",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "ShopVisit": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id"
+          },
+          "salesman_id": {
+            "type": "string",
+            "description": "Salesman id"
+          },
+          "salesman": {
+            "description": "Salesman",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Salesman"
+              }
+            ]
+          },
+          "distributor_id": {
+            "type": "string",
+            "description": "Distributor id"
+          },
+          "distributor": {
+            "description": "Distributor",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Distributor"
+              }
+            ]
+          },
           "shop_id": {
             "type": "string",
             "description": "Shop id"
           },
+          "shop": {
+            "description": "Shop",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Shop"
+              }
+            ]
+          },
           "working_day_id": {
             "type": "string",
             "description": "Working day id"
+          },
+          "working_day": {
+            "description": "Working day",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WorkingDay"
+              }
+            ]
           },
           "visit_type": {
             "type": "string",
@@ -7272,8 +7050,12 @@
         "required": [
           "id",
           "salesman_id",
+          "salesman",
           "distributor_id",
+          "distributor",
           "shop_id",
+          "shop",
+          "working_day",
           "status",
           "started_at",
           "is_offline_created",

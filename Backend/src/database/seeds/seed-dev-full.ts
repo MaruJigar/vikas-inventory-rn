@@ -20,6 +20,7 @@ import { ShopVisit } from '../../visit/shop-visit.entity';
 import { ApprovalRequest } from '../../approval/approval-request.entity';
 import { UploadedFile } from '../../shop-image/uploaded-file.entity';
 import { LocationLog } from '../../location/location-log.entity';
+import { WorkingDay } from '../../working-day/working-day.entity';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -47,6 +48,7 @@ async function bootstrap() {
   const apprRepo = getRepo(ApprovalRequest);
   const fileRepo = getRepo(UploadedFile);
   const locRepo = getRepo(LocationLog);
+  const wdRepo = getRepo(WorkingDay);
 
   console.log('[SEED] Starting Comprehensive Dev Seeding Process...');
 
@@ -204,6 +206,7 @@ async function bootstrap() {
   // 200 Salesmen
   console.log('[SEED] Creating 200 Salesmen...');
   const salesmen: Salesman[] = [];
+  const salesmanWorkingDays: Record<string, { active?: string, completed?: string }> = {};
   for (let i = 0; i < 200; i++) {
     const status = randomApproval();
     const dist = faker.helpers.arrayElement(dists); // Assign to random dist
@@ -233,6 +236,28 @@ async function bootstrap() {
     );
     salesmen.push(sm);
 
+    if (status === 'APPROVED') {
+      salesmanWorkingDays[sm.id] = {};
+      const cwd = await wdRepo.save(wdRepo.create({
+        salesman_id: sm.id,
+        distributor_id: sm.distributor_id,
+        check_in_at: new Date(Date.now() - 86400000 * 2),
+        check_out_at: new Date(Date.now() - 86400000 * 2 + 36000000),
+        status: 'COMPLETED',
+      }));
+      salesmanWorkingDays[sm.id].completed = cwd.id;
+
+      if (Math.random() > 0.5) {
+        const awd = await wdRepo.save(wdRepo.create({
+          salesman_id: sm.id,
+          distributor_id: sm.distributor_id,
+          check_in_at: new Date(),
+          status: 'ACTIVE',
+        }));
+        salesmanWorkingDays[sm.id].active = awd.id;
+      }
+    }
+
     if (status === 'PENDING_APPROVAL') {
       await apprRepo.save(apprRepo.create({
         request_type: 'SALESMAN_APPROVAL',
@@ -247,8 +272,14 @@ async function bootstrap() {
   console.log('[SEED] Creating 20 Categories & 200 Products...');
   const cats: ProductCategory[] = [];
   for (let i = 0; i < 20; i++) {
-    const cat = await catRepo.save(catRepo.create({ name: faker.commerce.department() + ' ' + faker.string.nanoid(4) }));
-    cats.push(cat);
+    const catName = faker.commerce.department() + ' ' + faker.string.nanoid(4);
+    const insertResult = await catRepo.createQueryBuilder()
+      .insert()
+      .into(ProductCategory)
+      .values({ name: catName })
+      .returning('id')
+      .execute();
+    cats.push({ id: insertResult.identifiers[0].id } as ProductCategory);
   }
 
   const products: Product[] = [];
@@ -273,15 +304,19 @@ async function bootstrap() {
     products.push(p);
 
     // Mock Product Image
-    await fileRepo.save(fileRepo.create({
-      uploaded_by_user_id: mfr.user_id,
-      entity_type: 'PRODUCT',
-      entity_id: p.id,
-      file_type: 'IMAGE',
-      original_file_name: 'product.jpg',
-      file_url: faker.image.urlLoremFlickr({ category: 'product' }),
-      compression_applied: true,
-    } as any));
+    await fileRepo.createQueryBuilder()
+      .insert()
+      .into(UploadedFile)
+      .values({
+        uploaded_by_user_id: mfr.user_id,
+        entity_type: 'PRODUCT',
+        entity_id: p.id,
+        file_type: 'IMAGE',
+        original_file_name: 'product.jpg',
+        file_url: faker.image.urlLoremFlickr({ category: 'product' }),
+        compression_applied: true,
+      })
+      .execute();
   }
 
   // --- PHASE 4: SHOP DATA ---
@@ -314,24 +349,30 @@ async function bootstrap() {
     shops.push(s);
 
     // Location Log entry for shop
+    const wd = salesmanWorkingDays[sm.id];
     await locRepo.save(locRepo.create({
       salesman_id: sm.id,
       distributor_id: sm.distributor_id,
+      working_day_id: wd?.active || wd?.completed,
       event_type: 'SHOP_CREATION',
       location: { type: 'Point', coordinates: [lng, lat] },
       captured_at: new Date(),
     }));
 
     // Mock Shop Verification Image
-    await fileRepo.save(fileRepo.create({
-      uploaded_by_user_id: sm.user_id,
-      entity_type: 'SHOP',
-      entity_id: s.id,
-      file_type: 'IMAGE',
-      original_file_name: 'shop_front.jpg',
-      file_url: s.verification_photo_url,
-      compression_applied: true,
-    } as any));
+    await fileRepo.createQueryBuilder()
+      .insert()
+      .into(UploadedFile)
+      .values({
+        uploaded_by_user_id: sm.user_id,
+        entity_type: 'SHOP',
+        entity_id: s.id,
+        file_type: 'IMAGE',
+        original_file_name: 'shop_front.jpg',
+        file_url: s.verification_photo_url ?? undefined,
+        compression_applied: true,
+      })
+      .execute();
   }
 
   // --- PHASE 7: INVENTORY ---
@@ -363,12 +404,15 @@ async function bootstrap() {
     const smId = shop.created_by_salesman_id;
     if (!smId) continue;
     
+    const wd = salesmanWorkingDays[smId];
     const visitStatus = faker.helpers.arrayElement(['COMPLETED', 'MISSED', 'ACTIVE']);
+    const assignedWdId = visitStatus === 'ACTIVE' ? (wd?.active || wd?.completed) : (wd?.completed || wd?.active);
     
     const v = await visitRepo.save(visitRepo.create({
       shop_id: shop.id,
       salesman_id: smId,
       distributor_id: shop.distributor_id,
+      working_day_id: assignedWdId,
       status: visitStatus as any,
       started_at: new Date(Date.now() - faker.number.int({ min: 1000000, max: 100000000 })),
       ended_at: visitStatus === 'COMPLETED' ? new Date() : undefined,
