@@ -222,10 +222,13 @@ async function bootstrap() {
   for (const name of catNames) {
     let c = await catRepo.findOne({ where: { name } });
     if (!c) {
-      const catDraft = catRepo.create({
-        name,
-      });
-      c = await catRepo.save(catDraft);
+      const insertResult = await catRepo.createQueryBuilder()
+        .insert()
+        .into(ProductCategory)
+        .values({ name })
+        .returning('id')
+        .execute();
+      c = await catRepo.findOne({ where: { id: insertResult.identifiers[0].id } });
     }
     if (!c) throw new Error('Failed to seed Product Category');
     cats.push(c);

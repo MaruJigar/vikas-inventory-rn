@@ -29,7 +29,7 @@ import {
   ApiCreatedResponse,
 } from '@nestjs/swagger';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
-import { ShopVisit } from '../shop-visit/shop-visit.entity';
+import { ShopVisit } from './shop-visit.entity';
 
 @Controller('visits')
 @UseGuards(JwtAuthGuard, RolesGuard)
