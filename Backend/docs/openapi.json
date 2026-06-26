@@ -5964,10 +5964,6 @@
           "parent_id": {
             "type": "string",
             "description": "Parent id"
-          },
-          "description": {
-            "type": "string",
-            "description": "Description"
           }
         },
         "required": [
@@ -5984,10 +5980,6 @@
           "parent_id": {
             "type": "string",
             "description": "Parent id"
-          },
-          "description": {
-            "type": "string",
-            "description": "Description"
           }
         }
       },
