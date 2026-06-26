@@ -7,14 +7,18 @@
     "userInterfaceStyle": "light",
     "runtimeVersion": "1.0.0",
     "splash": {
-      "backgroundColor": "#4F46E5"
+      "backgroundColor": "#FFFFFF"
     },
-    "platforms": ["android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "android": {
       "edgeToEdgeEnabled": true,
       "package": "com.vikas.inventory",
       "adaptiveIcon": {
-        "backgroundColor": "#4F46E5"
+        "backgroundColor": "#111111"
       },
       "permissions": [
         "INTERNET",
@@ -23,13 +27,17 @@
       ]
     },
     "web": {
-      "bundler": "webpack"
+      "bundler": "metro"
     },
     "extra": {
       "eas": {
         "projectId": "58885d07-7211-473b-aeda-875736ff4327"
       }
     },
-    "owner": "param2607"
+    "owner": "param2607",
+    "plugins": [
+      "expo-localization",
+      "expo-font"
+    ]
   }
 }
