@@ -87,7 +87,7 @@ export function SelectShopScreen({ navigation }: HomeScreenProps<'SelectShop'>) 
   );
 
   return (
-    <Screen scroll={false}>
+    <Screen scroll={false} edges={[]}>
       <Text style={[typography.h2, styles.title]}>{t('visit.selectShop')}</Text>
       <Input
         value={query}

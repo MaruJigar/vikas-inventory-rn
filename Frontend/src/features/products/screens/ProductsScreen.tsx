@@ -51,7 +51,7 @@ export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
   );
 
   return (
-    <Screen scroll={false}>
+    <Screen scroll={false} edges={[]}>
       <Input
         value={query}
         onChangeText={setQuery}

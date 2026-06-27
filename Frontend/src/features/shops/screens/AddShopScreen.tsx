@@ -212,7 +212,7 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
   };
 
   return (
-    <Screen>
+    <Screen edges={[]}>
       <Text style={[typography.h1, styles.title]}>{t('shops.form.title')}</Text>
 
       <ControlledInput

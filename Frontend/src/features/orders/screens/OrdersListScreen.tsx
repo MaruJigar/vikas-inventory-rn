@@ -77,7 +77,11 @@ export function OrdersListScreen({
   );
 
   return (
-    <Screen scroll={false}>
+    <Screen scroll={false} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={typography.h1}>{t('orders.title')}</Text>
+      </View>
+
       <Input
         value={query}
         onChangeText={setQuery}
@@ -170,6 +174,7 @@ function Chip({
 }
 
 const styles = StyleSheet.create({
+  header: { marginTop: spacing.sm, marginBottom: spacing.md },
   filterRow: { marginBottom: spacing.sm },
   chips: { gap: spacing.sm, paddingVertical: spacing.xs },
   chip: {

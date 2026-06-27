@@ -94,7 +94,7 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
 
   if (lines.length === 0) {
     return (
-      <Screen>
+      <Screen edges={[]}>
         <View style={styles.emptyWrap}>
           <EmptyState
             title={t('cart.empty')}
@@ -146,7 +146,7 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
   };
 
   return (
-    <Screen>
+    <Screen edges={[]}>
       <Text style={[typography.h1, styles.title]}>{t('cart.title')}</Text>
 
       {lines.map(renderLine)}

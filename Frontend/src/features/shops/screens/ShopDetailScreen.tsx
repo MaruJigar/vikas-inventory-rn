@@ -30,7 +30,7 @@ export function ShopDetailScreen({
   if (isLoading) return <Spinner />;
   if (isError || !shop) {
     return (
-      <Screen>
+      <Screen edges={[]}>
         <EmptyState
           title={t('shops.loadError')}
           actionLabel={t('common.retry')}
@@ -61,7 +61,7 @@ export function ShopDetailScreen({
     d ? new Date(d).toLocaleDateString() : t('shops.detail.never');
 
   return (
-    <Screen>
+    <Screen edges={[]}>
       <Text style={[typography.h1, styles.title]}>{shop.name}</Text>
 
       {shop.verification_photo_url ? (

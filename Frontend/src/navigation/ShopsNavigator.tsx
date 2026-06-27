@@ -18,6 +18,7 @@ export function ShopsNavigator() {
         headerTintColor: colors.primary,
         headerStyle: { backgroundColor: colors.background },
         headerShadowVisible: false,
+        headerTitleAlign: 'left',
       }}
     >
       <Stack.Screen

@@ -4,9 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { Screen, Card, Button, Section, LanguageToggle } from '@/components';
-import { colors, spacing, typography } from '@/theme';
+import { colors, radius, spacing, typography } from '@/theme';
 import { useAuthStore } from '@/store/useAuthStore';
+import type { Role } from '@/types/auth';
 import type { AccountScreenProps } from '@/navigation/types';
+
+const ROLE_LABELS: Record<Role, string> = {
+  SALESMAN: 'Salesman',
+  DISTRIBUTOR_ADMIN: 'Distributor',
+  MANUFACTURER_ADMIN: 'Manufacturer',
+  SUPER_ADMIN: 'Admin',
+};
 
 /**
  * Account tab home. Surfaces identity, language and logout, plus a
@@ -20,23 +28,34 @@ export function AccountScreen({
   const logout = useAuthStore((s) => s.logout);
   const isDistributor = user?.role === 'DISTRIBUTOR_ADMIN';
 
-  return (
-    <Screen>
-      <View style={styles.header}>
-        <Text style={typography.h1}>{t('account.title')}</Text>
-      </View>
+  const name = user?.full_name ?? '';
+  const initial = name.trim().charAt(0).toUpperCase() || '?';
+  const roleLabel = user ? ROLE_LABELS[user.role] ?? user.role : '';
 
-      <Card style={styles.identity}>
-        <Text style={typography.title}>{user?.full_name ?? ''}</Text>
+  return (
+    <Screen edges={['top']}>
+      <Text style={[typography.h1, styles.title]}>{t('account.title')}</Text>
+
+      <View style={styles.profile}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initial}</Text>
+        </View>
+        <Text style={typography.h2}>{name}</Text>
         {user?.email ? <Text style={styles.muted}>{user.email}</Text> : null}
         <Text style={styles.muted}>{user?.phone ?? ''}</Text>
+      </View>
+
+      <Card style={styles.infoCard}>
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>{t('account.role')}</Text>
-          <Text style={styles.metaValue}>{user?.role ?? ''}</Text>
+          <Text style={styles.metaValue}>{roleLabel}</Text>
         </View>
+        <View style={styles.divider} />
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>{t('account.status')}</Text>
-          <Text style={styles.metaValue}>{t('account.statusApproved')}</Text>
+          <Text style={[styles.metaValue, styles.approved]}>
+            {t('account.statusApproved')}
+          </Text>
         </View>
       </Card>
 
@@ -64,36 +83,55 @@ export function AccountScreen({
         </Card>
       </Section>
 
-      <Text style={styles.hint}>{t('account.profileHint')}</Text>
-
       <View style={styles.spacer} />
+      <Text style={styles.hint}>{t('account.profileHint')}</Text>
       <Button
         label={t('account.logout')}
         variant="danger"
         onPress={() => void logout()}
+        style={styles.logout}
       />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { marginTop: spacing.sm },
-  identity: { marginTop: spacing.lg, gap: spacing.xs },
+  title: { marginTop: spacing.sm },
+  profile: {
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  avatarText: { fontSize: 30, fontWeight: '700', color: '#FFFFFF' },
+  infoCard: { gap: spacing.sm },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: spacing.sm,
+    alignItems: 'center',
   },
   metaLabel: { ...typography.label },
   metaValue: { ...typography.body },
+  approved: { color: colors.success },
+  divider: { height: 1, backgroundColor: colors.border },
   languageCard: { alignItems: 'flex-start' },
-  hint: { ...typography.caption, marginTop: spacing.lg },
-  muted: { ...typography.body, color: colors.textMuted },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   menuLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  spacer: { flex: 1, minHeight: spacing.xl },
+  muted: { ...typography.body, color: colors.textMuted },
+  spacer: { flex: 1, minHeight: spacing.lg },
+  hint: { ...typography.caption, marginBottom: spacing.md, textAlign: 'center' },
+  logout: {},
 });

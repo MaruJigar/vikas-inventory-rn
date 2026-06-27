@@ -19,6 +19,7 @@ export function AccountNavigator() {
         headerTintColor: colors.primary,
         headerStyle: { backgroundColor: colors.background },
         headerShadowVisible: false,
+        headerTitleAlign: 'left',
         headerBackTitle: t('common.back'),
       }}
     >

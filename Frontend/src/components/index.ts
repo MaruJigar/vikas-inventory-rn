@@ -3,6 +3,7 @@ export { Button } from '@/components/Button';
 export { Input } from '@/components/Input';
 export { Card } from '@/components/Card';
 export { Section } from '@/components/Section';
+export { ActionTile } from '@/components/ActionTile';
 export { EmptyState } from '@/components/EmptyState';
 export { Spinner } from '@/components/Spinner';
 export { ErrorBoundary } from '@/components/ErrorBoundary';
