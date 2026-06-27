@@ -18,6 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Screen, Button, Card, ControlledInput } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { confirmAction, notify } from '@/lib/dialog';
 import { addShopSchema, type AddShopForm } from '@/features/shops/schemas';
 import { useCheckDuplicate, useCreateShop } from '@/features/shops/hooks';
 import type {
@@ -59,7 +60,7 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
         // Browsers block geolocation on insecure origins (non-HTTPS,
         // non-localhost) and report "denied" without ever prompting.
         if ((globalThis as { isSecureContext?: boolean }).isSecureContext === false) {
-          Alert.alert(t('shops.form.locationInsecure'));
+          notify(t('shops.form.locationInsecure'));
           return;
         }
         // On web the prompt fires on the position request itself, not on the
@@ -76,7 +77,7 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
 
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(t('shops.form.locationPermission'));
+        notify(t('shops.form.locationPermission'));
         return;
       }
       const pos = await Location.getCurrentPositionAsync({
@@ -87,7 +88,7 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
         longitude: pos.coords.longitude,
       });
     } catch {
-      Alert.alert(
+      notify(
         Platform.OS === 'web'
           ? t('shops.form.locationDenied')
           : t('shops.form.locationError'),
@@ -108,7 +109,7 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
   const pickFromCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(t('shops.form.photoPermission'));
+      notify(t('shops.form.photoPermission'));
       return;
     }
     const res = await ImagePicker.launchCameraAsync({ quality: 0.6 });
@@ -119,7 +120,7 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
     const { status } =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(t('shops.form.photoPermission'));
+      notify(t('shops.form.photoPermission'));
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -171,14 +172,14 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
       {
         onSuccess: () => navigation.goBack(),
         onError: (err) =>
-          Alert.alert(getApiErrorMessage(err, t) || t('shops.form.createError')),
+          notify(getApiErrorMessage(err, t) || t('shops.form.createError')),
       },
     );
   };
 
   const onSubmit = async (values: AddShopForm) => {
     if (!coords) {
-      Alert.alert(t('shops.form.locationRequired'));
+      notify(t('shops.form.locationRequired'));
       return;
     }
     try {
@@ -191,25 +192,22 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
 
       if (matches.length > 0) {
         const top = matches[0];
-        Alert.alert(
-          t('shops.duplicate.title'),
-          `${t('shops.duplicate.message')}\n${t('shops.duplicate.matchedBy', {
-            type: top.match_type,
-          })}`,
-          [
-            { text: t('shops.duplicate.cancel'), style: 'cancel' },
-            {
-              text: t('shops.duplicate.addAnyway'),
-              onPress: () => submitShop(buildPayload(values, coords, top)),
-            },
-          ],
-        );
+        confirmAction({
+          title: t('shops.duplicate.title'),
+          message: `${t('shops.duplicate.message')}\n${t(
+            'shops.duplicate.matchedBy',
+            { type: top.match_type },
+          )}`,
+          confirmLabel: t('shops.duplicate.addAnyway'),
+          cancelLabel: t('shops.duplicate.cancel'),
+          onConfirm: () => submitShop(buildPayload(values, coords, top)),
+        });
         return;
       }
 
       submitShop(buildPayload(values, coords));
     } catch (err) {
-      Alert.alert(getApiErrorMessage(err, t));
+      notify(getApiErrorMessage(err, t));
     }
   };
 
