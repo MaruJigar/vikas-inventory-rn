@@ -3,7 +3,12 @@ import { Platform } from 'react-native';
 import { apiClient, API_BASE_URL } from '@/api/client';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { ListQuery, Paginated } from '@/api/types';
-import type { Category, CreateProductPayload, Product } from '@/types/product';
+import type {
+  Category,
+  CreateProductPayload,
+  Product,
+  UpdateProductPayload,
+} from '@/types/product';
 import type { PickedImage } from '@/types/shop';
 
 export const productsApi = {
@@ -17,8 +22,19 @@ export const productsApi = {
       .get<Paginated<Category>>('/product-categories', { params: query })
       .then((r) => r.data),
 
+  createCategory: (name: string) =>
+    apiClient
+      .post<Category>('/product-categories', { name })
+      .then((r) => r.data),
+
   create: (payload: CreateProductPayload) =>
     apiClient.post<Product>('/products', payload).then((r) => r.data),
+
+  update: (id: string, payload: UpdateProductPayload) =>
+    apiClient.put<Product>(`/products/${id}`, payload).then((r) => r.data),
+
+  remove: (id: string) =>
+    apiClient.delete(`/products/${id}`).then((r) => r.data),
 
   /** Upload a product image (multipart, field `image`) → returns its URL. */
   uploadImage: async (image: PickedImage): Promise<string> => {

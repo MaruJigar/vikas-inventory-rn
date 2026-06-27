@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
@@ -15,10 +15,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 
-import { Screen, Button, Card, ControlledInput } from '@/components';
+import { Screen, Button, Card, ControlledInput, Input } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { confirmAction, notify } from '@/lib/dialog';
+import { searchPlaces, type PlaceResult } from '@/lib/geocode';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { addShopSchema, type AddShopForm } from '@/features/shops/schemas';
 import { useCheckDuplicate, useCreateShop } from '@/features/shops/hooks';
 import type {
@@ -35,6 +37,35 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
   const [coords, setCoords] = useState<Coords | null>(null);
   const [locating, setLocating] = useState(false);
   const [image, setImage] = useState<PickedImage | null>(null);
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
+  const [placeQuery, setPlaceQuery] = useState('');
+  const [results, setResults] = useState<PlaceResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const debouncedPlace = useDebouncedValue(placeQuery.trim(), 400);
+
+  // Live search as the user types (one field, no separate button).
+  useEffect(() => {
+    if (debouncedPlace.length < 3) {
+      setResults([]);
+      return;
+    }
+    let active = true;
+    setSearching(true);
+    searchPlaces(debouncedPlace)
+      .then((r) => active && setResults(r))
+      .catch(() => active && setResults([]))
+      .finally(() => active && setSearching(false));
+    return () => {
+      active = false;
+    };
+  }, [debouncedPlace]);
+
+  const selectPlace = (place: PlaceResult) => {
+    setCoords({ latitude: place.latitude, longitude: place.longitude });
+    setLocationLabel(place.label);
+    setResults([]);
+    setPlaceQuery('');
+  };
 
   const checkDuplicate = useCheckDuplicate();
   const createShop = useCreateShop();
@@ -72,6 +103,7 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
         });
+        setLocationLabel(t('shops.form.currentLocation'));
         return;
       }
 
@@ -87,6 +119,7 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
       });
+      setLocationLabel(t('shops.form.currentLocation'));
     } catch {
       notify(
         Platform.OS === 'web'
@@ -255,21 +288,40 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
       />
 
       <Text style={styles.sectionLabel}>{t('shops.form.location')}</Text>
-      <Button
-        label={
-          coords
-            ? t('shops.form.locationCaptured')
-            : t('shops.form.captureLocation')
-        }
-        variant="secondary"
-        loading={locating}
-        onPress={() => void captureLocation()}
+      <Input
+        value={placeQuery}
+        onChangeText={setPlaceQuery}
+        placeholder={t('shops.form.searchLocationPlaceholder')}
+        returnKeyType="search"
+        rightIcon="locate"
+        rightIconLoading={locating}
+        onRightIconPress={() => void captureLocation()}
+        rightIconLabel={t('shops.form.captureLocation')}
       />
+      {searching ? (
+        <Text style={styles.searchHint}>{t('common.loading')}</Text>
+      ) : null}
+
+      {results.map((r, i) => (
+        <Pressable
+          key={`${r.latitude}-${r.longitude}-${i}`}
+          onPress={() => selectPlace(r)}
+        >
+          <Card style={styles.resultRow}>
+            <Ionicons name="location-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.resultText} numberOfLines={2}>
+              {r.label}
+            </Text>
+          </Card>
+        </Pressable>
+      ))}
+
       {coords ? (
         <View style={styles.coordsRow}>
-          <Ionicons name="location" size={14} color={colors.success} />
-          <Text style={styles.coords}>
-            {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}
+          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+          <Text style={styles.coords} numberOfLines={2}>
+            {locationLabel ??
+              `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`}
           </Text>
         </View>
       ) : null}
@@ -320,13 +372,27 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
+  orText: {
+    ...typography.caption,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginVertical: spacing.sm,
+  },
+  searchHint: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  resultText: { ...typography.caption, color: colors.text, flex: 1 },
   coordsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     marginTop: spacing.sm,
   },
-  coords: { ...typography.caption, color: colors.text },
+  coords: { ...typography.caption, color: colors.text, flex: 1 },
   muted: { ...typography.body, color: colors.textMuted },
   photoPlaceholder: {
     alignItems: 'center',

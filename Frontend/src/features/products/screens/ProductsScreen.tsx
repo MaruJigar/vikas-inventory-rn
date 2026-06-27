@@ -13,8 +13,10 @@ import { useTranslation } from 'react-i18next';
 import { Screen, Input, EmptyState, Spinner } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
+import { getApiErrorMessage } from '@/lib/apiError';
+import { confirmAction, notify } from '@/lib/dialog';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useProducts } from '@/features/products/hooks';
+import { useProducts, useDeleteProduct } from '@/features/products/hooks';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { useCartStore } from '@/store/useCartStore';
 import { computeCartTotals, formatINR } from '@/features/products/pricing';
@@ -43,15 +45,47 @@ export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
     [data],
   );
 
+  const deleteProduct = useDeleteProduct();
+
   const items = useCartStore((s) => s.items);
   const totals = useMemo(
     () => computeCartTotals(Object.values(items)),
     [items],
   );
 
-  const renderItem = ({ item }: { item: Product }) => (
-    <ProductCard product={item} />
-  );
+  const renderItem = ({ item }: { item: Product }) => {
+    const ownProduct =
+      isDistributor && item.product_source === 'DISTRIBUTOR_CREATED';
+    return (
+      <ProductCard
+        product={item}
+        onEdit={
+          ownProduct
+            ? () => navigation.navigate('AddProduct', { product: item })
+            : undefined
+        }
+        onDelete={
+          ownProduct
+            ? () =>
+                confirmAction({
+                  title: t('products.deleteConfirm'),
+                  confirmLabel: t('products.delete'),
+                  cancelLabel: t('common.cancel'),
+                  destructive: true,
+                  onConfirm: () =>
+                    deleteProduct.mutate(item.id, {
+                      onError: (e) =>
+                        notify(
+                          getApiErrorMessage(e, t) ||
+                            t('products.deleteError'),
+                        ),
+                    }),
+                })
+            : undefined
+        }
+      />
+    );
+  };
 
   return (
     <Screen scroll={false} edges={[]}>

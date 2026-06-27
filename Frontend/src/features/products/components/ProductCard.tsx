@@ -10,7 +10,15 @@ import { useCartStore } from '@/store/useCartStore';
 import { distributorUnitPrice, formatINR, toNum } from '@/features/products/pricing';
 import type { Product } from '@/types/product';
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({
+  product,
+  onEdit,
+  onDelete,
+}: {
+  product: Product;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}) {
   const { t } = useTranslation();
   const qty = useCartStore((s) => s.items[product.id]?.qty ?? 0);
   const add = useCartStore((s) => s.add);
@@ -38,9 +46,25 @@ export function ProductCard({ product }: { product: Product }) {
       </View>
 
       <View style={styles.body}>
-        <Text style={typography.title} numberOfLines={2}>
-          {product.name}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={[typography.title, styles.titleText]} numberOfLines={2}>
+            {product.name}
+          </Text>
+          {onEdit || onDelete ? (
+            <View style={styles.manageRow}>
+              {onEdit ? (
+                <Pressable onPress={onEdit} hitSlop={8} accessibilityLabel={t('common.submit')}>
+                  <Ionicons name="create-outline" size={20} color={colors.primary} />
+                </Pressable>
+              ) : null}
+              {onDelete ? (
+                <Pressable onPress={onDelete} hitSlop={8} accessibilityLabel={t('common.cancel')}>
+                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
         {manufacturer ? (
           <Text style={styles.muted} numberOfLines={1}>
             {manufacturer}
@@ -103,6 +127,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   image: { width: '100%', height: '100%' },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  titleText: { flex: 1 },
+  manageRow: { flexDirection: 'row', gap: spacing.md },
   body: { flex: 1, gap: spacing.xs },
   muted: { ...typography.caption, color: colors.textMuted },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },

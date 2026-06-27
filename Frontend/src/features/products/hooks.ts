@@ -6,7 +6,10 @@ import {
 } from '@tanstack/react-query';
 
 import { productsApi } from '@/features/products/api';
-import type { CreateProductPayload } from '@/types/product';
+import type {
+  CreateProductPayload,
+  UpdateProductPayload,
+} from '@/types/product';
 import type { PickedImage } from '@/types/shop';
 
 const PAGE_SIZE = 20;
@@ -52,6 +55,45 @@ export function useCreateProduct() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: productKeys.all });
+    },
+  });
+}
+
+export function useUpdateProduct(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      payload: UpdateProductPayload;
+      image?: PickedImage;
+    }) => {
+      let product_image_url = input.payload.product_image_url;
+      if (input.image) {
+        product_image_url = await productsApi.uploadImage(input.image);
+      }
+      return productsApi.update(id, { ...input.payload, product_image_url });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: productKeys.all });
+    },
+  });
+}
+
+export function useDeleteProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => productsApi.remove(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: productKeys.all });
+    },
+  });
+}
+
+export function useCreateCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => productsApi.createCategory(name),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: productKeys.categories });
     },
   });
 }

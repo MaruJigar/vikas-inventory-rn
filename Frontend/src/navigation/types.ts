@@ -1,6 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NavigatorScreenParams } from '@react-navigation/native';
+import type { Product } from '@/types/product';
 
 /**
  * Auth flow (shown when unauthenticated). The app is login-only — distributors
@@ -34,7 +35,7 @@ export type HomeStackParamList = {
   HomeDashboard: undefined;
   SelectShop: undefined;
   Products: undefined;
-  AddProduct: undefined;
+  AddProduct: { product?: Product } | undefined;
   Cart: undefined;
   OrderSuccess: { orderNumber: string };
 };

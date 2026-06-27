@@ -22,7 +22,28 @@ export interface CreateProductPayload {
   sku?: string;
   unit?: string;
   description?: string;
+  /** First selected category (current backend single-FK). */
   category_id?: string;
+  /** All selected categories — backend must add multi-category support to persist. */
+  category_ids?: string[];
+  product_image_url?: string;
+}
+
+/**
+ * PUT /v1/products/:id. `external_manufacturer_name` and category fields are
+ * sent but the backend currently strips them (whitelist) — it must add them to
+ * UpdateProductDto (+ multi-category support) to persist.
+ */
+export interface UpdateProductPayload {
+  name?: string;
+  external_manufacturer_name?: string;
+  mrp?: number;
+  gst_percent?: number;
+  sku?: string;
+  unit?: string;
+  description?: string;
+  category_id?: string;
+  category_ids?: string[];
   product_image_url?: string;
 }
 
