@@ -3,7 +3,6 @@ import type {
   AuthTokens,
   LoginPayload,
   RegisterDistributorPayload,
-  RegisterSalesmanPayload,
   User,
 } from '@/types/auth';
 
@@ -15,11 +14,6 @@ export interface RegisterResponse {
 export const authApi = {
   login: (payload: LoginPayload) =>
     apiClient.post<AuthTokens>('/auth/login', payload).then((r) => r.data),
-
-  registerSalesman: (payload: RegisterSalesmanPayload) =>
-    apiClient
-      .post<RegisterResponse>('/auth/register/salesman', payload)
-      .then((r) => r.data),
 
   registerDistributor: (payload: RegisterDistributorPayload) =>
     apiClient

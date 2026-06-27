@@ -22,12 +22,6 @@ const baseRegister = {
   password: z.string().min(6, 'validation.passwordMin'),
 };
 
-export const registerSalesmanSchema = z.object({
-  ...baseRegister,
-  distributor_id: z.string().trim().min(1, 'validation.required'),
-});
-export type RegisterSalesmanForm = z.infer<typeof registerSalesmanSchema>;
-
 export const registerDistributorSchema = z.object({
   ...baseRegister,
   business_name: z.string().trim().min(1, 'validation.required'),

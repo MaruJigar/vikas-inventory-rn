@@ -1,11 +1,12 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 
-/** Auth flow (shown when unauthenticated). */
+/**
+ * Auth flow (shown when unauthenticated). Registration is distributor-only —
+ * salesmen are created by their distributor inside the app, not self-registered.
+ */
 export type AuthStackParamList = {
   Login: undefined;
-  RoleSelect: undefined;
-  RegisterSalesman: undefined;
   RegisterDistributor: undefined;
   RegisterSuccess: undefined;
   ForgotPassword: undefined;
@@ -47,3 +48,14 @@ export type ShopsStackParamList = {
 
 export type ShopsScreenProps<T extends keyof ShopsStackParamList> =
   NativeStackScreenProps<ShopsStackParamList, T>;
+
+/** Account tab stack (account → distributor-only salesmen management). */
+export type AccountStackParamList = {
+  AccountHome: undefined;
+  Salesmen: undefined;
+  AddSalesman: undefined;
+  SalesmanDetail: { id: string };
+};
+
+export type AccountScreenProps<T extends keyof AccountStackParamList> =
+  NativeStackScreenProps<AccountStackParamList, T>;

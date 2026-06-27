@@ -16,7 +16,7 @@ export function HomeNavigator() {
   const { t } = useTranslation();
   const role = useAuthStore((s) => s.user?.role);
   const Dashboard =
-    role === 'DISTRIBUTOR'
+    role === 'DISTRIBUTOR_ADMIN'
       ? DistributorDashboardScreen
       : SalesmanDashboardScreen;
 
