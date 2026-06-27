@@ -11,7 +11,12 @@ import { useVisitStore } from '@/store/useVisitStore';
 import { getCurrentCoords, type CoordsResult } from '@/lib/location';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { notify } from '@/lib/dialog';
-import { useCheckIn, useCheckOut, useNoOrderVisit } from '@/features/visit/hooks';
+import {
+  useCheckIn,
+  useCheckOut,
+  useNoOrderVisit,
+  useVisitSession,
+} from '@/features/visit/hooks';
 import type { HomeStackParamList } from '@/navigation/types';
 
 export function SalesmanDashboardScreen() {
@@ -25,6 +30,10 @@ export function SalesmanDashboardScreen() {
   const setWorkingDay = useVisitStore((s) => s.setWorkingDay);
   const setActiveVisit = useVisitStore((s) => s.setActiveVisit);
   const reset = useVisitStore((s) => s.reset);
+
+  const role = useAuthStore((s) => s.user?.role);
+  // Restore real check-in/visit state from the backend (cache is cleared on logout).
+  const session = useVisitSession(role === 'SALESMAN');
 
   const checkIn = useCheckIn();
   const checkOut = useCheckOut();
@@ -93,14 +102,16 @@ export function SalesmanDashboardScreen() {
 
       <Card style={styles.checkInCard}>
         <Text style={styles.checkInStatus}>
-          {checkedIn
-            ? t('dashboard.salesman.checkedInAt', {
-                time: new Date(workingDay.checkedInAt).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                }),
-              })
-            : t('dashboard.salesman.notCheckedIn')}
+          {session.isLoading
+            ? t('common.loading')
+            : checkedIn
+              ? t('dashboard.salesman.checkedInAt', {
+                  time: new Date(workingDay.checkedInAt).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
+                })
+              : t('dashboard.salesman.notCheckedIn')}
         </Text>
         <Button
           label={
@@ -109,7 +120,7 @@ export function SalesmanDashboardScreen() {
               : t('dashboard.salesman.checkIn')
           }
           variant={checkedIn ? 'danger' : 'primary'}
-          loading={busy}
+          loading={busy || session.isLoading}
           onPress={() => void (checkedIn ? runCheckOut() : runCheckIn())}
         />
       </Card>
