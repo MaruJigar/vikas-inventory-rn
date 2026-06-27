@@ -149,6 +149,10 @@ export const hi: TranslationResources = {
       locationRequired: 'जारी रखने के लिए दुकान का स्थान कैप्चर करें।',
       locationPermission: 'दुकान जोड़ने के लिए स्थान की अनुमति आवश्यक है।',
       locationError: 'आपका स्थान प्राप्त नहीं हो सका। पुनः प्रयास करें।',
+      locationDenied:
+        'आपके ब्राउज़र में स्थान अवरुद्ध है। इस साइट के लिए स्थान पहुँच सक्षम करें और पुनः प्रयास करें।',
+      locationInsecure:
+        'स्थान के लिए सुरक्षित कनेक्शन आवश्यक है। ऐप को localhost या HTTPS पर खोलें।',
       photo: 'विज़िटिंग कार्ड',
       addPhoto: 'फ़ोटो जोड़ें',
       changePhoto: 'फ़ोटो बदलें',
