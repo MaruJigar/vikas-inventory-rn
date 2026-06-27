@@ -197,11 +197,6 @@ export const hi: TranslationResources = {
     profileError: 'आपकी वितरक प्रोफ़ाइल लोड नहीं हो सकी।',
     active: 'सक्रिय',
     inactive: 'निष्क्रिय',
-    approval: {
-      approved: 'स्वीकृत',
-      pending: 'लंबित',
-      rejected: 'अस्वीकृत',
-    },
     form: {
       title: 'सेल्समैन जोड़ें',
       subtitle:
@@ -210,16 +205,13 @@ export const hi: TranslationResources = {
       email: 'ईमेल',
       phone: 'फ़ोन',
       password: 'अस्थायी पासवर्ड',
-      active: 'सक्रिय',
-      activeHint: 'निष्क्रिय सेल्समैन साइन इन नहीं कर सकते।',
-      approvedNote: 'नए सेल्समैन स्वतः स्वीकृत हो जाते हैं।',
       submit: 'सेल्समैन बनाएं',
       createError: 'सेल्समैन नहीं बनाया जा सका। कृपया पुनः प्रयास करें।',
     },
     detail: {
       title: 'सेल्समैन',
       status: 'सक्रिय',
-      approval: 'स्वीकृति स्थिति',
+      approval: 'स्वीकृति',
       editTitle: 'विवरण संपादित करें',
       save: 'परिवर्तन सहेजें',
       statusNote:

@@ -2,13 +2,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 
 /**
- * Auth flow (shown when unauthenticated). Registration is distributor-only —
- * salesmen are created by their distributor inside the app, not self-registered.
+ * Auth flow (shown when unauthenticated). The app is login-only — distributors
+ * are created on the backend/admin side and salesmen by their distributor, so
+ * there is no in-app registration.
  */
 export type AuthStackParamList = {
   Login: undefined;
-  RegisterDistributor: undefined;
-  RegisterSuccess: undefined;
   ForgotPassword: undefined;
 };
 
