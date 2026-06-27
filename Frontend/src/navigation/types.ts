@@ -1,4 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 
 /** Auth flow (shown when unauthenticated). */
 export type AuthStackParamList = {
@@ -13,7 +14,16 @@ export type AuthStackParamList = {
 export type AuthScreenProps<T extends keyof AuthStackParamList> =
   NativeStackScreenProps<AuthStackParamList, T>;
 
-/** Root (post-auth) — expands as feature stacks land in later phases. */
-export type RootStackParamList = {
-  Placeholder: undefined;
+/**
+ * Main app tabs (shown when approved). The Home tab renders a role-specific
+ * dashboard; the other tabs are shared shells filled in by later phases.
+ */
+export type MainTabParamList = {
+  Home: undefined;
+  Shops: undefined;
+  Orders: undefined;
+  Account: undefined;
 };
+
+export type MainTabScreenProps<T extends keyof MainTabParamList> =
+  BottomTabScreenProps<MainTabParamList, T>;
