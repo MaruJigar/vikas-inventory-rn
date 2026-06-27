@@ -1,5 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { NavigatorScreenParams } from '@react-navigation/native';
 
 /**
  * Auth flow (shown when unauthenticated). The app is login-only — distributors
@@ -19,10 +20,10 @@ export type AuthScreenProps<T extends keyof AuthStackParamList> =
  * dashboard; the other tabs are shared shells filled in by later phases.
  */
 export type MainTabParamList = {
-  Home: undefined;
-  Shops: undefined;
-  Orders: undefined;
-  Account: undefined;
+  Home: NavigatorScreenParams<HomeStackParamList> | undefined;
+  Shops: NavigatorScreenParams<ShopsStackParamList> | undefined;
+  Orders: NavigatorScreenParams<OrdersStackParamList> | undefined;
+  Account: NavigatorScreenParams<AccountStackParamList> | undefined;
 };
 
 export type MainTabScreenProps<T extends keyof MainTabParamList> =
@@ -33,6 +34,7 @@ export type HomeStackParamList = {
   HomeDashboard: undefined;
   SelectShop: undefined;
   Products: undefined;
+  AddProduct: undefined;
   Cart: undefined;
   OrderSuccess: { orderNumber: string };
 };

@@ -1,6 +1,13 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { productsApi } from '@/features/products/api';
+import type { CreateProductPayload } from '@/types/product';
+import type { PickedImage } from '@/types/shop';
 
 const PAGE_SIZE = 20;
 
@@ -23,6 +30,29 @@ export function useProducts(search: string) {
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.meta.hasNextPage ? lastPage.meta.page + 1 : undefined,
+  });
+}
+
+/**
+ * Create a distributor product. If an image was picked, it's uploaded first and
+ * its URL is attached to the create payload.
+ */
+export function useCreateProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      payload: CreateProductPayload;
+      image?: PickedImage;
+    }) => {
+      let product_image_url = input.payload.product_image_url;
+      if (input.image) {
+        product_image_url = await productsApi.uploadImage(input.image);
+      }
+      return productsApi.create({ ...input.payload, product_image_url });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: productKeys.all });
+    },
   });
 }
 

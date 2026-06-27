@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Card } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
+import { resolveMediaUrl } from '@/lib/media';
 import { useCartStore } from '@/store/useCartStore';
 import { distributorUnitPrice, formatINR, toNum } from '@/features/products/pricing';
 import type { Product } from '@/types/product';
@@ -19,6 +20,7 @@ export function ProductCard({ product }: { product: Product }) {
   const mrp = toNum(product.mrp);
   const price = distributorUnitPrice(product);
   const discounted = price < mrp;
+  const imageUrl = resolveMediaUrl(product.product_image_url);
   const manufacturer =
     product.manufacturer?.business_name ??
     product.manufacturer?.name ??
@@ -28,11 +30,8 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <Card style={styles.card}>
       <View style={styles.imageWrap}>
-        {product.product_image_url ? (
-          <Image
-            source={{ uri: product.product_image_url }}
-            style={styles.image}
-          />
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.image} />
         ) : (
           <Ionicons name="cube-outline" size={28} color={colors.textMuted} />
         )}

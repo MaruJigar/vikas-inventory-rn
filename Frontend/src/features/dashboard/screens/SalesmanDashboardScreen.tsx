@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 import { Screen, Card, Button, Section, Input, LanguageToggle } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -18,13 +19,18 @@ import {
   useNoOrderVisit,
   useVisitSession,
 } from '@/features/visit/hooks';
-import type { HomeStackParamList } from '@/navigation/types';
+import { RecentOrders } from '@/features/orders/components/RecentOrders';
+import type { HomeStackParamList, MainTabParamList } from '@/navigation/types';
 
 export function SalesmanDashboardScreen() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const navigation =
     useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const goToOrder = (id: string) =>
+    navigation
+      .getParent<BottomTabNavigationProp<MainTabParamList>>()
+      ?.navigate('Orders', { screen: 'OrderDetail', params: { id } });
 
   const workingDay = useVisitStore((s) => s.workingDay);
   const activeVisit = useVisitStore((s) => s.activeVisit);
@@ -190,11 +196,7 @@ export function SalesmanDashboardScreen() {
       </Pressable>
 
       <Section title={t('dashboard.salesman.recentOrders')}>
-        <Card>
-          <Text style={styles.muted}>
-            {t('dashboard.salesman.noRecentOrders')}
-          </Text>
-        </Card>
+        <RecentOrders onOpenOrder={goToOrder} />
       </Section>
     </Screen>
   );

@@ -19,6 +19,8 @@ interface ScreenProps {
   padded?: boolean;
   edges?: Edge[];
   style?: ViewStyle;
+  /** A node pinned over the content (e.g. a floating action button). */
+  floatingAction?: React.ReactNode;
 }
 
 /** Standard safe-area screen wrapper used by every screen. */
@@ -28,6 +30,7 @@ export function Screen({
   padded = true,
   edges = ['top', 'bottom'],
   style,
+  floatingAction,
 }: ScreenProps) {
   const inner = padded ? styles.padded : undefined;
 
@@ -49,6 +52,7 @@ export function Screen({
           <View style={[styles.flex, inner, style]}>{children}</View>
         )}
       </KeyboardAvoidingView>
+      {floatingAction}
     </SafeAreaView>
   );
 }

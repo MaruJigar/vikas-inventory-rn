@@ -7,11 +7,13 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { Screen, Input, EmptyState, Spinner } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useProducts } from '@/features/products/hooks';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { useCartStore } from '@/store/useCartStore';
@@ -21,6 +23,7 @@ import type { HomeScreenProps } from '@/navigation/types';
 
 export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
   const { t } = useTranslation();
+  const isDistributor = useAuthStore((s) => s.user?.role) === 'DISTRIBUTOR_ADMIN';
   const [query, setQuery] = useState('');
   const search = useDebouncedValue(query.trim(), 350);
 
@@ -111,6 +114,17 @@ export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
           </View>
         </Pressable>
       ) : null}
+
+      {isDistributor ? (
+        <Pressable
+          style={[styles.fab, totals.itemCount > 0 && styles.fabRaised]}
+          onPress={() => navigation.navigate('AddProduct')}
+          accessibilityRole="button"
+          accessibilityLabel={t('products.form.title')}
+        >
+          <Ionicons name="add" size={28} color="#FFFFFF" />
+        </Pressable>
+      ) : null}
     </Screen>
   );
 }
@@ -140,4 +154,21 @@ const styles = StyleSheet.create({
   cartBarRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   cartBarTotal: { ...typography.title, color: '#FFFFFF' },
   cartBarCta: { ...typography.label, color: '#FFFFFF' },
+  fab: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.xl,
+    width: 56,
+    height: 56,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  fabRaised: { bottom: 92 },
 });

@@ -1,13 +1,16 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
-import { Screen, Card, Button, Section, LanguageToggle } from '@/components';
-import { colors, spacing, typography } from '@/theme';
+import { Screen, Card, Section, LanguageToggle } from '@/components';
+import { colors, radius, spacing, typography } from '@/theme';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { HomeStackParamList } from '@/navigation/types';
+import { RecentOrders } from '@/features/orders/components/RecentOrders';
+import type { HomeStackParamList, MainTabParamList } from '@/navigation/types';
 
 /** A single labelled count in the orders-summary row. */
 function SummaryStat({ label, value }: { label: string; value: number }) {
@@ -29,21 +32,37 @@ export function DistributorDashboardScreen() {
   const user = useAuthStore((s) => s.user);
   const navigation =
     useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const goToOrder = (id: string) =>
+    navigation
+      .getParent<BottomTabNavigationProp<MainTabParamList>>()
+      ?.navigate('Orders', { screen: 'OrderDetail', params: { id } });
 
   return (
-    <Screen>
+    <Screen
+      edges={['top']}
+      floatingAction={
+        <Pressable
+          style={styles.fab}
+          onPress={() => navigation.navigate('Products')}
+          accessibilityRole="button"
+          accessibilityLabel={t('dashboard.distributor.newOrder')}
+        >
+          <Ionicons name="add" size={18} color="#FFFFFF" />
+          <Text style={styles.fabText}>
+            {t('dashboard.distributor.newOrder')}
+          </Text>
+        </Pressable>
+      }
+    >
       <View style={styles.topBar}>
-        <Text style={typography.h1}>
-          {t('dashboard.greeting', { name: user?.full_name ?? '' })}
-        </Text>
+        <View style={styles.greetingWrap}>
+          <Text style={styles.hello}>{t('dashboard.hello')}</Text>
+          <Text style={typography.h1} numberOfLines={1}>
+            {user?.full_name ?? ''}
+          </Text>
+        </View>
         <LanguageToggle />
       </View>
-
-      <Button
-        label={`+  ${t('dashboard.distributor.newOrder')}`}
-        style={styles.newOrder}
-        onPress={() => navigation.navigate('Products')}
-      />
 
       <Section title={t('dashboard.distributor.ordersSummary')}>
         <View style={styles.statsRow}>
@@ -62,11 +81,7 @@ export function DistributorDashboardScreen() {
       </Section>
 
       <Section title={t('dashboard.distributor.recentOrders')}>
-        <Card>
-          <Text style={styles.muted}>
-            {t('dashboard.distributor.noRecentOrders')}
-          </Text>
-        </Card>
+        <RecentOrders onOpenOrder={goToOrder} />
       </Section>
     </Screen>
   );
@@ -75,14 +90,34 @@ export function DistributorDashboardScreen() {
 const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: spacing.md,
     marginTop: spacing.sm,
   },
-  newOrder: { marginTop: spacing.lg },
+  greetingWrap: { flex: 1 },
+  hello: { ...typography.body, color: colors.textMuted },
   statsRow: { flexDirection: 'row', gap: spacing.md },
   stat: { flex: 1, alignItems: 'center', gap: spacing.xs },
   statValue: { ...typography.h2 },
   statLabel: { ...typography.caption, textAlign: 'center' },
   muted: { ...typography.body, color: colors.textMuted },
+  fab: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    height: 44,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  fabText: { ...typography.label, color: '#FFFFFF' },
 });
