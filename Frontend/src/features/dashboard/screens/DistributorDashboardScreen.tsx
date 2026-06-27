@@ -1,10 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Screen, Card, Button, Section, LanguageToggle } from '@/components';
 import { colors, spacing, typography } from '@/theme';
 import { useAuthStore } from '@/store/useAuthStore';
+import type { HomeStackParamList } from '@/navigation/types';
 
 /** A single labelled count in the orders-summary row. */
 function SummaryStat({ label, value }: { label: string; value: number }) {
@@ -24,6 +27,8 @@ function SummaryStat({ label, value }: { label: string; value: number }) {
 export function DistributorDashboardScreen() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const navigation =
+    useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
 
   return (
     <Screen>
@@ -37,6 +42,7 @@ export function DistributorDashboardScreen() {
       <Button
         label={`+  ${t('dashboard.distributor.newOrder')}`}
         style={styles.newOrder}
+        onPress={() => navigation.navigate('Products')}
       />
 
       <Section title={t('dashboard.distributor.ordersSummary')}>

@@ -1,10 +1,11 @@
 import React from 'react';
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Screen, Card, Button, Spinner, EmptyState } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { confirmAction, notify } from '@/lib/dialog';
 import { useShop, useDeleteShop } from '@/features/shops/hooks';
 import type { ShopsScreenProps } from '@/navigation/types';
 
@@ -40,25 +41,19 @@ export function ShopDetailScreen({
   }
 
   const confirmDelete = () => {
-    Alert.alert(
-      t('shops.detail.deleteConfirmTitle'),
-      t('shops.detail.deleteConfirmMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('shops.detail.delete'),
-          style: 'destructive',
-          onPress: () =>
-            deleteShop.mutate(id, {
-              onSuccess: () => navigation.goBack(),
-              onError: (err) =>
-                Alert.alert(
-                  getApiErrorMessage(err, t) || t('shops.detail.deleteError'),
-                ),
-            }),
-        },
-      ],
-    );
+    confirmAction({
+      title: t('shops.detail.deleteConfirmTitle'),
+      message: t('shops.detail.deleteConfirmMessage'),
+      confirmLabel: t('shops.detail.delete'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+      onConfirm: () =>
+        deleteShop.mutate(id, {
+          onSuccess: () => navigation.goBack(),
+          onError: (err) =>
+            notify(getApiErrorMessage(err, t) || t('shops.detail.deleteError')),
+        }),
+    });
   };
 
   const dash = '—';

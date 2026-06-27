@@ -28,6 +28,16 @@ export type MainTabParamList = {
 export type MainTabScreenProps<T extends keyof MainTabParamList> =
   BottomTabScreenProps<MainTabParamList, T>;
 
+/** Home tab stack (dashboard → products → cart). */
+export type HomeStackParamList = {
+  HomeDashboard: undefined;
+  Products: undefined;
+  Cart: undefined;
+};
+
+export type HomeScreenProps<T extends keyof HomeStackParamList> =
+  NativeStackScreenProps<HomeStackParamList, T>;
+
 /** Shops tab stack (listing → detail → add). */
 export type ShopsStackParamList = {
   ShopsList: undefined;

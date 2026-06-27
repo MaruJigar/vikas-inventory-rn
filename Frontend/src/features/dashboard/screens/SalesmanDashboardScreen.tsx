@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Screen, Card, Button, Section, LanguageToggle } from '@/components';
 import { colors, spacing, typography } from '@/theme';
 import { useAuthStore } from '@/store/useAuthStore';
+import type { HomeStackParamList } from '@/navigation/types';
 
 /**
  * Post-approval salesman home (PRD §6.1). Phase 2 builds the layout shell;
@@ -15,6 +18,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 export function SalesmanDashboardScreen() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const navigation =
+    useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const [checkedIn, setCheckedIn] = useState(false);
 
   return (
@@ -63,6 +68,13 @@ export function SalesmanDashboardScreen() {
         style={styles.startVisit}
       />
 
+      <Button
+        label={t('dashboard.salesman.browseProducts')}
+        variant="secondary"
+        onPress={() => navigation.navigate('Products')}
+        style={styles.browse}
+      />
+
       <Section title={t('dashboard.salesman.nearbyShops')}>
         <Card>
           <Text style={styles.muted}>
@@ -93,5 +105,6 @@ const styles = StyleSheet.create({
   checkInRow: { flexDirection: 'row', alignItems: 'center' },
   checkInStatus: { ...typography.body, color: colors.textMuted },
   startVisit: { marginTop: spacing.lg },
+  browse: { marginTop: spacing.md },
   muted: { ...typography.body, color: colors.textMuted },
 });
