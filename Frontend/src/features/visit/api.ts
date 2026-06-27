@@ -1,4 +1,5 @@
 import { apiClient } from '@/api/client';
+import type { Paginated } from '@/api/types';
 import type {
   CheckInPayload,
   EndVisitPayload,
@@ -13,6 +14,18 @@ export const visitApi = {
     apiClient
       .post<WorkingDay>('/working-day/check-in', payload)
       .then((r) => r.data),
+
+  /** Working-day history (plain array, newest first). */
+  history: () =>
+    apiClient.get<WorkingDay[]>('/working-day/history').then((r) => r.data),
+
+  /** The salesman's current ACTIVE visit, if any. */
+  activeVisit: () =>
+    apiClient
+      .get<Paginated<ShopVisit>>('/visits', {
+        params: { status: 'ACTIVE', limit: 1 },
+      })
+      .then((r) => r.data.data[0] ?? null),
 
   checkOut: (payload: CheckInPayload) =>
     apiClient
