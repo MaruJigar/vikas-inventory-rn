@@ -4,23 +4,83 @@ import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { Screen, Card, Button, Section, LanguageToggle } from '@/components';
+import { Screen, Card, Button, Section, Input, LanguageToggle } from '@/components';
 import { colors, spacing, typography } from '@/theme';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useVisitStore } from '@/store/useVisitStore';
+import { getCurrentCoords, type CoordsResult } from '@/lib/location';
+import { getApiErrorMessage } from '@/lib/apiError';
+import { notify } from '@/lib/dialog';
+import { useCheckIn, useCheckOut, useNoOrderVisit } from '@/features/visit/hooks';
 import type { HomeStackParamList } from '@/navigation/types';
 
-/**
- * Post-approval salesman home (PRD §6.1). Phase 2 builds the layout shell;
- * GPS check-in, visit area, nearby shops and recent orders are wired to the
- * backend in their respective later phases. The check-in toggle is local
- * state for now so the Start Visit affordance can be demonstrated.
- */
 export function SalesmanDashboardScreen() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const navigation =
     useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
-  const [checkedIn, setCheckedIn] = useState(false);
+
+  const workingDay = useVisitStore((s) => s.workingDay);
+  const activeVisit = useVisitStore((s) => s.activeVisit);
+  const setWorkingDay = useVisitStore((s) => s.setWorkingDay);
+  const setActiveVisit = useVisitStore((s) => s.setActiveVisit);
+  const reset = useVisitStore((s) => s.reset);
+
+  const checkIn = useCheckIn();
+  const checkOut = useCheckOut();
+  const noOrder = useNoOrderVisit();
+
+  const [locating, setLocating] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [reason, setReason] = useState('');
+
+  const checkedIn = !!workingDay;
+  const busy = locating || checkIn.isPending || checkOut.isPending;
+
+  const gpsMessage = (reason: Exclude<CoordsResult, { ok: true }>['reason']) =>
+    reason === 'insecure'
+      ? t('visit.gps.insecure')
+      : reason === 'permission'
+        ? t('visit.gps.permission')
+        : t('visit.gps.error');
+
+  const runCheckIn = async () => {
+    setLocating(true);
+    const res = await getCurrentCoords();
+    setLocating(false);
+    if (!res.ok) return notify(gpsMessage(res.reason));
+    checkIn.mutate(res.coords, {
+      onSuccess: (wd) =>
+        setWorkingDay({ id: wd.id, checkedInAt: wd.check_in_at }),
+      onError: (e) => notify(getApiErrorMessage(e, t)),
+    });
+  };
+
+  const runCheckOut = async () => {
+    setLocating(true);
+    const res = await getCurrentCoords();
+    setLocating(false);
+    if (!res.ok) return notify(gpsMessage(res.reason));
+    checkOut.mutate(res.coords, {
+      onSuccess: () => reset(),
+      onError: (e) => notify(getApiErrorMessage(e, t)),
+    });
+  };
+
+  const confirmNoOrder = () => {
+    if (!activeVisit || !reason.trim()) return;
+    noOrder.mutate(
+      { visitId: activeVisit.visitId, reason: reason.trim() },
+      {
+        onSuccess: () => {
+          setActiveVisit(null);
+          setEnding(false);
+          setReason('');
+        },
+        onError: (e) => notify(getApiErrorMessage(e, t)),
+      },
+    );
+  };
 
   return (
     <Screen>
@@ -32,18 +92,16 @@ export function SalesmanDashboardScreen() {
       </View>
 
       <Card style={styles.checkInCard}>
-        <View style={styles.checkInRow}>
-          <Text style={styles.checkInStatus}>
-            {checkedIn
-              ? t('dashboard.salesman.checkedInAt', {
-                  time: new Date().toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }),
-                })
-              : t('dashboard.salesman.todaysVisitArea')}
-          </Text>
-        </View>
+        <Text style={styles.checkInStatus}>
+          {checkedIn
+            ? t('dashboard.salesman.checkedInAt', {
+                time: new Date(workingDay.checkedInAt).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+              })
+            : t('dashboard.salesman.notCheckedIn')}
+        </Text>
         <Button
           label={
             checkedIn
@@ -51,22 +109,54 @@ export function SalesmanDashboardScreen() {
               : t('dashboard.salesman.checkIn')
           }
           variant={checkedIn ? 'danger' : 'primary'}
-          onPress={() => setCheckedIn((v) => !v)}
+          loading={busy}
+          onPress={() => void (checkedIn ? runCheckOut() : runCheckIn())}
         />
       </Card>
 
-      <Section title={t('dashboard.salesman.todaysVisitArea')}>
-        <Card>
-          <Text style={styles.muted}>{t('dashboard.salesman.noVisitArea')}</Text>
+      {activeVisit ? (
+        <Card style={styles.visitCard}>
+          <Text style={styles.visitLabel}>{t('visit.activeVisit')}</Text>
+          <Text style={typography.title}>{activeVisit.shopName}</Text>
+          <Button
+            label={t('visit.addProducts')}
+            onPress={() => navigation.navigate('Products')}
+            style={styles.visitAction}
+          />
+          {ending ? (
+            <View style={styles.endBox}>
+              <Input
+                value={reason}
+                onChangeText={setReason}
+                placeholder={t('visit.noOrderReason')}
+                maxLength={20}
+              />
+              <Button
+                label={t('visit.confirmNoOrder')}
+                variant="danger"
+                loading={noOrder.isPending}
+                disabled={!reason.trim()}
+                onPress={confirmNoOrder}
+              />
+            </View>
+          ) : (
+            <Button
+              label={t('visit.endNoOrder')}
+              variant="secondary"
+              onPress={() => setEnding(true)}
+              style={styles.visitAction}
+            />
+          )}
         </Card>
-      </Section>
-
-      <Button
-        label={t('dashboard.salesman.startVisit')}
-        variant="secondary"
-        disabled={!checkedIn}
-        style={styles.startVisit}
-      />
+      ) : (
+        <Button
+          label={t('dashboard.salesman.startVisit')}
+          variant="secondary"
+          disabled={!checkedIn}
+          onPress={() => navigation.navigate('SelectShop')}
+          style={styles.startVisit}
+        />
+      )}
 
       <Button
         label={t('dashboard.salesman.browseProducts')}
@@ -74,14 +164,6 @@ export function SalesmanDashboardScreen() {
         onPress={() => navigation.navigate('Products')}
         style={styles.browse}
       />
-
-      <Section title={t('dashboard.salesman.nearbyShops')}>
-        <Card>
-          <Text style={styles.muted}>
-            {t('dashboard.salesman.noNearbyShops')}
-          </Text>
-        </Card>
-      </Section>
 
       <Section title={t('dashboard.salesman.recentOrders')}>
         <Card>
@@ -102,8 +184,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   checkInCard: { marginTop: spacing.lg, gap: spacing.md },
-  checkInRow: { flexDirection: 'row', alignItems: 'center' },
   checkInStatus: { ...typography.body, color: colors.textMuted },
+  visitCard: { marginTop: spacing.lg, gap: spacing.sm },
+  visitLabel: { ...typography.label, color: colors.success },
+  visitAction: { marginTop: spacing.sm },
+  endBox: { marginTop: spacing.sm, gap: spacing.sm },
   startVisit: { marginTop: spacing.lg },
   browse: { marginTop: spacing.md },
   muted: { ...typography.body, color: colors.textMuted },

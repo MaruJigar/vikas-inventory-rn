@@ -28,11 +28,13 @@ export type MainTabParamList = {
 export type MainTabScreenProps<T extends keyof MainTabParamList> =
   BottomTabScreenProps<MainTabParamList, T>;
 
-/** Home tab stack (dashboard → products → cart). */
+/** Home tab stack (dashboard → visit flow → products → cart → success). */
 export type HomeStackParamList = {
   HomeDashboard: undefined;
+  SelectShop: undefined;
   Products: undefined;
   Cart: undefined;
+  OrderSuccess: { orderNumber: string };
 };
 
 export type HomeScreenProps<T extends keyof HomeStackParamList> =
@@ -47,6 +49,15 @@ export type ShopsStackParamList = {
 
 export type ShopsScreenProps<T extends keyof ShopsStackParamList> =
   NativeStackScreenProps<ShopsStackParamList, T>;
+
+/** Orders tab stack (listing → detail). */
+export type OrdersStackParamList = {
+  OrdersList: undefined;
+  OrderDetail: { id: string };
+};
+
+export type OrdersScreenProps<T extends keyof OrdersStackParamList> =
+  NativeStackScreenProps<OrdersStackParamList, T>;
 
 /** Account tab stack (account → distributor-only salesmen management). */
 export type AccountStackParamList = {

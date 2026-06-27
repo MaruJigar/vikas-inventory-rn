@@ -9,6 +9,8 @@ import { SalesmanDashboardScreen } from '@/features/dashboard/screens/SalesmanDa
 import { DistributorDashboardScreen } from '@/features/dashboard/screens/DistributorDashboardScreen';
 import { ProductsScreen } from '@/features/products/screens/ProductsScreen';
 import { CartScreen } from '@/features/cart/screens/CartScreen';
+import { SelectShopScreen } from '@/features/visit/screens/SelectShopScreen';
+import { OrderSuccessScreen } from '@/features/orders/screens/OrderSuccessScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -34,6 +36,11 @@ export function HomeNavigator() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
+        name="SelectShop"
+        component={SelectShopScreen}
+        options={{ title: t('visit.selectShop'), headerBackTitle: t('common.back') }}
+      />
+      <Stack.Screen
         name="Products"
         component={ProductsScreen}
         options={{ title: t('products.title'), headerBackTitle: t('common.back') }}
@@ -42,6 +49,11 @@ export function HomeNavigator() {
         name="Cart"
         component={CartScreen}
         options={{ title: t('cart.title'), headerBackTitle: t('common.back') }}
+      />
+      <Stack.Screen
+        name="OrderSuccess"
+        component={OrderSuccessScreen}
+        options={{ headerShown: false, gestureEnabled: false }}
       />
     </Stack.Navigator>
   );
