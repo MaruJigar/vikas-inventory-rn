@@ -6,16 +6,25 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { resolveMediaUrl } from '@/lib/media';
+import { notify } from '@/lib/dialog';
 import { useCartStore } from '@/store/useCartStore';
-import { distributorUnitPrice, formatINR, toNum } from '@/features/products/pricing';
+import {
+  availableUnits,
+  distributorUnitPrice,
+  formatINR,
+  toNum,
+} from '@/features/products/pricing';
 import type { Product } from '@/types/product';
 
 export function ProductCard({
   product,
+  addable = true,
   onEdit,
   onDelete,
 }: {
   product: Product;
+  /** Show the add-to-cart / quantity controls (only during an active visit). */
+  addable?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
 }) {
@@ -24,6 +33,18 @@ export function ProductCard({
   const add = useCartStore((s) => s.add);
   const increment = useCartStore((s) => s.increment);
   const decrement = useCartStore((s) => s.decrement);
+
+  const stock = availableUnits(product);
+  const atStockLimit = stock != null && qty >= stock;
+
+  const handleAdd = () => {
+    if (stock != null && stock < 1) return notify(t('products.outOfStock'));
+    add(product);
+  };
+  const handleIncrement = () => {
+    if (atStockLimit) return notify(t('products.maxStock', { count: stock }));
+    increment(product.id);
+  };
 
   const mrp = toNum(product.mrp);
   const price = distributorUnitPrice(product);
@@ -76,15 +97,23 @@ export function ProductCard({
           {discounted ? (
             <Text style={styles.mrp}>{formatINR(mrp)}</Text>
           ) : null}
-          {product.unit ? (
+          {product.unit && stock == null ? (
             <Text style={styles.unit}>/ {product.unit}</Text>
           ) : null}
         </View>
 
-        {qty === 0 ? (
+        {stock != null ? (
+          <Text style={[styles.stock, stock < 1 && styles.stockOut]}>
+            {stock < 1
+              ? t('products.outOfStock')
+              : t('products.inStock', { count: stock })}
+          </Text>
+        ) : null}
+
+        {!addable ? null : qty === 0 ? (
           <Pressable
             style={styles.addBtn}
-            onPress={() => add(product)}
+            onPress={handleAdd}
             accessibilityRole="button"
             accessibilityLabel={t('products.addToCart')}
           >
@@ -102,8 +131,8 @@ export function ProductCard({
             </Pressable>
             <Text style={styles.qty}>{qty}</Text>
             <Pressable
-              style={styles.stepBtn}
-              onPress={() => increment(product.id)}
+              style={[styles.stepBtn, atStockLimit && styles.stepBtnDisabled]}
+              onPress={handleIncrement}
               accessibilityLabel={t('products.increase')}
             >
               <Ionicons name="add" size={18} color={colors.text} />
@@ -130,6 +159,9 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   titleText: { flex: 1 },
   manageRow: { flexDirection: 'row', gap: spacing.md },
+  stock: { ...typography.caption, color: colors.textMuted },
+  stockOut: { color: colors.danger },
+  stepBtnDisabled: { opacity: 0.4 },
   body: { flex: 1, gap: spacing.xs },
   muted: { ...typography.caption, color: colors.textMuted },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },

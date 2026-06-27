@@ -44,6 +44,7 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
   const createCategory = useCreateCategory();
 
   const [image, setImage] = useState<PickedImage | null>(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
   const [categoryIds, setCategoryIds] = useState<string[]>(
     editing?.category ? [editing.category.id] : [],
   );
@@ -71,6 +72,15 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
   const busy = createProduct.isPending || updateProduct.isPending;
   const existingImage = isEdit ? resolveMediaUrl(editing?.product_image_url) : undefined;
 
+  const pickImage = (picked: PickedImage) => {
+    setImage(picked);
+    setImageRemoved(false);
+  };
+  const removeImage = () => {
+    setImage(null);
+    setImageRemoved(true);
+  };
+
   if (!isEdit && isLoading) return <Spinner />;
   if (!isEdit && (isError || !distributor)) {
     return (
@@ -97,14 +107,14 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
       mediaTypes: ['images'],
       quality: 0.6,
     });
-    if (!res.canceled) setImage(toPicked(res.assets[0]));
+    if (!res.canceled) pickImage(toPicked(res.assets[0]));
   };
 
   const pickFromCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') return notify(t('shops.form.photoPermission'));
     const res = await ImagePicker.launchCameraAsync({ quality: 0.6 });
-    if (!res.canceled) setImage(toPicked(res.assets[0]));
+    if (!res.canceled) pickImage(toPicked(res.assets[0]));
   };
 
   const choosePhoto = () => {
@@ -145,6 +155,8 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
             description: values.description || undefined,
             category_id: categoryIds[0] ?? undefined,
             category_ids: categoryIds.length ? categoryIds : undefined,
+            // '' clears the image on the backend; undefined keeps the existing one.
+            product_image_url: imageRemoved && !image ? '' : undefined,
           },
           image: image ?? undefined,
         },
@@ -183,7 +195,7 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
   };
 
   const opt = (label: string) => `${label} (${t('shops.form.optional')})`;
-  const previewUri = image?.uri ?? existingImage;
+  const previewUri = image?.uri ?? (imageRemoved ? undefined : existingImage);
 
   return (
     <Screen edges={[]}>
@@ -265,7 +277,7 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
       {previewUri ? (
         <View>
           <Image source={{ uri: previewUri }} style={styles.preview} />
-          <Pressable style={styles.removePhoto} onPress={() => setImage(null)} hitSlop={8}>
+          <Pressable style={styles.removePhoto} onPress={removeImage} hitSlop={8}>
             <Ionicons name="close" size={18} color="#FFFFFF" />
           </Pressable>
           <Pressable onPress={choosePhoto} style={styles.changePhoto}>

@@ -12,6 +12,7 @@ import { useVisitStore } from '@/store/useVisitStore';
 import { useCreateOrder } from '@/features/orders/hooks';
 import { useEndVisit } from '@/features/visit/hooks';
 import {
+  availableUnits,
   computeCartTotals,
   distributorUnitPrice,
   formatINR,
@@ -134,7 +135,14 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
             <Text style={styles.qty}>{qty}</Text>
             <Pressable
               style={styles.stepBtn}
-              onPress={() => increment(product.id)}
+              onPress={() => {
+                const stock = availableUnits(product);
+                if (stock != null && qty >= stock) {
+                  notify(t('products.maxStock', { count: stock }));
+                  return;
+                }
+                increment(product.id);
+              }}
             >
               <Ionicons name="add" size={16} color={colors.text} />
             </Pressable>

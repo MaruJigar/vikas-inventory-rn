@@ -30,7 +30,12 @@ export function SalesmanDashboardScreen() {
   const goToOrder = (id: string) =>
     navigation
       .getParent<BottomTabNavigationProp<MainTabParamList>>()
-      ?.navigate('Orders', { screen: 'OrderDetail', params: { id } });
+      ?.navigate('Orders', {
+        screen: 'OrderDetail',
+        params: { id },
+        // Keep the Orders list beneath so the detail has a back button.
+        initial: false,
+      });
 
   const workingDay = useVisitStore((s) => s.workingDay);
   const activeVisit = useVisitStore((s) => s.activeVisit);
@@ -39,8 +44,9 @@ export function SalesmanDashboardScreen() {
   const reset = useVisitStore((s) => s.reset);
 
   const role = useAuthStore((s) => s.user?.role);
+  const isSalesman = role === 'SALESMAN';
   // Restore real check-in/visit state from the backend (cache is cleared on logout).
-  const session = useVisitSession(role === 'SALESMAN');
+  const session = useVisitSession(isSalesman);
 
   const checkIn = useCheckIn();
   const checkOut = useCheckOut();
@@ -110,6 +116,7 @@ export function SalesmanDashboardScreen() {
         <LanguageToggle />
       </View>
 
+      {isSalesman ? (
       <Card style={styles.checkInCard}>
         <Text style={styles.checkInStatus}>
           {session.isLoading
@@ -144,8 +151,9 @@ export function SalesmanDashboardScreen() {
           />
         </View>
       </Card>
+      ) : null}
 
-      {activeVisit ? (
+      {isSalesman && activeVisit ? (
         <Card style={styles.visitCard}>
           <Text style={styles.visitLabel}>{t('visit.activeVisit')}</Text>
           <Text style={typography.title}>{activeVisit.shopName}</Text>

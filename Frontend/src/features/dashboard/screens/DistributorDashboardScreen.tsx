@@ -35,7 +35,12 @@ export function DistributorDashboardScreen() {
   const goToOrder = (id: string) =>
     navigation
       .getParent<BottomTabNavigationProp<MainTabParamList>>()
-      ?.navigate('Orders', { screen: 'OrderDetail', params: { id } });
+      ?.navigate('Orders', {
+        screen: 'OrderDetail',
+        params: { id },
+        // Keep the Orders list beneath so the detail has a back button.
+        initial: false,
+      });
 
   return (
     <Screen
