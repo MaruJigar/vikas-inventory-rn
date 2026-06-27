@@ -8,7 +8,7 @@ import { colors } from '@/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import { SalesmanDashboardScreen } from '@/features/dashboard/screens/SalesmanDashboardScreen';
 import { DistributorDashboardScreen } from '@/features/dashboard/screens/DistributorDashboardScreen';
-import { ShopsScreen } from '@/features/shops/screens/ShopsScreen';
+import { ShopsNavigator } from '@/navigation/ShopsNavigator';
 import { OrdersScreen } from '@/features/orders/screens/OrdersScreen';
 import { AccountScreen } from '@/features/profile/screens/AccountScreen';
 
@@ -61,7 +61,7 @@ export function MainNavigator() {
       />
       <Tab.Screen
         name="Shops"
-        component={ShopsScreen}
+        component={ShopsNavigator}
         options={{ tabBarLabel: t('nav.shops') }}
       />
       <Tab.Screen
