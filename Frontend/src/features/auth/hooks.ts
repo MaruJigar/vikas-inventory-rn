@@ -5,7 +5,6 @@ import { useAuthStore } from '@/store/useAuthStore';
 import type {
   LoginPayload,
   RegisterDistributorPayload,
-  RegisterSalesmanPayload,
 } from '@/types/auth';
 
 /**
@@ -24,13 +23,6 @@ export function useLogin() {
       setUser(user);
       return user;
     },
-  });
-}
-
-export function useRegisterSalesman() {
-  return useMutation({
-    mutationFn: (payload: RegisterSalesmanPayload) =>
-      authApi.registerSalesman(payload),
   });
 }
 

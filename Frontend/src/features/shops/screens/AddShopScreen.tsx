@@ -275,16 +275,33 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
       ) : null}
 
       <Text style={styles.sectionLabel}>{t('shops.form.photo')}</Text>
-      <Pressable onPress={choosePhoto}>
-        {image ? (
+      {image ? (
+        <View>
           <Image source={{ uri: image.uri }} style={styles.preview} />
-        ) : (
+          <Pressable
+            style={styles.removePhoto}
+            onPress={() => setImage(null)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('shops.form.removePhoto')}
+          >
+            <Ionicons name="close" size={18} color="#FFFFFF" />
+          </Pressable>
+          <Pressable onPress={choosePhoto} style={styles.changePhoto}>
+            <Ionicons name="image-outline" size={16} color={colors.primary} />
+            <Text style={styles.changePhotoText}>
+              {t('shops.form.changePhoto')}
+            </Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable onPress={choosePhoto}>
           <Card style={styles.photoPlaceholder}>
             <Ionicons name="camera-outline" size={24} color={colors.textMuted} />
             <Text style={styles.muted}>{t('shops.form.addPhoto')}</Text>
           </Card>
-        )}
-      </Pressable>
+        </Pressable>
+      )}
 
       <Button
         label={t('shops.form.submit')}
@@ -323,5 +340,24 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.surface,
   },
+  removePhoto: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 30,
+    height: 30,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  changePhoto: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  changePhotoText: { ...typography.label, color: colors.primary },
   submit: { marginTop: spacing.xl },
 });

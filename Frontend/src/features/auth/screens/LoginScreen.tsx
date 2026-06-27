@@ -68,7 +68,7 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
 
       <View style={styles.footer}>
         <Text style={typography.body}>{t('auth.login.noAccount')} </Text>
-        <Pressable onPress={() => navigation.navigate('RoleSelect')}>
+        <Pressable onPress={() => navigation.navigate('RegisterDistributor')}>
           <Text style={[styles.link, styles.linkStrong]}>
             {t('auth.login.register')}
           </Text>

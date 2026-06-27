@@ -8,7 +8,7 @@ import { colors } from '@/theme';
 import { HomeNavigator } from '@/navigation/HomeNavigator';
 import { ShopsNavigator } from '@/navigation/ShopsNavigator';
 import { OrdersScreen } from '@/features/orders/screens/OrdersScreen';
-import { AccountScreen } from '@/features/profile/screens/AccountScreen';
+import { AccountNavigator } from '@/navigation/AccountNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -64,7 +64,7 @@ export function MainNavigator() {
       />
       <Tab.Screen
         name="Account"
-        component={AccountScreen}
+        component={AccountNavigator}
         options={{ tabBarLabel: t('nav.account') }}
       />
     </Tab.Navigator>
