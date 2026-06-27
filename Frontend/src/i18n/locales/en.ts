@@ -152,6 +152,10 @@ export const en = {
       locationRequired: 'Capture the shop location to continue.',
       locationPermission: 'Location permission is required to add a shop.',
       locationError: 'Could not get your location. Try again.',
+      locationDenied:
+        'Location is blocked in your browser. Enable location access for this site, then try again.',
+      locationInsecure:
+        'Location needs a secure connection. Open the app on localhost or over HTTPS.',
       photo: 'Visiting card',
       addPhoto: 'Add photo',
       changePhoto: 'Change photo',

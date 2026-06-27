@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
@@ -47,6 +55,25 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
   const captureLocation = async () => {
     setLocating(true);
     try {
+      if (Platform.OS === 'web') {
+        // Browsers block geolocation on insecure origins (non-HTTPS,
+        // non-localhost) and report "denied" without ever prompting.
+        if ((globalThis as { isSecureContext?: boolean }).isSecureContext === false) {
+          Alert.alert(t('shops.form.locationInsecure'));
+          return;
+        }
+        // On web the prompt fires on the position request itself, not on the
+        // permission request — so call it directly to trigger the dialog.
+        const pos = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        setCoords({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        });
+        return;
+      }
+
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(t('shops.form.locationPermission'));
@@ -60,7 +87,11 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
         longitude: pos.coords.longitude,
       });
     } catch {
-      Alert.alert(t('shops.form.locationError'));
+      Alert.alert(
+        Platform.OS === 'web'
+          ? t('shops.form.locationDenied')
+          : t('shops.form.locationError'),
+      );
     } finally {
       setLocating(false);
     }
@@ -99,6 +130,12 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
   };
 
   const choosePhoto = () => {
+    // react-native-web's Alert can't render a multi-button action sheet, so on
+    // web go straight to the file picker (which offers the camera on mobile web).
+    if (Platform.OS === 'web') {
+      void pickFromLibrary();
+      return;
+    }
     Alert.alert(t('shops.form.photo'), undefined, [
       { text: t('shops.form.takePhoto'), onPress: () => void pickFromCamera() },
       {
