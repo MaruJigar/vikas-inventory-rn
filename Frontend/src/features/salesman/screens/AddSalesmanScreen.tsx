@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 
-import { Screen, Button, Card, ControlledInput, Spinner, EmptyState } from '@/components';
+import { Screen, Button, ControlledInput, Spinner, EmptyState } from '@/components';
 import { colors, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { notify } from '@/lib/dialog';
@@ -20,7 +20,6 @@ export function AddSalesmanScreen({
   const { data: distributor, isLoading, isError, refetch } =
     useDistributorProfile();
   const createSalesman = useCreateSalesman();
-  const [isActive, setIsActive] = useState(true);
 
   const { control, handleSubmit } = useForm<AddSalesmanForm>({
     resolver: zodResolver(addSalesmanSchema),
@@ -42,7 +41,7 @@ export function AddSalesmanScreen({
 
   const onSubmit = (values: AddSalesmanForm) => {
     createSalesman.mutate(
-      { ...values, distributor_id: distributor.id, is_active: isActive },
+      { ...values, distributor_id: distributor.id },
       {
         onSuccess: () => navigation.goBack(),
         onError: (err) =>
@@ -81,23 +80,6 @@ export function AddSalesmanScreen({
         secureTextEntry
       />
 
-      <Card style={styles.toggleRow}>
-        <View style={styles.toggleText}>
-          <Text style={typography.title}>{t('salesmen.form.active')}</Text>
-          <Text style={styles.toggleHint}>
-            {t('salesmen.form.activeHint')}
-          </Text>
-        </View>
-        <Switch
-          value={isActive}
-          onValueChange={setIsActive}
-          trackColor={{ true: colors.primary, false: colors.border }}
-          thumbColor="#FFFFFF"
-        />
-      </Card>
-
-      <Text style={styles.approvedNote}>{t('salesmen.form.approvedNote')}</Text>
-
       <Button
         label={t('salesmen.form.submit')}
         onPress={handleSubmit(onSubmit)}
@@ -115,15 +97,5 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginBottom: spacing.lg,
   },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    marginTop: spacing.sm,
-  },
-  toggleText: { flex: 1, gap: spacing.xs },
-  toggleHint: { ...typography.caption },
-  approvedNote: { ...typography.caption, marginTop: spacing.md },
   submit: { marginTop: spacing.xl },
 });

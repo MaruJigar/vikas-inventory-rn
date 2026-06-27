@@ -2,10 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { authApi } from '@/features/auth/api';
 import { useAuthStore } from '@/store/useAuthStore';
-import type {
-  LoginPayload,
-  RegisterDistributorPayload,
-} from '@/types/auth';
+import type { LoginPayload } from '@/types/auth';
 
 /**
  * Login: backend returns tokens only, so we persist them and then fetch
@@ -23,13 +20,6 @@ export function useLogin() {
       setUser(user);
       return user;
     },
-  });
-}
-
-export function useRegisterDistributor() {
-  return useMutation({
-    mutationFn: (payload: RegisterDistributorPayload) =>
-      authApi.registerDistributor(payload),
   });
 }
 

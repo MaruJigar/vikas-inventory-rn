@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 
 import { Screen, Card, Button, ControlledInput, Spinner, EmptyState } from '@/components';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { notify } from '@/lib/dialog';
 import {
@@ -13,14 +13,8 @@ import {
   type EditSalesmanForm,
 } from '@/features/salesman/schemas';
 import { useSalesman, useUpdateSalesman } from '@/features/salesman/hooks';
-import type { ApprovalStatus, Salesman } from '@/types/salesman';
+import type { Salesman } from '@/types/salesman';
 import type { AccountScreenProps } from '@/navigation/types';
-
-const APPROVAL_OPTIONS: ApprovalStatus[] = [
-  'APPROVED',
-  'PENDING_APPROVAL',
-  'REJECTED',
-];
 
 /** Inner form — mounted only once the salesman has loaded (stable defaults). */
 function EditForm({
@@ -32,10 +26,6 @@ function EditForm({
 }) {
   const { t } = useTranslation();
   const update = useUpdateSalesman(salesman.id);
-  const [isActive, setIsActive] = useState(salesman.is_active);
-  const [approval, setApproval] = useState<ApprovalStatus>(
-    (salesman.approval_status as ApprovalStatus) ?? 'PENDING_APPROVAL',
-  );
 
   const { control, handleSubmit } = useForm<EditSalesmanForm>({
     resolver: zodResolver(editSalesmanSchema),
@@ -47,55 +37,23 @@ function EditForm({
   });
 
   const onSubmit = (values: EditSalesmanForm) =>
-    update.mutate(
-      { ...values, is_active: isActive, approval_status: approval },
-      {
-        onSuccess: onSaved,
-        onError: (err) => notify(getApiErrorMessage(err, t)),
-      },
-    );
-
-  const approvalLabel = (s: ApprovalStatus) =>
-    s === 'APPROVED'
-      ? t('salesmen.approval.approved')
-      : s === 'REJECTED'
-        ? t('salesmen.approval.rejected')
-        : t('salesmen.approval.pending');
+    update.mutate(values, {
+      onSuccess: onSaved,
+      onError: (err) => notify(getApiErrorMessage(err, t)),
+    });
 
   return (
     <>
       <Card style={styles.statusCard}>
         <View style={styles.statusRow}>
-          <Text style={typography.title}>{t('salesmen.detail.status')}</Text>
-          <Switch
-            value={isActive}
-            onValueChange={setIsActive}
-            trackColor={{ true: colors.primary, false: colors.border }}
-            thumbColor="#FFFFFF"
-          />
+          <Text style={styles.statusLabel}>{t('salesmen.detail.status')}</Text>
+          <Text style={styles.statusValue}>
+            {salesman.is_active ? t('salesmen.active') : t('salesmen.inactive')}
+          </Text>
         </View>
-
-        <Text style={styles.approvalLabel}>{t('salesmen.detail.approval')}</Text>
-        <View style={styles.pills}>
-          {APPROVAL_OPTIONS.map((option) => {
-            const selected = approval === option;
-            return (
-              <Pressable
-                key={option}
-                onPress={() => setApproval(option)}
-                style={[styles.pill, selected && styles.pillSelected]}
-              >
-                <Text
-                  style={[
-                    styles.pillText,
-                    selected && styles.pillTextSelected,
-                  ]}
-                >
-                  {approvalLabel(option)}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View style={styles.statusRow}>
+          <Text style={styles.statusLabel}>{t('salesmen.detail.approval')}</Text>
+          <Text style={styles.statusValue}>{salesman.approval_status}</Text>
         </View>
       </Card>
 
@@ -125,6 +83,7 @@ function EditForm({
         loading={update.isPending}
         style={styles.save}
       />
+      <Text style={styles.note}>{t('salesmen.detail.statusNote')}</Text>
     </>
   );
 }
@@ -160,30 +119,11 @@ export function SalesmanDetailScreen({
 
 const styles = StyleSheet.create({
   title: { marginTop: spacing.sm, marginBottom: spacing.lg },
-  statusCard: { gap: spacing.md, marginBottom: spacing.lg },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  approvalLabel: { ...typography.label },
-  pills: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
-  pill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  pillSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  pillText: { ...typography.label, color: colors.text },
-  pillTextSelected: { color: '#FFFFFF' },
-  sectionLabel: {
-    ...typography.label,
-    marginBottom: spacing.sm,
-  },
+  statusCard: { gap: spacing.sm, marginBottom: spacing.lg },
+  statusRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  statusLabel: { ...typography.label },
+  statusValue: { ...typography.body },
+  sectionLabel: { ...typography.label, marginBottom: spacing.sm },
   save: { marginTop: spacing.lg },
+  note: { ...typography.caption, marginTop: spacing.md, textAlign: 'center' },
 });

@@ -11,8 +11,6 @@ export interface Salesman {
   created_at: string;
 }
 
-export type ApprovalStatus = 'APPROVED' | 'PENDING_APPROVAL' | 'REJECTED';
-
 /** POST /v1/salesmen (distributor creates a salesman; defaults to APPROVED). */
 export interface CreateSalesmanPayload {
   full_name: string;
@@ -20,14 +18,11 @@ export interface CreateSalesmanPayload {
   phone: string;
   password: string;
   distributor_id: string;
-  is_active: boolean;
 }
 
-/** PUT /v1/salesmen/:id */
+/** PUT /v1/salesmen/:id (backend accepts these fields only). */
 export interface UpdateSalesmanPayload {
   full_name?: string;
   phone?: string;
   email?: string;
-  is_active?: boolean;
-  approval_status?: ApprovalStatus;
 }

@@ -201,11 +201,6 @@ export const en = {
     profileError: 'Could not load your distributor profile.',
     active: 'Active',
     inactive: 'Inactive',
-    approval: {
-      approved: 'Approved',
-      pending: 'Pending',
-      rejected: 'Rejected',
-    },
     form: {
       title: 'Add Salesman',
       subtitle:
@@ -214,16 +209,13 @@ export const en = {
       email: 'Email',
       phone: 'Phone',
       password: 'Temporary password',
-      active: 'Active',
-      activeHint: 'Inactive salesmen cannot sign in.',
-      approvedNote: 'New salesmen are approved automatically.',
       submit: 'Create salesman',
       createError: 'Could not create the salesman. Please try again.',
     },
     detail: {
       title: 'Salesman',
       status: 'Active',
-      approval: 'Approval status',
+      approval: 'Approval',
       editTitle: 'Edit details',
       save: 'Save changes',
       statusNote:

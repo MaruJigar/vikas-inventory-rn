@@ -30,13 +30,3 @@ export interface LoginPayload {
   password: string;
 }
 
-/** POST /v1/auth/register/distributor */
-export interface RegisterDistributorPayload {
-  full_name: string;
-  email: string;
-  phone: string;
-  password: string;
-  business_name: string;
-  gst_number: string;
-}
-
