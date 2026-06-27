@@ -6,7 +6,11 @@ import { useTranslation } from 'react-i18next';
 import { Screen, Card, Button, EmptyState } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { confirmAction, notify } from '@/lib/dialog';
+import { getApiErrorMessage } from '@/lib/apiError';
 import { useCartStore } from '@/store/useCartStore';
+import { useVisitStore } from '@/store/useVisitStore';
+import { useCreateOrder } from '@/features/orders/hooks';
+import { useEndVisit } from '@/features/visit/hooks';
 import {
   computeCartTotals,
   distributorUnitPrice,
@@ -50,8 +54,43 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
   const remove = useCartStore((s) => s.remove);
   const clear = useCartStore((s) => s.clear);
 
+  const activeVisit = useVisitStore((s) => s.activeVisit);
+  const setActiveVisit = useVisitStore((s) => s.setActiveVisit);
+  const createOrder = useCreateOrder();
+  const endVisit = useEndVisit();
+
   const lines = useMemo(() => Object.values(items), [items]);
   const totals = useMemo(() => computeCartTotals(lines), [lines]);
+
+  const placeOrder = () => {
+    if (!activeVisit) {
+      notify(t('cart.needVisit'));
+      return;
+    }
+    createOrder.mutate(
+      {
+        visitId: activeVisit.visitId,
+        shopId: activeVisit.shopId,
+        products: lines.map((l) => ({
+          productId: l.product.id,
+          quantity: l.qty,
+        })),
+      },
+      {
+        onSuccess: (order) => {
+          // Close the visit (best-effort) and reset local order state.
+          endVisit.mutate({ visitId: activeVisit.visitId });
+          clear();
+          setActiveVisit(null);
+          navigation.replace('OrderSuccess', {
+            orderNumber: order.order_number,
+          });
+        },
+        onError: (e) =>
+          notify(getApiErrorMessage(e, t) || t('cart.placeError')),
+      },
+    );
+  };
 
   if (lines.length === 0) {
     return (
@@ -135,9 +174,16 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
 
       <Text style={styles.previewNote}>{t('cart.previewNote')}</Text>
 
+      {activeVisit ? (
+        <Text style={styles.visitNote}>
+          {t('cart.placingFor', { shop: activeVisit.shopName })}
+        </Text>
+      ) : null}
+
       <Button
         label={t('cart.placeOrder')}
-        onPress={() => notify(t('cart.placeOrderComingSoon'))}
+        loading={createOrder.isPending}
+        onPress={placeOrder}
         style={styles.placeOrder}
       />
       <Button
@@ -198,6 +244,12 @@ const styles = StyleSheet.create({
   },
   previewNote: {
     ...typography.caption,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  visitNote: {
+    ...typography.caption,
+    color: colors.success,
     marginTop: spacing.md,
     textAlign: 'center',
   },

@@ -7,7 +7,7 @@ import type { MainTabParamList } from '@/navigation/types';
 import { colors } from '@/theme';
 import { HomeNavigator } from '@/navigation/HomeNavigator';
 import { ShopsNavigator } from '@/navigation/ShopsNavigator';
-import { OrdersScreen } from '@/features/orders/screens/OrdersScreen';
+import { OrdersNavigator } from '@/navigation/OrdersNavigator';
 import { AccountNavigator } from '@/navigation/AccountNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -59,7 +59,7 @@ export function MainNavigator() {
       />
       <Tab.Screen
         name="Orders"
-        component={OrdersScreen}
+        component={OrdersNavigator}
         options={{ tabBarLabel: t('nav.orders') }}
       />
       <Tab.Screen
