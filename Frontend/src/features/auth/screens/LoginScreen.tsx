@@ -17,7 +17,10 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
 
   const { control, handleSubmit } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email_or_phone: '', password: '' },
+    defaultValues: { email_or_phone: 'admin@vikassales.local', password: 'Password@123' },
+    // distributor@vikassales.local
+    // admin@vikassales.local
+    // salesman@vikassales.local
   });
 
   const onSubmit = (values: LoginForm) => login.mutate(values);
@@ -62,15 +65,6 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
         onPress={handleSubmit(onSubmit)}
         loading={login.isPending}
       />
-
-      <View style={styles.footer}>
-        <Text style={typography.body}>{t('auth.login.noAccount')} </Text>
-        <Pressable onPress={() => navigation.navigate('RoleSelect')}>
-          <Text style={[styles.link, styles.linkStrong]}>
-            {t('auth.login.register')}
-          </Text>
-        </Pressable>
-      </View>
     </Screen>
   );
 }

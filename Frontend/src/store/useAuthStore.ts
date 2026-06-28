@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { secureStorage, STORAGE_KEYS } from '@/lib/secureStorage';
+import { useVisitStore } from '@/store/useVisitStore';
 import type { AuthTokens, User } from '@/types/auth';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
@@ -62,6 +63,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       secureStorage.remove(STORAGE_KEYS.accessToken),
       secureStorage.remove(STORAGE_KEYS.refreshToken),
     ]);
+    // Drop any in-progress check-in/visit so the next user starts clean.
+    useVisitStore.getState().reset();
     set({
       accessToken: null,
       refreshToken: null,

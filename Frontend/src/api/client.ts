@@ -42,6 +42,15 @@ interface RetriableConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
 }
 
+/**
+ * Auth-entry endpoints establish a session rather than consume one, so a 401
+ * here means bad credentials — NOT an expired access token. They must bypass
+ * the refresh machinery; otherwise a wrong-password login is misread as a
+ * stale session (and, with no refresh token, can leave the request hanging).
+ */
+const isAuthEntryRequest = (url?: string): boolean =>
+  !!url && /\/auth\/(login|register|refresh)/.test(url);
+
 let isRefreshing = false;
 let pendingQueue: {
   resolve: (token: string) => void;
@@ -71,7 +80,13 @@ apiClient.interceptors.response.use(
     }
 
     // 401 → attempt a single refresh, queueing concurrent requests.
-    if (error.response.status === 401 && original && !original._retry) {
+    // Auth-entry 401s (bad credentials) skip refresh and reject directly.
+    if (
+      error.response.status === 401 &&
+      original &&
+      !original._retry &&
+      !isAuthEntryRequest(original.url)
+    ) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
           pendingQueue.push({ resolve, reject });
@@ -86,6 +101,9 @@ apiClient.interceptors.response.use(
 
       const { refreshToken, setTokens, logout } = useAuthStore.getState();
       if (!refreshToken) {
+        // Reset before returning — this path skips the try/finally below.
+        isRefreshing = false;
+        flushQueue(error, null);
         await logout();
         return Promise.reject(error);
       }

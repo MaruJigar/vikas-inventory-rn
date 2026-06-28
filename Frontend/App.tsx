@@ -10,15 +10,18 @@ import { ErrorBoundary } from '@/components';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
+import { useVisitStore } from '@/store/useVisitStore';
 
 export default function App() {
   const hydrateAuth = useAuthStore((s) => s.hydrate);
   const hydrateLanguage = useLanguageStore((s) => s.hydrate);
+  const hydrateVisit = useVisitStore((s) => s.hydrate);
 
   useEffect(() => {
     void hydrateLanguage();
     void hydrateAuth();
-  }, [hydrateAuth, hydrateLanguage]);
+    void hydrateVisit();
+  }, [hydrateAuth, hydrateLanguage, hydrateVisit]);
 
   return (
     <ErrorBoundary>
