@@ -19,12 +19,19 @@ import type { Product } from '@/types/product';
 export function ProductCard({
   product,
   addable = true,
+  enforceStock = true,
   onEdit,
   onDelete,
 }: {
   product: Product;
   /** Show the add-to-cart / quantity controls (only during an active visit). */
   addable?: boolean;
+  /**
+   * Show available-stock and cap quantity to it. Used by the distributor
+   * managing their catalog; the salesman ordering flow turns this off (they can
+   * order beyond on-hand stock — backorders are handled server-side).
+   */
+  enforceStock?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
 }) {
@@ -34,7 +41,8 @@ export function ProductCard({
   const increment = useCartStore((s) => s.increment);
   const decrement = useCartStore((s) => s.decrement);
 
-  const stock = availableUnits(product);
+  // null = don't track/limit stock (salesman flow) → no stock label, no cap.
+  const stock = enforceStock ? availableUnits(product) : null;
   const atStockLimit = stock != null && qty >= stock;
 
   const handleAdd = () => {
@@ -97,7 +105,7 @@ export function ProductCard({
           {discounted ? (
             <Text style={styles.mrp}>{formatINR(mrp)}</Text>
           ) : null}
-          {product.unit && stock == null ? (
+          {enforceStock && product.unit && stock == null ? (
             <Text style={styles.unit}>/ {product.unit}</Text>
           ) : null}
         </View>

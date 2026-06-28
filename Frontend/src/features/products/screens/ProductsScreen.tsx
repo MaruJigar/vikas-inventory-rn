@@ -81,6 +81,7 @@ export function ProductsScreen({
       <ProductCard
         product={item}
         addable={canAdd}
+        enforceStock={isDistributor}
         onEdit={
           ownProduct
             ? () => navigation.navigate('AddProduct', { product: item })
