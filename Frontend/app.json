@@ -23,7 +23,8 @@
       "permissions": [
         "INTERNET",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA"
       ]
     },
     "web": {
@@ -37,7 +38,20 @@
     "owner": "param2607",
     "plugins": [
       "expo-localization",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Vikas Marketing uses your location to tag shops and find nearby ones."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Vikas Marketing uses the camera to capture a shop's visiting card.",
+          "photosPermission": "Vikas Marketing accesses your photos to attach a shop's visiting card."
+        }
+      ]
     ]
   }
 }

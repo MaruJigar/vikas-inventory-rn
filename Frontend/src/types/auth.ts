@@ -1,6 +1,11 @@
 /** Mirrors the backend user/role/approval contract (Backend/src/user, /auth). */
 
-export type Role = 'SALESMAN' | 'DISTRIBUTOR' | 'MANUFACTURER' | 'ADMIN';
+/** Role strings exactly as the backend stores/returns them (user.role). */
+export type Role =
+  | 'SUPER_ADMIN'
+  | 'MANUFACTURER_ADMIN'
+  | 'DISTRIBUTOR_ADMIN'
+  | 'SALESMAN';
 
 export type ApprovalStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
 
@@ -25,21 +30,3 @@ export interface LoginPayload {
   password: string;
 }
 
-/** POST /v1/auth/register/distributor */
-export interface RegisterDistributorPayload {
-  full_name: string;
-  email: string;
-  phone: string;
-  password: string;
-  business_name: string;
-  gst_number: string;
-}
-
-/** POST /v1/auth/register/salesman */
-export interface RegisterSalesmanPayload {
-  full_name: string;
-  email: string;
-  phone: string;
-  password: string;
-  distributor_id: string;
-}
