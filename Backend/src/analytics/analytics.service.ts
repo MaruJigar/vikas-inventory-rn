@@ -116,15 +116,15 @@ export class AnalyticsService {
       .createQueryBuilder('wd')
       .select('COUNT(wd.id)', 'total_active')
       .addSelect(
-        'SUM(CASE WHEN wd.check_in_time >= :today THEN 1 ELSE 0 END)',
+        'SUM(CASE WHEN wd.check_in_at >= :today THEN 1 ELSE 0 END)',
         'checked_in_today',
       )
       .addSelect(
-        'SUM(CASE WHEN wd.check_out_time >= :today THEN 1 ELSE 0 END)',
+        'SUM(CASE WHEN wd.check_out_at >= :today THEN 1 ELSE 0 END)',
         'checked_out_today',
       )
       .addSelect(
-        'AVG(EXTRACT(EPOCH FROM (wd.check_out_time - wd.check_in_time))/3600)',
+        'AVG(EXTRACT(EPOCH FROM (wd.check_out_at - wd.check_in_at))/3600)',
         'avg_hours',
       )
       .setParameter('today', today);
@@ -159,7 +159,7 @@ export class AnalyticsService {
         'completed_visits',
       )
       .addSelect(
-        "SUM(CASE WHEN visit.status = 'COMPLETED' AND visit.has_order = false THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN visit.status = 'COMPLETED' AND visit.no_order_reason IS NOT NULL THEN 1 ELSE 0 END)",
         'no_order_visits',
       );
 
@@ -208,12 +208,11 @@ export class AnalyticsService {
       qb.andWhere('order.created_at <= :endDate', { endDate: query.endDate });
     }
 
-    // 1. Overall Totals
     const totalsQb = qb.clone();
     totalsQb
       .select('COUNT(order.id)', 'total_orders')
-      .addSelect('SUM(order.total_amount)', 'total_revenue')
-      .addSelect('AVG(order.total_amount)', 'average_order_value');
+      .addSelect('SUM(order.final_order_amount)', 'total_revenue')
+      .addSelect('AVG(order.final_order_amount)', 'average_order_value');
     const totalsResult = await totalsQb.getRawOne();
 
     // 2. Status Distribution
@@ -229,7 +228,7 @@ export class AnalyticsService {
     trendsQb
       .select('DATE(order.created_at)', 'date')
       .addSelect('COUNT(order.id)', 'order_count')
-      .addSelect('SUM(order.total_amount)', 'revenue')
+      .addSelect('SUM(order.final_order_amount)', 'revenue')
       .groupBy('DATE(order.created_at)')
       .orderBy('date', 'ASC');
     const trends = await trendsQb.getRawMany();
@@ -238,11 +237,11 @@ export class AnalyticsService {
     const salesmanQb = qb.clone();
     salesmanQb
       .leftJoin('order.salesman', 'salesman')
-      .leftJoin('salesman.user', 'user')
-      .select('user.full_name', 'salesman_name')
+      .select('salesman.full_name', 'salesman_name')
       .addSelect('COUNT(order.id)', 'order_count')
-      .addSelect('SUM(order.total_amount)', 'revenue')
-      .groupBy('user.id')
+      .addSelect('SUM(order.final_order_amount)', 'revenue')
+      .groupBy('salesman.id')
+      .addGroupBy('salesman.full_name')
       .orderBy('revenue', 'DESC')
       .limit(5);
     const topSalesmen = await salesmanQb.getRawMany();
@@ -253,8 +252,9 @@ export class AnalyticsService {
       .leftJoin('order.distributor', 'distributor')
       .select('distributor.business_name', 'distributor_name')
       .addSelect('COUNT(order.id)', 'order_count')
-      .addSelect('SUM(order.total_amount)', 'revenue')
+      .addSelect('SUM(order.final_order_amount)', 'revenue')
       .groupBy('distributor.id')
+      .addGroupBy('distributor.business_name')
       .orderBy('revenue', 'DESC')
       .limit(5);
     const topDistributors = await distQb.getRawMany();
@@ -386,7 +386,7 @@ export class AnalyticsService {
     const qb = this.approvalRepo
       .createQueryBuilder('app')
       .select(
-        "SUM(CASE WHEN app.status = 'PENDING' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN app.status = 'PENDING_APPROVAL' THEN 1 ELSE 0 END)",
         'pending',
       )
       .addSelect(
