@@ -23,6 +23,14 @@ export function useLogin() {
   });
 }
 
+/** Request a password-reset email. Backend responds 200 regardless of whether
+ * the email exists (anti-enumeration), so success just means "request sent". */
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (email: string) => authApi.forgotPassword(email),
+  });
+}
+
 /** Re-fetch the current user — used by the waiting screen's "refresh status". */
 export function useMe(enabled: boolean) {
   const setUser = useAuthStore((s) => s.setUser);

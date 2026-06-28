@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { SalesmanDashboardScreen } from '@/features/dashboard/screens/SalesmanDashboardScreen';
 import { DistributorDashboardScreen } from '@/features/dashboard/screens/DistributorDashboardScreen';
 import { ProductsScreen } from '@/features/products/screens/ProductsScreen';
+import { CategoriesScreen } from '@/features/products/screens/CategoriesScreen';
 import { AddProductScreen } from '@/features/products/screens/AddProductScreen';
 import { CartScreen } from '@/features/cart/screens/CartScreen';
 import { SelectShopScreen } from '@/features/visit/screens/SelectShopScreen';
@@ -41,6 +42,14 @@ export function HomeNavigator() {
         name="SelectShop"
         component={SelectShopScreen}
         options={{ title: t('visit.selectShop'), headerBackTitle: t('common.back') }}
+      />
+      <Stack.Screen
+        name="Categories"
+        component={CategoriesScreen}
+        options={{
+          title: t('dashboard.distributor.allCategories'),
+          headerBackTitle: t('common.back'),
+        }}
       />
       <Stack.Screen
         name="Products"

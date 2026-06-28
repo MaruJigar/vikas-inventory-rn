@@ -18,6 +18,8 @@ export const productKeys = {
   all: ['products'] as const,
   list: (search: string) => ['products', 'list', search] as const,
   categories: ['products', 'categories'] as const,
+  categoryList: (search: string) =>
+    ['products', 'categories', 'list', search] as const,
 };
 
 /** Paginated, searchable product list (infinite scroll). */
@@ -98,10 +100,27 @@ export function useCreateCategory() {
   });
 }
 
+/** Flat top-of-list categories (single page) — for the dashboard rail and forms. */
 export function useCategories() {
   return useQuery({
     queryKey: productKeys.categories,
     queryFn: () => productsApi.categories({ limit: 100 }),
     select: (res) => res.data,
+  });
+}
+
+/** Paginated, searchable category list (infinite scroll) — for the All Categories screen. */
+export function useCategoryList(search: string) {
+  return useInfiniteQuery({
+    queryKey: productKeys.categoryList(search),
+    queryFn: ({ pageParam }) =>
+      productsApi.categories({
+        page: pageParam,
+        limit: PAGE_SIZE,
+        search: search || undefined,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.hasNextPage ? lastPage.meta.page + 1 : undefined,
   });
 }

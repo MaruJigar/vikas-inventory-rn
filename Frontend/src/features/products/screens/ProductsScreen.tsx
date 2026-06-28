@@ -24,13 +24,24 @@ import { computeCartTotals, formatINR } from '@/features/products/pricing';
 import type { Product } from '@/types/product';
 import type { HomeScreenProps } from '@/navigation/types';
 
-export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
+export function ProductsScreen({
+  navigation,
+  route,
+}: HomeScreenProps<'Products'>) {
   const { t } = useTranslation();
   const isDistributor = useAuthStore((s) => s.user?.role) === 'DISTRIBUTOR_ADMIN';
   const activeVisit = useVisitStore((s) => s.activeVisit);
   const canAdd = !!activeVisit; // add-to-cart only during an active shop visit
   const [query, setQuery] = useState('');
   const search = useDebouncedValue(query.trim(), 350);
+
+  const categoryId = route.params?.categoryId;
+  const categoryName = route.params?.categoryName;
+
+  // Show the category name in the header when scoped to one.
+  React.useEffect(() => {
+    if (categoryName) navigation.setOptions({ title: categoryName });
+  }, [categoryName, navigation]);
 
   const {
     data,
@@ -43,10 +54,17 @@ export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
     isFetchingNextPage,
   } = useProducts(search);
 
-  const products = useMemo(
-    () => data?.pages.flatMap((p) => p.data) ?? [],
-    [data],
-  );
+  // The backend has no category filter param, so we filter client-side. To make
+  // that reliable across pagination, eagerly load all pages while a category is
+  // active (distributor catalogs are modest), then filter by category id.
+  React.useEffect(() => {
+    if (categoryId && hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [categoryId, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const products = useMemo(() => {
+    const all = data?.pages.flatMap((p) => p.data) ?? [];
+    return categoryId ? all.filter((p) => p.category?.id === categoryId) : all;
+  }, [data, categoryId]);
 
   const deleteProduct = useDeleteProduct();
 
@@ -130,9 +148,13 @@ export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
             if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
           }}
           ListEmptyComponent={
-            <EmptyState
-              title={search ? t('products.noResults') : t('products.empty')}
-            />
+            isFetchingNextPage ? (
+              <ActivityIndicator style={styles.footer} color={colors.primary} />
+            ) : (
+              <EmptyState
+                title={search ? t('products.noResults') : t('products.empty')}
+              />
+            )
           }
           ListFooterComponent={
             isFetchingNextPage ? (

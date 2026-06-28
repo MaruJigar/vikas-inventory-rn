@@ -56,11 +56,12 @@ export const hi: TranslationResources = {
     },
     forgot: {
       title: 'पासवर्ड रीसेट करें',
-      subtitle: 'OTP प्राप्त करने के लिए अपना ईमेल या फ़ोन दर्ज करें',
-      emailOrPhone: 'ईमेल या फ़ोन',
-      sendOtp: 'OTP भेजें',
-      unavailable:
-        'पासवर्ड रीसेट अभी उपलब्ध नहीं है। कृपया अपने एडमिन से संपर्क करें।',
+      subtitle: 'अपना ईमेल दर्ज करें, हम आपको रीसेट लिंक भेजेंगे',
+      email: 'ईमेल',
+      send: 'रीसेट लिंक भेजें',
+      sentTitle: 'अपना ईमेल देखें',
+      sentMessage:
+        'यदि {{email}} के लिए कोई खाता मौजूद है, तो हमने आपका पासवर्ड रीसेट करने के लिए एक लिंक भेजा है।',
       backToLogin: 'लॉगिन पर वापस जाएं',
     },
     waiting: {
@@ -79,7 +80,7 @@ export const hi: TranslationResources = {
     home: 'होम',
     shops: 'दुकानें',
     orders: 'ऑर्डर',
-    account: 'खाता',
+    account: 'सेटिंग',
   },
   dashboard: {
     greeting: 'नमस्ते, {{name}}',
@@ -106,7 +107,8 @@ export const hi: TranslationResources = {
       browseProducts: 'उत्पाद देखें',
     },
     distributor: {
-      newOrder: 'नया ऑर्डर',
+      addProduct: 'उत्पाद जोड़ें',
+      allCategories: 'सभी श्रेणियाँ',
       ordersSummary: 'ऑर्डर सारांश',
       pending: 'लंबित',
       approved: 'स्वीकृत',
@@ -260,6 +262,10 @@ export const hi: TranslationResources = {
       statusNote:
         'सक्रिय और स्वीकृति स्थिति एडमिन स्वीकृति प्रक्रिया द्वारा प्रबंधित की जाती है।',
     },
+  },
+  categories: {
+    searchPlaceholder: 'श्रेणियाँ खोजें',
+    noResults: 'आपकी खोज से कोई श्रेणी मेल नहीं खाती',
   },
   products: {
     title: 'उत्पाद',

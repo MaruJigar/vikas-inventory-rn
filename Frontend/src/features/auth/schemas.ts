@@ -11,7 +11,8 @@ export const loginSchema = z.object({
 });
 export type LoginForm = z.infer<typeof loginSchema>;
 
+// Backend resets by EMAIL (sends a reset link), so this flow needs an email.
 export const forgotSchema = z.object({
-  email_or_phone: z.string().trim().min(1, 'validation.emailOrPhone'),
+  email: z.string().trim().toLowerCase().min(1, 'validation.required').email('validation.email'),
 });
 export type ForgotForm = z.infer<typeof forgotSchema>;

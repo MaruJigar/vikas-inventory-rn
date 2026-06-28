@@ -59,11 +59,12 @@ export const en = {
     },
     forgot: {
       title: 'Reset password',
-      subtitle: 'Enter your email or phone to receive an OTP',
-      emailOrPhone: 'Email or phone',
-      sendOtp: 'Send OTP',
-      unavailable:
-        'Password reset is not available yet. Please contact your administrator.',
+      subtitle: 'Enter your email and we’ll send you a reset link',
+      email: 'Email',
+      send: 'Send reset link',
+      sentTitle: 'Check your email',
+      sentMessage:
+        'If an account exists for {{email}}, we’ve sent a link to reset your password.',
       backToLogin: 'Back to login',
     },
     waiting: {
@@ -82,7 +83,7 @@ export const en = {
     home: 'Home',
     shops: 'Shops',
     orders: 'Orders',
-    account: 'Account',
+    account: 'Settings',
   },
   dashboard: {
     greeting: 'Hello, {{name}}',
@@ -109,7 +110,8 @@ export const en = {
       browseProducts: 'Browse Products',
     },
     distributor: {
-      newOrder: 'New Order',
+      addProduct: 'Add Product',
+      allCategories: 'All Categories',
       ordersSummary: 'Orders Summary',
       pending: 'Pending',
       approved: 'Approved',
@@ -264,6 +266,10 @@ export const en = {
       statusNote:
         'Active and approval status are managed by the admin approval flow.',
     },
+  },
+  categories: {
+    searchPlaceholder: 'Search categories',
+    noResults: 'No categories match your search',
   },
   products: {
     title: 'Products',
