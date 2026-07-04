@@ -18,6 +18,8 @@ import { OrderItem } from '../../order/order-item.entity';
 import { ShopVisit } from '../../visit/shop-visit.entity';
 import { Notification } from '../../notification/notification.entity';
 import { ApprovalRequest } from '../../approval/approval-request.entity';
+import { City } from '../../region/entities/city.entity';
+import { State } from '../../region/entities/state.entity';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -260,6 +262,11 @@ async function bootstrap() {
 
   // 6. SHOPS
   console.log('[SEED] Seeding Shops...');
+  const cityRepo = getRepo(City);
+  const stateRepo = getRepo(State);
+  const puneCity = await cityRepo.findOne({ where: { name: 'Pune' } });
+  const maharashtraState = await stateRepo.findOne({ where: { name: 'Maharashtra' } });
+
   const shops: Shop[] = [];
   for (let i = 1; i <= 20; i++) {
     const mobile = `55555555${String(i).padStart(2, '0')}`;
@@ -272,10 +279,11 @@ async function bootstrap() {
         owner_name: `Owner ${i}`,
         phone: mobile,
         address: `Shop Address ${i}`,
-        city: 'Pune',
-        state: 'Maharashtra',
+        city_name: 'Pune',
+        state_name: 'Maharashtra',
+        city_id: puneCity?.id,
+        state_id: maharashtraState?.id,
         verification_photo_url: 'https://example.com/shop.jpg',
-        location: { type: 'Point', coordinates: [72.8777, 19.076] },
         verification_status: 'VERIFIED',
         is_active: true,
       });

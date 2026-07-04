@@ -12,6 +12,8 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Distributor } from '../distributor/distributor.entity';
 import { Salesman } from '../salesman/salesman.entity';
+import { City } from '../region/entities/city.entity';
+import { State } from '../region/entities/state.entity';
 
 @Entity('shops')
 @Index('idx_shops_dist_status', ['distributor_id', 'verification_status'])
@@ -59,26 +61,39 @@ export class Shop {
   @ApiProperty({ description: 'Address' })
   address: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  @ApiPropertyOptional({ description: 'City' })
-  city: string;
+  @Column({ name: 'city', type: 'varchar', length: 100, nullable: true })
+  @ApiPropertyOptional({ description: 'City name text' })
+  city_name: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  @ApiPropertyOptional({ description: 'State' })
-  state: string;
+  @Column({ name: 'state', type: 'varchar', length: 100, nullable: true })
+  @ApiPropertyOptional({ description: 'State name text' })
+  state_name: string;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   @ApiPropertyOptional({ description: 'Gst number' })
   gst_number: string;
 
-  @Column({
-    type: 'geography',
-    spatialFeatureType: 'Point',
-    srid: 4326,
-    nullable: true,
-  })
-  @ApiPropertyOptional({ description: 'Location' })
-  location: any;
+  @Column({ type: 'text', nullable: true })
+  @ApiPropertyOptional({ description: 'Google Maps link for the shop location' })
+  maps_link: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  @ApiPropertyOptional({ description: 'City id' })
+  city_id: string;
+
+  @ManyToOne(() => City)
+  @JoinColumn({ name: 'city_id' })
+  @ApiPropertyOptional({ type: () => City, description: 'City relation' })
+  city?: City;
+
+  @Column({ type: 'uuid', nullable: true })
+  @ApiPropertyOptional({ description: 'State id' })
+  state_id: string;
+
+  @ManyToOne(() => State)
+  @JoinColumn({ name: 'state_id' })
+  @ApiPropertyOptional({ type: () => State, description: 'State relation' })
+  state?: State;
 
   @Column({ type: 'text', nullable: true })
   @ApiPropertyOptional({ description: 'Verification photo url' })

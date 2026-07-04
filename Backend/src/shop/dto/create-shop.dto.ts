@@ -61,15 +61,20 @@ export class CreateShopDto {
   @ApiPropertyOptional({ description: 'Gst number' })
   gst_number?: string;
 
-  @IsNumber()
-  @IsNotEmpty()
-  @ApiProperty({ description: 'Latitude' })
-  latitude: number;
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional({ description: 'Google Maps link for the shop location' })
+  maps_link?: string;
 
-  @IsNumber()
-  @IsNotEmpty()
-  @ApiProperty({ description: 'Longitude' })
-  longitude: number;
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional({ description: 'City ID' })
+  city_id?: string;
+
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional({ description: 'State ID' })
+  state_id?: string;
 
   @IsOptional()
   @IsString()

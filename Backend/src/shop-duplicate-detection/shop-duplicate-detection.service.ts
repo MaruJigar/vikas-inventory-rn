@@ -17,8 +17,8 @@ export class ShopDuplicateDetectionService {
     distributorId: string,
     phone: string,
     name: string,
-    lat: number,
-    lon: number,
+    cityId?: string,
+    stateId?: string,
   ) {
     const matches: any[] = [];
 
@@ -32,16 +32,15 @@ export class ShopDuplicateDetectionService {
       });
     }
 
-    // 2. Location Proximity
-    if (lat !== undefined && lon !== undefined) {
-      const point = `POINT(${lon} ${lat})`;
-      const locationMatches = await this.shopRepo
+    // 2. City Proximity
+    if (cityId) {
+      const cityMatches = await this.shopRepo
         .createQueryBuilder('shop')
-        .where('ST_DWithin(shop.location, ST_GeogFromText(:point), 50)')
-        .setParameters({ point })
+        .where('shop.city_id = :cityId', { cityId })
+        .andWhere('shop.name ILIKE :name', { name: `%${name}%` })
         .getMany();
 
-      for (const match of locationMatches) {
+      for (const match of cityMatches) {
         if (!matches.find((m) => m.shop.id === match.id)) {
           matches.push({
             shop: match,

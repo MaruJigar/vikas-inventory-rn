@@ -21,6 +21,8 @@ import { ApprovalRequest } from '../../approval/approval-request.entity';
 import { UploadedFile } from '../../shop-image/uploaded-file.entity';
 import { LocationLog } from '../../location/location-log.entity';
 import { WorkingDay } from '../../working-day/working-day.entity';
+import { City } from '../../region/entities/city.entity';
+import { State } from '../../region/entities/state.entity';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -321,10 +323,14 @@ async function bootstrap() {
 
   // --- PHASE 4: SHOP DATA ---
   console.log('[SEED] Creating 400 Shops...');
+  const cityRepo = getRepo(City);
+  const citiesList = await cityRepo.find({ relations: { state: true } });
+
   const shops: Shop[] = [];
   for (let i = 0; i < 400; i++) {
     const sm = faker.helpers.arrayElement(salesmen);
     const status = faker.helpers.arrayElement(['VERIFIED', 'PENDING', 'REJECTED']);
+    const randomCity = faker.helpers.arrayElement(citiesList);
     
     // Generate valid Indian lat/lng roughly
     const lat = faker.location.latitude({ max: 30, min: 10 });
@@ -338,10 +344,11 @@ async function bootstrap() {
         owner_name: faker.person.fullName(),
         phone: faker.string.numeric(10),
         address: faker.location.streetAddress(),
-        city: faker.location.city(),
-        state: faker.location.state(),
+        city_name: randomCity.name,
+        state_name: randomCity.state?.name || 'Maharashtra',
+        city_id: randomCity.id,
+        state_id: randomCity.state_id,
         verification_photo_url: faker.image.urlLoremFlickr({ category: 'shop' }),
-        location: { type: 'Point', coordinates: [lng, lat] },
         verification_status: status as any,
         is_active: status === 'VERIFIED',
       })

@@ -12,13 +12,13 @@ export class CheckDuplicateDto {
   @ApiProperty({ description: 'Phone' })
   phone: string;
 
-  @IsNumber()
-  @IsNotEmpty()
-  @ApiProperty({ description: 'Latitude' })
-  latitude: number;
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional({ description: 'City ID' })
+  city_id?: string;
 
-  @IsNumber()
-  @IsNotEmpty()
-  @ApiProperty({ description: 'Longitude' })
-  longitude: number;
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional({ description: 'State ID' })
+  state_id?: string;
 }
