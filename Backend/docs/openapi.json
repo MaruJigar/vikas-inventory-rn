@@ -4718,6 +4718,56 @@
           "Visit"
         ]
       }
+    },
+    "/v1/states": {
+      "get": {
+        "operationId": "RegionController_getStates_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of all states"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all states",
+        "tags": [
+          "Region"
+        ]
+      }
+    },
+    "/v1/cities": {
+      "get": {
+        "operationId": "RegionController_getCities_v1",
+        "parameters": [
+          {
+            "name": "state_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by State ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of cities"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get cities (optionally filtered by state)",
+        "tags": [
+          "Region"
+        ]
+      }
     }
   },
   "info": {
