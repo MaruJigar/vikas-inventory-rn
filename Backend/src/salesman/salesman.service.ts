@@ -13,6 +13,7 @@ import { ApprovalRequest } from '../approval/approval-request.entity';
 import { RegisterSalesmanDto } from './dto/register-salesman.dto';
 import { CreateSalesmanAdminDto } from './dto/create-salesman-admin.dto';
 import { UpdateSalesmanDto } from './dto/update-salesman.dto';
+import { UpdateSalesmanStatusDto } from './dto/update-salesman-status.dto';
 import * as bcrypt from 'bcrypt';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
@@ -346,5 +347,39 @@ export class SalesmanService {
     }
 
     return salesman;
+  }
+
+  async updateSalesmanStatus(
+    id: string,
+    dto: UpdateSalesmanStatusDto,
+    userRole: string,
+    userId: string,
+  ) {
+    const salesman = await this.getSalesmanById(id, userRole, userId);
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      salesman.is_active = dto.is_active;
+      await queryRunner.manager.save(Salesman, salesman);
+
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: salesman.user_id },
+      });
+      if (user) {
+        user.is_active = dto.is_active;
+        await queryRunner.manager.save(User, user);
+      }
+
+      await queryRunner.commitTransaction();
+      return { message: 'Salesman status updated successfully' };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 }

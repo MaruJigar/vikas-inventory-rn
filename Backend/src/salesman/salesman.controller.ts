@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Body,
   Param,
   UseGuards,
@@ -13,6 +14,7 @@ import { SalesmanService } from './salesman.service';
 import { RegisterSalesmanDto } from './dto/register-salesman.dto';
 import { CreateSalesmanAdminDto } from './dto/create-salesman-admin.dto';
 import { UpdateSalesmanDto } from './dto/update-salesman.dto';
+import { UpdateSalesmanStatusDto } from './dto/update-salesman-status.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
@@ -94,6 +96,24 @@ export class SalesmanController {
     @Request() req,
   ) {
     return this.salesmanService.updateSalesman(
+      id,
+      dto,
+      req.user.role,
+      req.user.userId,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Update Salesman Active/Inactive Status' })
+  @ApiBearerAuth('bearer')
+  updateSalesmanStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateSalesmanStatusDto,
+    @Request() req,
+  ) {
+    return this.salesmanService.updateSalesmanStatus(
       id,
       dto,
       req.user.role,

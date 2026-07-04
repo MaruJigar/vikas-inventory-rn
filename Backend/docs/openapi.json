@@ -1558,6 +1558,45 @@
         ]
       }
     },
+    "/v1/salesmen/{id}/status": {
+      "patch": {
+        "operationId": "SalesmanController_updateSalesmanStatus_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSalesmanStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update Salesman Active/Inactive Status",
+        "tags": [
+          "Salesman"
+        ]
+      }
+    },
     "/v1/products": {
       "post": {
         "operationId": "ProductController_createProduct_v1",
@@ -5775,6 +5814,18 @@
             "description": "Email"
           }
         }
+      },
+      "UpdateSalesmanStatusDto": {
+        "type": "object",
+        "properties": {
+          "is_active": {
+            "type": "boolean",
+            "description": "Is active status"
+          }
+        },
+        "required": [
+          "is_active"
+        ]
       },
       "CreateProductDto": {
         "type": "object",
