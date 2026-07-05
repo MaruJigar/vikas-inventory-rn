@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { Screen, Card, Input, EmptyState, Spinner } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { useShops } from '@/features/shops/hooks';
 import type { Shop } from '@/types/shop';
 import type { ShopsScreenProps } from '@/navigation/types';
@@ -27,11 +28,11 @@ export function ShopsListScreen({ navigation }: ShopsScreenProps<'ShopsList'>) {
     isLoading,
     isError,
     refetch,
-    isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useShops(search);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const shops = useMemo(
     () => data?.pages.flatMap((p) => p.data) ?? [],
@@ -84,8 +85,8 @@ export function ShopsListScreen({ navigation }: ShopsScreenProps<'ShopsList'>) {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          onRefresh={() => void refetch()}
-          refreshing={isRefetching}
+          onRefresh={() => void onRefresh()}
+          refreshing={refreshing}
           onEndReachedThreshold={0.4}
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) void fetchNextPage();

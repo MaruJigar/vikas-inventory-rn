@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { Screen, Card, Input, EmptyState, Spinner } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { useOrders } from '@/features/orders/hooks';
 import {
   ORDER_STATUSES,
@@ -48,11 +49,11 @@ export function OrdersListScreen({
     isLoading,
     isError,
     refetch,
-    isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useOrders(search, status);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const orders = useMemo(
     () => data?.pages.flatMap((p) => p.data) ?? [],
@@ -138,8 +139,8 @@ export function OrdersListScreen({
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          onRefresh={() => void refetch()}
-          refreshing={isRefetching}
+          onRefresh={() => void onRefresh()}
+          refreshing={refreshing}
           onEndReachedThreshold={0.4}
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) void fetchNextPage();

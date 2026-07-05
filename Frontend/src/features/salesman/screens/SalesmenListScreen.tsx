@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { Screen, Card, Input, EmptyState, Spinner } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { useSalesmen } from '@/features/salesman/hooks';
 import type { Salesman } from '@/types/salesman';
 import type { AccountScreenProps } from '@/navigation/types';
@@ -29,11 +30,11 @@ export function SalesmenListScreen({
     isLoading,
     isError,
     refetch,
-    isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useSalesmen(search);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const salesmen = useMemo(
     () => data?.pages.flatMap((p) => p.data) ?? [],
@@ -91,8 +92,8 @@ export function SalesmenListScreen({
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          onRefresh={() => void refetch()}
-          refreshing={isRefetching}
+          onRefresh={() => void onRefresh()}
+          refreshing={refreshing}
           onEndReachedThreshold={0.4}
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) void fetchNextPage();

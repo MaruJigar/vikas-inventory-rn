@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { Screen, Input, EmptyState, Spinner } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { confirmAction, notify } from '@/lib/dialog';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -48,11 +49,11 @@ export function ProductsScreen({
     isLoading,
     isError,
     refetch,
-    isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useProducts(search);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   // The backend has no category filter param, so we filter client-side. To make
   // that reliable across pagination, eagerly load all pages while a category is
@@ -142,8 +143,8 @@ export function ProductsScreen({
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          onRefresh={() => void refetch()}
-          refreshing={isRefetching}
+          onRefresh={() => void onRefresh()}
+          refreshing={refreshing}
           onEndReachedThreshold={0.4}
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) void fetchNextPage();

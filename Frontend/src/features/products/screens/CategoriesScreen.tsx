@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { Screen, Card, Input, Spinner, EmptyState } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { useCategoryList } from '@/features/products/hooks';
 import { iconForCategory } from '@/features/products/categoryIcons';
 import type { Category } from '@/types/product';
@@ -33,11 +34,11 @@ export function CategoriesScreen({ navigation }: HomeScreenProps<'Categories'>) 
     isLoading,
     isError,
     refetch,
-    isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useCategoryList(search);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const categories = useMemo(
     () => data?.pages.flatMap((p) => p.data) ?? [],
@@ -94,8 +95,8 @@ export function CategoriesScreen({ navigation }: HomeScreenProps<'Categories'>) 
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          onRefresh={() => void refetch()}
-          refreshing={isRefetching}
+          onRefresh={() => void onRefresh()}
+          refreshing={refreshing}
           onEndReachedThreshold={0.4}
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) void fetchNextPage();

@@ -187,7 +187,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: radius.md,
     padding: spacing.md,
-    maxHeight: '70%',
+    // Centered dialog: full width on phones, capped on wide/web screens.
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+    maxHeight: '80%',
   },
   sheetTitle: {
     ...typography.title,
@@ -203,7 +207,9 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
   },
-  list: { flexGrow: 0 },
+  // Concrete height so the dropdown is a usable size and scrolls — a percentage
+  // maxHeight alone collapses on react-native-web (parent has no definite height).
+  list: { flexGrow: 0, maxHeight: 360 },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
