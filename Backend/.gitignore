@@ -1,8 +1,0 @@
-node_modules/
-dist/
-.env
-
-# Backups
-backups/
-*.dump
-*.dump.gz
