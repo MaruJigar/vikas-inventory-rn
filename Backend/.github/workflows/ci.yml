@@ -1,16 +1,22 @@
-name: Backend CI Pipeline
+name: Backend CI/CD Pipeline
 
 on:
   push:
     branches:
-      - main
+      - Backend
   pull_request:
+    branches:
+      - Backend
+
+concurrency:
+  group: backend-production
+  cancel-in-progress: true
 
 jobs:
   validate:
     name: Build & Validate
     runs-on: ubuntu-latest
-    
+
     env:
       NODE_ENV: test
       PORT: 3000
@@ -26,11 +32,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 22.x
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
-          cache: 'npm'
+          node-version: 22
+          cache: npm
 
       - name: Install Dependencies
         run: npm ci
@@ -38,14 +44,50 @@ jobs:
       - name: Verify TypeScript Compilation
         run: npm run build
 
-      - name: Validate Migration Configuration
-        # We run ts-node against data-source.ts to verify the file compiles and configuration loads.
-        # It creates the DataSource instance without calling .initialize(), meaning it validates paths
-        # without requiring a live database connection.
+      - name: Validate TypeORM Configuration
         run: npx ts-node src/database/data-source.ts
 
-      - name: Audit Test Suite
-        # Marked as continue-on-error due to known technical debt (41 failing tests).
-        # This provides visibility into failures on the PR without blocking the merge.
+      - name: Run Tests
         continue-on-error: true
-        run: npm run test
+        run: npm test
+
+  deploy:
+    name: Deploy to VPS
+    needs: validate
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+
+          script: |
+            set -e
+
+            cd /var/www/vikas-backend
+
+            echo "Updating source..."
+            git fetch origin
+            git reset --hard origin/Backend
+
+            echo "Installing dependencies..."
+            npm ci
+
+            echo "Building..."
+            npm run build
+
+            echo "Running migrations..."
+            npm run migration:run
+
+            echo "Reloading PM2..."
+            pm2 reload ecosystem.config.js --update-env
+
+            echo "Saving PM2..."
+            pm2 save
+
+            echo "Deployment completed successfully."
