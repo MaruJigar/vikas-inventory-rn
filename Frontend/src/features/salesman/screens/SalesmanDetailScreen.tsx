@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,33 +31,9 @@ function EditForm({
   const { t } = useTranslation();
   const update = useUpdateSalesman(salesman.id);
   const status = useUpdateSalesmanStatus(salesman.id);
-
-  const onToggleActive = (next: boolean) => {
-    confirmAction({
-      title: next
-        ? t('salesmen.detail.activateTitle')
-        : t('salesmen.detail.deactivateTitle'),
-      message: next
-        ? t('salesmen.detail.activateMessage')
-        : t('salesmen.detail.deactivateMessage'),
-      confirmLabel: next
-        ? t('salesmen.detail.activate')
-        : t('salesmen.detail.deactivate'),
-      cancelLabel: t('common.cancel'),
-      destructive: !next,
-      onConfirm: () =>
-        status.mutate(
-          { is_active: next },
-          {
-            onError: (err) =>
-              notify(
-                getApiErrorMessage(err, t) ||
-                  t('salesmen.detail.statusUpdateError'),
-              ),
-          },
-        ),
-    });
-  };
+  // The Switch only changes this locally; it's persisted on "Save changes".
+  const [isActive, setIsActive] = useState(salesman.is_active);
+  const saving = update.isPending || status.isPending;
 
   const { control, handleSubmit } = useForm<EditSalesmanForm>({
     resolver: zodResolver(editSalesmanSchema),
@@ -68,11 +44,37 @@ function EditForm({
     },
   });
 
-  const onSubmit = (values: EditSalesmanForm) =>
-    update.mutate(values, {
-      onSuccess: onSaved,
-      onError: (err) => notify(getApiErrorMessage(err, t)),
-    });
+  const onSubmit = (values: EditSalesmanForm) => {
+    const statusChanged = isActive !== salesman.is_active;
+
+    // Persist details (PUT) and, if it changed, the active/inactive status
+    // (PATCH) together as a single save.
+    const run = async () => {
+      try {
+        await update.mutateAsync(values);
+        if (statusChanged) await status.mutateAsync({ is_active: isActive });
+        onSaved();
+      } catch (err) {
+        notify(
+          getApiErrorMessage(err, t) || t('salesmen.detail.statusUpdateError'),
+        );
+      }
+    };
+
+    // Deactivating logs the salesman out — confirm that before saving.
+    if (statusChanged && !isActive) {
+      confirmAction({
+        title: t('salesmen.detail.deactivateTitle'),
+        message: t('salesmen.detail.deactivateMessage'),
+        confirmLabel: t('salesmen.detail.deactivate'),
+        cancelLabel: t('common.cancel'),
+        destructive: true,
+        onConfirm: () => void run(),
+      });
+      return;
+    }
+    void run();
+  };
 
   return (
     <>
@@ -81,14 +83,12 @@ function EditForm({
           <Text style={styles.statusLabel}>{t('salesmen.detail.status')}</Text>
           <View style={styles.statusToggle}>
             <Text style={styles.statusValue}>
-              {salesman.is_active
-                ? t('salesmen.active')
-                : t('salesmen.inactive')}
+              {isActive ? t('salesmen.active') : t('salesmen.inactive')}
             </Text>
             <Switch
-              value={salesman.is_active}
-              onValueChange={onToggleActive}
-              disabled={status.isPending}
+              value={isActive}
+              onValueChange={setIsActive}
+              disabled={saving}
               trackColor={{ true: colors.primary, false: colors.border }}
               thumbColor="#FFFFFF"
             />
@@ -123,7 +123,7 @@ function EditForm({
       <Button
         label={t('salesmen.detail.save')}
         onPress={handleSubmit(onSubmit)}
-        loading={update.isPending}
+        loading={saving}
         style={styles.save}
       />
       <Text style={styles.note}>{t('salesmen.detail.statusNote')}</Text>

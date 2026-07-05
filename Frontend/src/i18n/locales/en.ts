@@ -260,11 +260,8 @@ export const en = {
       approval: 'Approval',
       editTitle: 'Edit details',
       save: 'Save changes',
-      activateTitle: 'Activate salesman?',
-      activateMessage: 'They will be able to log in and place orders.',
       deactivateTitle: 'Deactivate salesman?',
       deactivateMessage: 'They will be logged out and blocked from ordering.',
-      activate: 'Activate',
       deactivate: 'Deactivate',
       statusUpdateError: 'Could not update the status. Please try again.',
       statusNote:
@@ -370,6 +367,7 @@ export const en = {
     network: 'Network error. Cannot reach the server.',
     timeout: 'Connection timed out. Check your internet and retry.',
     invalidCredentials: 'Invalid email/phone or password.',
+    accountDeactivated: 'Your account has been deactivated. Contact your admin.',
     generic: 'Something went wrong. Please try again.',
   },
 };
