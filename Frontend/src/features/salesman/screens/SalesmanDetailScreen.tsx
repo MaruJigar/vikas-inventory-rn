@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
@@ -7,12 +7,16 @@ import { useTranslation } from 'react-i18next';
 import { Screen, Card, Button, ControlledInput, Spinner, EmptyState } from '@/components';
 import { colors, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { notify } from '@/lib/dialog';
+import { confirmAction, notify } from '@/lib/dialog';
 import {
   editSalesmanSchema,
   type EditSalesmanForm,
 } from '@/features/salesman/schemas';
-import { useSalesman, useUpdateSalesman } from '@/features/salesman/hooks';
+import {
+  useSalesman,
+  useUpdateSalesman,
+  useUpdateSalesmanStatus,
+} from '@/features/salesman/hooks';
 import type { Salesman } from '@/types/salesman';
 import type { AccountScreenProps } from '@/navigation/types';
 
@@ -26,6 +30,34 @@ function EditForm({
 }) {
   const { t } = useTranslation();
   const update = useUpdateSalesman(salesman.id);
+  const status = useUpdateSalesmanStatus(salesman.id);
+
+  const onToggleActive = (next: boolean) => {
+    confirmAction({
+      title: next
+        ? t('salesmen.detail.activateTitle')
+        : t('salesmen.detail.deactivateTitle'),
+      message: next
+        ? t('salesmen.detail.activateMessage')
+        : t('salesmen.detail.deactivateMessage'),
+      confirmLabel: next
+        ? t('salesmen.detail.activate')
+        : t('salesmen.detail.deactivate'),
+      cancelLabel: t('common.cancel'),
+      destructive: !next,
+      onConfirm: () =>
+        status.mutate(
+          { is_active: next },
+          {
+            onError: (err) =>
+              notify(
+                getApiErrorMessage(err, t) ||
+                  t('salesmen.detail.statusUpdateError'),
+              ),
+          },
+        ),
+    });
+  };
 
   const { control, handleSubmit } = useForm<EditSalesmanForm>({
     resolver: zodResolver(editSalesmanSchema),
@@ -47,9 +79,20 @@ function EditForm({
       <Card style={styles.statusCard}>
         <View style={styles.statusRow}>
           <Text style={styles.statusLabel}>{t('salesmen.detail.status')}</Text>
-          <Text style={styles.statusValue}>
-            {salesman.is_active ? t('salesmen.active') : t('salesmen.inactive')}
-          </Text>
+          <View style={styles.statusToggle}>
+            <Text style={styles.statusValue}>
+              {salesman.is_active
+                ? t('salesmen.active')
+                : t('salesmen.inactive')}
+            </Text>
+            <Switch
+              value={salesman.is_active}
+              onValueChange={onToggleActive}
+              disabled={status.isPending}
+              trackColor={{ true: colors.primary, false: colors.border }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
         </View>
         <View style={styles.statusRow}>
           <Text style={styles.statusLabel}>{t('salesmen.detail.approval')}</Text>
@@ -120,7 +163,12 @@ export function SalesmanDetailScreen({
 const styles = StyleSheet.create({
   title: { marginTop: spacing.sm, marginBottom: spacing.lg },
   statusCard: { gap: spacing.sm, marginBottom: spacing.lg },
-  statusRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statusToggle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   statusLabel: { ...typography.label },
   statusValue: { ...typography.body },
   sectionLabel: { ...typography.label, marginBottom: spacing.sm },

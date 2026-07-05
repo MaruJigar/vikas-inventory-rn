@@ -9,6 +9,7 @@ import { salesmenApi } from '@/features/salesman/api';
 import type {
   CreateSalesmanPayload,
   UpdateSalesmanPayload,
+  UpdateSalesmanStatusPayload,
 } from '@/types/salesman';
 
 const PAGE_SIZE = 20;
@@ -56,6 +57,18 @@ export function useUpdateSalesman(id: string) {
   return useMutation({
     mutationFn: (payload: UpdateSalesmanPayload) =>
       salesmenApi.update(id, payload),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: salesmanKeys.all });
+      void qc.invalidateQueries({ queryKey: salesmanKeys.detail(id) });
+    },
+  });
+}
+
+export function useUpdateSalesmanStatus(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateSalesmanStatusPayload) =>
+      salesmenApi.updateStatus(id, payload),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: salesmanKeys.all });
       void qc.invalidateQueries({ queryKey: salesmanKeys.detail(id) });

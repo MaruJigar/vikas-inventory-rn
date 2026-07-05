@@ -4,6 +4,7 @@ import type {
   CreateSalesmanPayload,
   Salesman,
   UpdateSalesmanPayload,
+  UpdateSalesmanStatusPayload,
 } from '@/types/salesman';
 
 export const salesmenApi = {
@@ -20,4 +21,9 @@ export const salesmenApi = {
 
   update: (id: string, payload: UpdateSalesmanPayload) =>
     apiClient.put<Salesman>(`/salesmen/${id}`, payload).then((r) => r.data),
+
+  updateStatus: (id: string, payload: UpdateSalesmanStatusPayload) =>
+    apiClient
+      .patch<{ message: string }>(`/salesmen/${id}/status`, payload)
+      .then((r) => r.data),
 };

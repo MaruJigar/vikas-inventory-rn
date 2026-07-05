@@ -26,3 +26,8 @@ export interface UpdateSalesmanPayload {
   phone?: string;
   email?: string;
 }
+
+/** PATCH /v1/salesmen/:id/status */
+export interface UpdateSalesmanStatusPayload {
+  is_active: boolean;
+}
