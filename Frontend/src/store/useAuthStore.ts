@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 
 import { secureStorage, STORAGE_KEYS } from '@/lib/secureStorage';
+import { queryClient } from '@/lib/queryClient';
 import { useVisitStore } from '@/store/useVisitStore';
+import { useCartStore } from '@/store/useCartStore';
 import type { AuthTokens, User } from '@/types/auth';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
@@ -63,8 +65,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       secureStorage.remove(STORAGE_KEYS.accessToken),
       secureStorage.remove(STORAGE_KEYS.refreshToken),
     ]);
-    // Drop any in-progress check-in/visit so the next user starts clean.
+    // Drop any in-progress check-in/visit, cart, and cached queries so the next
+    // user starts clean — otherwise React Query serves the previous user's data
+    // (e.g. their Recent Orders) until it goes stale.
     useVisitStore.getState().reset();
+    useCartStore.getState().clear();
+    queryClient.clear();
     set({
       accessToken: null,
       refreshToken: null,

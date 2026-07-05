@@ -18,7 +18,7 @@ const ICONS: Record<TabName, keyof typeof Ionicons.glyphMap> = {
   Home: 'home-outline',
   Shops: 'storefront-outline',
   Orders: 'receipt-outline',
-  Account: 'person-outline',
+  Account: 'settings-outline',
 };
 
 /**

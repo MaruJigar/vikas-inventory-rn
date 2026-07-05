@@ -40,6 +40,7 @@ import { McpToolsModule } from './mcp-tools/mcp-tools.module';
 import { VisitModule } from './visit/visit.module';
 import { QueueModule } from './queue/queue.module';
 import { EmailModule } from './email/email.module';
+import { RegionModule } from './region/region.module';
 
 import { appConfig } from './config/app.config';
 import { databaseConfig } from './config/database.config';
@@ -140,6 +141,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     VisitModule,
     QueueModule.forRoot(),
     EmailModule,
+    RegionModule,
   ],
   controllers: [AppController],
   providers: [

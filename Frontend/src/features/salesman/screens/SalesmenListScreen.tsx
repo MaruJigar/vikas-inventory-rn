@@ -67,7 +67,7 @@ export function SalesmenListScreen({
   );
 
   return (
-    <Screen scroll={false}>
+    <Screen scroll={false} edges={[]}>
       <Input
         value={query}
         onChangeText={setQuery}

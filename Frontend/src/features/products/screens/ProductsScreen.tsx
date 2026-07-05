@@ -7,22 +7,41 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { Screen, Input, EmptyState, Spinner } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
-import { useProducts } from '@/features/products/hooks';
+import { getApiErrorMessage } from '@/lib/apiError';
+import { confirmAction, notify } from '@/lib/dialog';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useVisitStore } from '@/store/useVisitStore';
+import { useProducts, useDeleteProduct } from '@/features/products/hooks';
 import { ProductCard } from '@/features/products/components/ProductCard';
 import { useCartStore } from '@/store/useCartStore';
 import { computeCartTotals, formatINR } from '@/features/products/pricing';
 import type { Product } from '@/types/product';
 import type { HomeScreenProps } from '@/navigation/types';
 
-export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
+export function ProductsScreen({
+  navigation,
+  route,
+}: HomeScreenProps<'Products'>) {
   const { t } = useTranslation();
+  const isDistributor = useAuthStore((s) => s.user?.role) === 'DISTRIBUTOR_ADMIN';
+  const activeVisit = useVisitStore((s) => s.activeVisit);
+  const canAdd = !!activeVisit; // add-to-cart only during an active shop visit
   const [query, setQuery] = useState('');
   const search = useDebouncedValue(query.trim(), 350);
+
+  const categoryId = route.params?.categoryId;
+  const categoryName = route.params?.categoryName;
+
+  // Show the category name in the header when scoped to one.
+  React.useEffect(() => {
+    if (categoryName) navigation.setOptions({ title: categoryName });
+  }, [categoryName, navigation]);
 
   const {
     data,
@@ -35,10 +54,19 @@ export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
     isFetchingNextPage,
   } = useProducts(search);
 
-  const products = useMemo(
-    () => data?.pages.flatMap((p) => p.data) ?? [],
-    [data],
-  );
+  // The backend has no category filter param, so we filter client-side. To make
+  // that reliable across pagination, eagerly load all pages while a category is
+  // active (distributor catalogs are modest), then filter by category id.
+  React.useEffect(() => {
+    if (categoryId && hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [categoryId, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const products = useMemo(() => {
+    const all = data?.pages.flatMap((p) => p.data) ?? [];
+    return categoryId ? all.filter((p) => p.category?.id === categoryId) : all;
+  }, [data, categoryId]);
+
+  const deleteProduct = useDeleteProduct();
 
   const items = useCartStore((s) => s.items);
   const totals = useMemo(
@@ -46,12 +74,44 @@ export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
     [items],
   );
 
-  const renderItem = ({ item }: { item: Product }) => (
-    <ProductCard product={item} />
-  );
+  const renderItem = ({ item }: { item: Product }) => {
+    const ownProduct =
+      isDistributor && item.product_source === 'DISTRIBUTOR_CREATED';
+    return (
+      <ProductCard
+        product={item}
+        addable={canAdd}
+        enforceStock={isDistributor}
+        onEdit={
+          ownProduct
+            ? () => navigation.navigate('AddProduct', { product: item })
+            : undefined
+        }
+        onDelete={
+          ownProduct
+            ? () =>
+                confirmAction({
+                  title: t('products.deleteConfirm'),
+                  confirmLabel: t('products.delete'),
+                  cancelLabel: t('common.cancel'),
+                  destructive: true,
+                  onConfirm: () =>
+                    deleteProduct.mutate(item.id, {
+                      onError: (e) =>
+                        notify(
+                          getApiErrorMessage(e, t) ||
+                            t('products.deleteError'),
+                        ),
+                    }),
+                })
+            : undefined
+        }
+      />
+    );
+  };
 
   return (
-    <Screen scroll={false}>
+    <Screen scroll={false} edges={[]}>
       <Input
         value={query}
         onChangeText={setQuery}
@@ -59,6 +119,13 @@ export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
         autoCapitalize="none"
         returnKeyType="search"
       />
+
+      {!canAdd ? (
+        <View style={styles.hint}>
+          <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
+          <Text style={styles.hintText}>{t('products.visitToAdd')}</Text>
+        </View>
+      ) : null}
 
       {isLoading ? (
         <Spinner />
@@ -82,9 +149,13 @@ export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
             if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
           }}
           ListEmptyComponent={
-            <EmptyState
-              title={search ? t('products.noResults') : t('products.empty')}
-            />
+            isFetchingNextPage ? (
+              <ActivityIndicator style={styles.footer} color={colors.primary} />
+            ) : (
+              <EmptyState
+                title={search ? t('products.noResults') : t('products.empty')}
+              />
+            )
           }
           ListFooterComponent={
             isFetchingNextPage ? (
@@ -111,6 +182,17 @@ export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
           </View>
         </Pressable>
       ) : null}
+
+      {isDistributor ? (
+        <Pressable
+          style={[styles.fab, totals.itemCount > 0 && styles.fabRaised]}
+          onPress={() => navigation.navigate('AddProduct')}
+          accessibilityRole="button"
+          accessibilityLabel={t('products.form.title')}
+        >
+          <Ionicons name="add" size={28} color="#FFFFFF" />
+        </Pressable>
+      ) : null}
     </Screen>
   );
 }
@@ -118,6 +200,13 @@ export function ProductsScreen({ navigation }: HomeScreenProps<'Products'>) {
 const styles = StyleSheet.create({
   listContent: { paddingBottom: spacing.xxl * 2.5, flexGrow: 1 },
   footer: { paddingVertical: spacing.lg },
+  hint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  hintText: { ...typography.caption, color: colors.textMuted, flex: 1 },
   cartBar: {
     position: 'absolute',
     left: spacing.lg,
@@ -140,4 +229,21 @@ const styles = StyleSheet.create({
   cartBarRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   cartBarTotal: { ...typography.title, color: '#FFFFFF' },
   cartBarCta: { ...typography.label, color: '#FFFFFF' },
+  fab: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.xl,
+    width: 56,
+    height: 56,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  fabRaised: { bottom: 92 },
 });

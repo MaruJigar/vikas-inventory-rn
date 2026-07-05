@@ -6,6 +6,7 @@ import { Screen, Card, Button, Spinner, EmptyState } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { confirmAction, notify } from '@/lib/dialog';
+import { resolveMediaUrl } from '@/lib/media';
 import { useShop, useDeleteShop } from '@/features/shops/hooks';
 import type { ShopsScreenProps } from '@/navigation/types';
 
@@ -30,7 +31,7 @@ export function ShopDetailScreen({
   if (isLoading) return <Spinner />;
   if (isError || !shop) {
     return (
-      <Screen>
+      <Screen edges={[]}>
         <EmptyState
           title={t('shops.loadError')}
           actionLabel={t('common.retry')}
@@ -61,12 +62,12 @@ export function ShopDetailScreen({
     d ? new Date(d).toLocaleDateString() : t('shops.detail.never');
 
   return (
-    <Screen>
+    <Screen edges={[]}>
       <Text style={[typography.h1, styles.title]}>{shop.name}</Text>
 
-      {shop.verification_photo_url ? (
+      {resolveMediaUrl(shop.verification_photo_url) ? (
         <Image
-          source={{ uri: shop.verification_photo_url }}
+          source={{ uri: resolveMediaUrl(shop.verification_photo_url) }}
           style={styles.photo}
         />
       ) : null}

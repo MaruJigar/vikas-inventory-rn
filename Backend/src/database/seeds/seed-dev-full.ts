@@ -21,6 +21,8 @@ import { ApprovalRequest } from '../../approval/approval-request.entity';
 import { UploadedFile } from '../../shop-image/uploaded-file.entity';
 import { LocationLog } from '../../location/location-log.entity';
 import { WorkingDay } from '../../working-day/working-day.entity';
+import { City } from '../../region/entities/city.entity';
+import { State } from '../../region/entities/state.entity';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -95,7 +97,7 @@ async function bootstrap() {
   );
 
   // --- PHASE 1 & 2: MASTER DATA & APPROVALS ---
-  
+
   // 20 Manufacturers
   console.log('[SEED] Creating 20 Manufacturers...');
   const mfrs: Manufacturer[] = [];
@@ -321,11 +323,15 @@ async function bootstrap() {
 
   // --- PHASE 4: SHOP DATA ---
   console.log('[SEED] Creating 400 Shops...');
+  const cityRepo = getRepo(City);
+  const citiesList = await cityRepo.find({ relations: { state: true } });
+
   const shops: Shop[] = [];
   for (let i = 0; i < 400; i++) {
     const sm = faker.helpers.arrayElement(salesmen);
     const status = faker.helpers.arrayElement(['VERIFIED', 'PENDING', 'REJECTED']);
-    
+    const randomCity = faker.helpers.arrayElement(citiesList);
+
     // Generate valid Indian lat/lng roughly
     const lat = faker.location.latitude({ max: 30, min: 10 });
     const lng = faker.location.longitude({ max: 90, min: 70 });
@@ -338,10 +344,11 @@ async function bootstrap() {
         owner_name: faker.person.fullName(),
         phone: faker.string.numeric(10),
         address: faker.location.streetAddress(),
-        city: faker.location.city(),
-        state: faker.location.state(),
+        city_name: randomCity.name,
+        state_name: randomCity.state?.name || 'Maharashtra',
+        city_id: randomCity.id,
+        state_id: randomCity.state_id,
         verification_photo_url: faker.image.urlLoremFlickr({ category: 'shop' }),
-        location: { type: 'Point', coordinates: [lng, lat] },
         verification_status: status as any,
         is_active: status === 'VERIFIED',
       })
@@ -380,12 +387,12 @@ async function bootstrap() {
   for (let i = 0; i < 200; i++) {
     const dist = faker.helpers.arrayElement(dists);
     const prod = faker.helpers.arrayElement(products);
-    
+
     // Scenarios: low stock, high stock, out of stock
     const qty = faker.helpers.arrayElement([0, faker.number.int({ min: 1, max: 20 }), faker.number.int({ min: 100, max: 1000 })]);
-    
+
     // Ensure no duplicates per dist/prod combo
-    const exists = await invRepo.findOne({ where: { distributor_id: dist.id, product_id: prod.id }});
+    const exists = await invRepo.findOne({ where: { distributor_id: dist.id, product_id: prod.id } });
     if (!exists) {
       await invRepo.save(invRepo.create({
         distributor_id: dist.id,
@@ -403,11 +410,11 @@ async function bootstrap() {
     const shop = faker.helpers.arrayElement(shops);
     const smId = shop.created_by_salesman_id;
     if (!smId) continue;
-    
+
     const wd = salesmanWorkingDays[smId];
     const visitStatus = faker.helpers.arrayElement(['COMPLETED', 'MISSED', 'ACTIVE']);
     const assignedWdId = visitStatus === 'ACTIVE' ? (wd?.active || wd?.completed) : (wd?.completed || wd?.active);
-    
+
     const v = await visitRepo.save(visitRepo.create({
       shop_id: shop.id,
       salesman_id: smId,
@@ -422,7 +429,7 @@ async function bootstrap() {
     if (visitStatus === 'COMPLETED') {
       // Create an order for completed visits
       const orderStatus = faker.helpers.arrayElement(['PENDING', 'DELIVERED', 'CANCELLED']);
-      
+
       const o = await orderRepo.save(orderRepo.create({
         order_number: 'ORD-' + faker.string.alphanumeric(8).toUpperCase(),
         shop_id: shop.id,
@@ -430,7 +437,7 @@ async function bootstrap() {
         salesman_id: smId,
         distributor_id: shop.distributor_id,
         // Optional manufacturer_id link
-        manufacturer_id: products[0].manufacturer_id, 
+        manufacturer_id: products[0].manufacturer_id,
         gross_order_amount: 0, // Calculated below
         final_order_amount: 0,
         status: orderStatus as any,

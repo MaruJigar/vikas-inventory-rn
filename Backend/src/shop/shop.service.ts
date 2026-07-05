@@ -65,11 +65,6 @@ export class ShopService {
     await queryRunner.startTransaction();
 
     try {
-      const point = {
-        type: 'Point',
-        coordinates: [dto.longitude, dto.latitude],
-      };
-
       const shop = queryRunner.manager.create(Shop, {
         distributor_id: distributorId,
         created_by_user_id: userId,
@@ -78,10 +73,12 @@ export class ShopService {
         owner_name: dto.owner_name,
         phone: dto.phone,
         address: dto.address,
-        city: dto.city,
-        state: dto.state,
+        city_name: dto.city,
+        state_name: dto.state,
         gst_number: dto.gst_number,
-        location: point,
+        maps_link: dto.maps_link || null,
+        city_id: dto.city_id,
+        state_id: dto.state_id,
         verification_photo_url: dto.verification_photo_url || null,
         verification_status: dto.verification_photo_url
           ? 'VERIFIED'
@@ -95,7 +92,8 @@ export class ShopService {
           distributor_id: distributorId,
           attempted_shop_name: dto.name,
           attempted_phone: dto.phone,
-          attempted_location: point,
+          attempted_city_id: dto.city_id,
+          attempted_state_id: dto.state_id,
           matched_shop_id: dto.duplicate_bypass.matched_shop_id,
           match_type: dto.duplicate_bypass.match_type,
           action_taken: 'CREATED_ANYWAY',
@@ -134,7 +132,9 @@ export class ShopService {
 
     const qb = this.shopRepo.createQueryBuilder('shop')
       .leftJoinAndSelect('shop.distributor', 'distributor')
-      .leftJoinAndSelect('shop.created_by_salesman', 'created_by_salesman');
+      .leftJoinAndSelect('shop.created_by_salesman', 'created_by_salesman')
+      .leftJoinAndSelect('shop.city', 'city')
+      .leftJoinAndSelect('shop.state', 'state');
 
     if (userRole === 'SUPER_ADMIN') {
       // Global
@@ -226,6 +226,8 @@ export class ShopService {
       .createQueryBuilder('shop')
       .leftJoinAndSelect('shop.distributor', 'distributor')
       .leftJoinAndSelect('shop.created_by_salesman', 'created_by_salesman')
+      .leftJoinAndSelect('shop.city', 'city')
+      .leftJoinAndSelect('shop.state', 'state')
       .where('shop.id = :id', { id });
 
     if (userRole === 'SUPER_ADMIN') {
@@ -282,16 +284,7 @@ export class ShopService {
       throw new ForbiddenException('You can only modify shops you created');
     }
 
-    if (dto.latitude !== undefined && dto.longitude !== undefined) {
-      shop.location = {
-        type: 'Point',
-        coordinates: [dto.longitude, dto.latitude],
-      };
-    }
-
     Object.assign(shop, dto);
-    delete (shop as any).latitude;
-    delete (shop as any).longitude;
 
     return this.shopRepo.save(shop);
   }

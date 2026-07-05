@@ -53,8 +53,8 @@ export class ShopController {
       distributorId,
       dto.phone || '',
       dto.name,
-      dto.latitude,
-      dto.longitude,
+      dto.city_id,
+      dto.state_id,
     );
   }
 

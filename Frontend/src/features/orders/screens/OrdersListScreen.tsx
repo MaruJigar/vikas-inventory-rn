@@ -26,11 +26,22 @@ import type { OrdersScreenProps } from '@/navigation/types';
 
 export function OrdersListScreen({
   navigation,
+  route,
 }: OrdersScreenProps<'OrdersList'>) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
-  const [status, setStatus] = useState<OrderStatus | null>(null);
+  // Seed the filter from a navigation param (e.g. a dashboard summary tile).
+  const [status, setStatus] = useState<OrderStatus | null>(
+    route.params?.initialStatus ?? null,
+  );
   const search = useDebouncedValue(query.trim(), 350);
+
+  // The Orders screen is the tab's initial route, so a second tile tap merges
+  // new params without remounting — keep the filter in sync when that happens.
+  const paramStatus = route.params?.initialStatus;
+  React.useEffect(() => {
+    if (paramStatus) setStatus(paramStatus);
+  }, [paramStatus]);
 
   const {
     data,
@@ -77,7 +88,11 @@ export function OrdersListScreen({
   );
 
   return (
-    <Screen scroll={false}>
+    <Screen scroll={false} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={typography.h1}>{t('orders.title')}</Text>
+      </View>
+
       <Input
         value={query}
         onChangeText={setQuery}
@@ -170,6 +185,7 @@ function Chip({
 }
 
 const styles = StyleSheet.create({
+  header: { marginTop: spacing.sm, marginBottom: spacing.md },
   filterRow: { marginBottom: spacing.sm },
   chips: { gap: spacing.sm, paddingVertical: spacing.xs },
   chip: {

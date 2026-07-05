@@ -6,6 +6,16 @@ export const toNum = (v: number | string | null | undefined): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
+/**
+ * Available units for a product. The `unit` field is used to hold the stock
+ * count (e.g. "2"); when it's not numeric (e.g. "kg") there's no limit.
+ */
+export function availableUnits(product: Product): number | undefined {
+  if (product.unit == null || product.unit === '') return undefined;
+  const n = Number(product.unit);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 /** Per-unit distributor price (MRP less distributor + special discount, pre-GST). */
 export function distributorUnitPrice(product: Product): number {
   const mrp = toNum(product.mrp);

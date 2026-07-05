@@ -1558,6 +1558,45 @@
         ]
       }
     },
+    "/v1/salesmen/{id}/status": {
+      "patch": {
+        "operationId": "SalesmanController_updateSalesmanStatus_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSalesmanStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update Salesman Active/Inactive Status",
+        "tags": [
+          "Salesman"
+        ]
+      }
+    },
     "/v1/products": {
       "post": {
         "operationId": "ProductController_createProduct_v1",
@@ -4718,6 +4757,56 @@
           "Visit"
         ]
       }
+    },
+    "/v1/states": {
+      "get": {
+        "operationId": "RegionController_getStates_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of all states"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all states",
+        "tags": [
+          "Region"
+        ]
+      }
+    },
+    "/v1/cities": {
+      "get": {
+        "operationId": "RegionController_getCities_v1",
+        "parameters": [
+          {
+            "name": "state_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by State ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of cities"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get cities (optionally filtered by state)",
+        "tags": [
+          "Region"
+        ]
+      }
     }
   },
   "info": {
@@ -5726,6 +5815,18 @@
           }
         }
       },
+      "UpdateSalesmanStatusDto": {
+        "type": "object",
+        "properties": {
+          "is_active": {
+            "type": "boolean",
+            "description": "Is active status"
+          }
+        },
+        "required": [
+          "is_active"
+        ]
+      },
       "CreateProductDto": {
         "type": "object",
         "properties": {
@@ -6154,20 +6255,18 @@
             "type": "string",
             "description": "Phone"
           },
-          "latitude": {
-            "type": "number",
-            "description": "Latitude"
+          "city_id": {
+            "type": "string",
+            "description": "City ID"
           },
-          "longitude": {
-            "type": "number",
-            "description": "Longitude"
+          "state_id": {
+            "type": "string",
+            "description": "State ID"
           }
         },
         "required": [
           "name",
-          "phone",
-          "latitude",
-          "longitude"
+          "phone"
         ]
       },
       "DuplicateBypassDto": {
@@ -6222,13 +6321,17 @@
             "type": "string",
             "description": "Gst number"
           },
-          "latitude": {
-            "type": "number",
-            "description": "Latitude"
+          "maps_link": {
+            "type": "string",
+            "description": "Google Maps link for the shop location"
           },
-          "longitude": {
-            "type": "number",
-            "description": "Longitude"
+          "city_id": {
+            "type": "string",
+            "description": "City ID"
+          },
+          "state_id": {
+            "type": "string",
+            "description": "State ID"
           },
           "verification_photo_url": {
             "type": "string",
@@ -6246,9 +6349,46 @@
         "required": [
           "name",
           "phone",
-          "address",
-          "latitude",
-          "longitude"
+          "address"
+        ]
+      },
+      "City": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "state_id": {
+            "type": "string",
+            "description": "State id"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "state_id"
+        ]
+      },
+      "State": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ]
       },
       "Shop": {
@@ -6302,21 +6442,45 @@
             "type": "string",
             "description": "Address"
           },
-          "city": {
+          "city_name": {
             "type": "string",
-            "description": "City"
+            "description": "City name text"
           },
-          "state": {
+          "state_name": {
             "type": "string",
-            "description": "State"
+            "description": "State name text"
           },
           "gst_number": {
             "type": "string",
             "description": "Gst number"
           },
-          "location": {
+          "maps_link": {
             "type": "object",
-            "description": "Location"
+            "description": "Google Maps link for the shop location"
+          },
+          "city_id": {
+            "type": "string",
+            "description": "City id"
+          },
+          "city": {
+            "description": "City relation",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/City"
+              }
+            ]
+          },
+          "state_id": {
+            "type": "string",
+            "description": "State id"
+          },
+          "state": {
+            "description": "State relation",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/State"
+              }
+            ]
           },
           "verification_photo_url": {
             "type": "object",
@@ -6400,13 +6564,17 @@
             "type": "string",
             "description": "Gst number"
           },
-          "latitude": {
-            "type": "number",
-            "description": "Latitude"
+          "maps_link": {
+            "type": "string",
+            "description": "Google Maps link for the shop location"
           },
-          "longitude": {
-            "type": "number",
-            "description": "Longitude"
+          "city_id": {
+            "type": "string",
+            "description": "City ID"
+          },
+          "state_id": {
+            "type": "string",
+            "description": "State ID"
           },
           "verification_photo_url": {
             "type": "string",

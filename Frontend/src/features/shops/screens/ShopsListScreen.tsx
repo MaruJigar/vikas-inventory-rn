@@ -56,7 +56,7 @@ export function ShopsListScreen({ navigation }: ShopsScreenProps<'ShopsList'>) {
   );
 
   return (
-    <Screen scroll={false}>
+    <Screen scroll={false} edges={['top']}>
       <View style={styles.header}>
         <Text style={typography.h1}>{t('shops.title')}</Text>
       </View>

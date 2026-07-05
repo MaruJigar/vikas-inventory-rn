@@ -44,6 +44,15 @@ export function useOrders(search: string, status: OrderStatus | null) {
   });
 }
 
+/** A small list of the most recent orders — for the dashboard. */
+export function useRecentOrders(limit = 5) {
+  return useQuery({
+    queryKey: ['orders', 'recent', limit],
+    queryFn: () => ordersApi.list({ limit }),
+    select: (res) => res.data,
+  });
+}
+
 export function useOrder(id: string) {
   return useQuery({
     queryKey: orderKeys.detail(id),

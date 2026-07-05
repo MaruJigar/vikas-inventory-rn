@@ -1,5 +1,6 @@
 import React, { forwardRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -15,11 +16,26 @@ import { colors, radius, spacing, typography } from '@/theme';
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
+  /** Optional tappable icon at the right edge (e.g. a "use my location" button). */
+  rightIcon?: keyof typeof Ionicons.glyphMap;
+  onRightIconPress?: () => void;
+  rightIconLoading?: boolean;
+  rightIconLabel?: string;
 }
 
 /** Presentational text field — pair with react-hook-form's Controller. */
 export const Input = forwardRef<TextInput, InputProps>(function Input(
-  { label, error, style, secureTextEntry, ...rest },
+  {
+    label,
+    error,
+    style,
+    secureTextEntry,
+    rightIcon,
+    onRightIconPress,
+    rightIconLoading,
+    rightIconLabel,
+    ...rest
+  },
   ref,
 ) {
   const { t } = useTranslation();
@@ -52,6 +68,21 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
               size={20}
               color={colors.textMuted}
             />
+          </Pressable>
+        ) : null}
+        {rightIcon && !isPassword ? (
+          <Pressable
+            onPress={onRightIconPress}
+            hitSlop={8}
+            style={styles.eye}
+            accessibilityRole="button"
+            accessibilityLabel={rightIconLabel}
+          >
+            {rightIconLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name={rightIcon} size={20} color={colors.primary} />
+            )}
           </Pressable>
         ) : null}
       </View>

@@ -29,7 +29,7 @@ export function AddSalesmanScreen({
   if (isLoading) return <Spinner />;
   if (isError || !distributor) {
     return (
-      <Screen>
+      <Screen edges={[]}>
         <EmptyState
           title={t('salesmen.profileError')}
           actionLabel={t('common.retry')}
@@ -51,7 +51,7 @@ export function AddSalesmanScreen({
   };
 
   return (
-    <Screen>
+    <Screen edges={[]}>
       <Text style={[typography.h1, styles.title]}>{t('salesmen.form.title')}</Text>
       <Text style={styles.subtitle}>{t('salesmen.form.subtitle')}</Text>
 

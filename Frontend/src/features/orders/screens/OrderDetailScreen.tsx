@@ -70,7 +70,7 @@ export function OrderDetailScreen({
   if (isLoading) return <Spinner />;
   if (isError || !order) {
     return (
-      <Screen>
+      <Screen edges={[]}>
         <EmptyState
           title={t('orders.loadError')}
           actionLabel={t('common.retry')}
@@ -93,18 +93,11 @@ export function OrderDetailScreen({
   const billDiscount = toNum(order.bill_discount_amount);
 
   return (
-    <Screen>
+    <Screen edges={[]}>
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={typography.h1}>{order.order_number}</Text>
-          <View
-            style={[styles.badge, { backgroundColor: statusColor(order.status) }]}
-          >
-            <Text style={styles.badgeText}>
-              {statusLabel(t, order.status)}
-            </Text>
-          </View>
-        </View>
+        <Text style={[typography.h1, styles.orderNumber]} numberOfLines={1}>
+          {order.order_number}
+        </Text>
         <Pressable
           onPress={onShare}
           hitSlop={8}
@@ -115,9 +108,16 @@ export function OrderDetailScreen({
         </Pressable>
       </View>
 
-      <Text style={styles.date}>
-        {new Date(order.created_at).toLocaleString()}
-      </Text>
+      <View style={styles.metaRow}>
+        <View
+          style={[styles.badge, { backgroundColor: statusColor(order.status) }]}
+        >
+          <Text style={styles.badgeText}>{statusLabel(t, order.status)}</Text>
+        </View>
+        <Text style={styles.date}>
+          {new Date(order.created_at).toLocaleString()}
+        </Text>
+      </View>
 
       {order.shop ? (
         <Card style={styles.shopCard}>
@@ -217,15 +217,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.md,
     marginTop: spacing.sm,
   },
-  headerLeft: {
+  orderNumber: { flex: 1 },
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    flex: 1,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
-  date: { ...typography.caption, marginTop: spacing.xs },
+  date: { ...typography.caption },
   shopCard: { marginTop: spacing.lg, gap: spacing.xs },
   muted: { ...typography.caption, color: colors.textMuted },
   itemsCard: { gap: spacing.sm },

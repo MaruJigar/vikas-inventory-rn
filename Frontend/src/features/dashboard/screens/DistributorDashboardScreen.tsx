@@ -1,72 +1,245 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
-import { Screen, Card, Button, Section, LanguageToggle } from '@/components';
-import { colors, spacing, typography } from '@/theme';
+import { Screen, Card, Section, LanguageToggle } from '@/components';
+import { colors, radius, spacing, typography } from '@/theme';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { HomeStackParamList } from '@/navigation/types';
+import {
+  useDistributorOrderSummary,
+  SUMMARY_TILE_STATUS,
+} from '@/features/dashboard/hooks';
+import { useCategories } from '@/features/products/hooks';
+import { iconForCategory } from '@/features/products/categoryIcons';
+import type { Category } from '@/types/product';
+import { RecentOrders } from '@/features/orders/components/RecentOrders';
+import type { OrderStatus } from '@/types/order';
+import type { HomeStackParamList, MainTabParamList } from '@/navigation/types';
 
-/** A single labelled count in the orders-summary row. */
-function SummaryStat({ label, value }: { label: string; value: number }) {
+/** A single labelled, tappable count in the orders-summary row. */
+function SummaryStat({
+  label,
+  value,
+  loading,
+  onPress,
+}: {
+  label: string;
+  value: number;
+  loading: boolean;
+  onPress: () => void;
+}) {
   return (
-    <Card style={styles.stat}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </Card>
+    <Pressable
+      style={styles.statPressable}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${value}`}
+    >
+      <Card style={styles.stat}>
+        {loading ? (
+          <ActivityIndicator color={colors.primary} style={styles.statSpinner} />
+        ) : (
+          <Text style={styles.statValue}>{value}</Text>
+        )}
+        <Text style={styles.statLabel}>{label}</Text>
+      </Card>
+    </Pressable>
   );
 }
 
 /**
- * Post-approval distributor home (PRD §6.2). Phase 2 builds the layout shell;
- * order counts, product categories and recent orders are wired to the backend
- * in their respective later phases (counts shown as 0 placeholders).
+ * Wrapping grid of product-category tiles. Uses a wrapping View (not a
+ * horizontal ScrollView) so it never nests a scroller inside the screen's
+ * vertical ScrollView — nesting one stole vertical-scroll gestures and froze
+ * the dashboard. Category tiles open Products (no backend category filter param
+ * yet); the trailing "All Categories" tile opens the full Categories screen.
+ */
+function CategoryRail({
+  onOpenCategory,
+  onShowAll,
+}: {
+  onOpenCategory: (category: Category) => void;
+  onShowAll: () => void;
+}) {
+  const { t } = useTranslation();
+  const { data: categories, isLoading, isError } = useCategories();
+
+  if (isLoading) {
+    return (
+      <Card style={styles.chipsState}>
+        <ActivityIndicator color={colors.primary} />
+      </Card>
+    );
+  }
+
+  if (isError || !categories || categories.length === 0) {
+    return (
+      <Card style={styles.emptyCard}>
+        <Ionicons
+          name="pricetags-outline"
+          size={20}
+          color={colors.textMuted}
+        />
+        <Text style={styles.muted}>
+          {t('dashboard.distributor.noCategories')}
+        </Text>
+      </Card>
+    );
+  }
+
+  // Keep the dashboard compact: show the top 3 categories, then an
+  // "All Categories" tile that opens the full Categories screen.
+  const MAX_TILES = 3;
+
+  return (
+    <View style={styles.rail}>
+      {categories.slice(0, MAX_TILES).map((c) => (
+        <Pressable
+          key={c.id}
+          onPress={() => onOpenCategory(c)}
+          accessibilityRole="button"
+          accessibilityLabel={c.name}
+          style={({ pressed }) => [styles.tilePressable, pressed && styles.tilePressed]}
+        >
+          <Card style={styles.tileCard}>
+            <Ionicons
+              name={iconForCategory(c.name)}
+              size={26}
+              color={colors.primary}
+            />
+            <Text
+              style={styles.tileLabel}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {c.name}
+            </Text>
+          </Card>
+        </Pressable>
+      ))}
+
+      <Pressable
+        key="all"
+        onPress={onShowAll}
+        accessibilityRole="button"
+        accessibilityLabel={t('dashboard.distributor.allCategories')}
+        style={({ pressed }) => [styles.tilePressable, pressed && styles.tilePressed]}
+      >
+        <Card style={styles.tileCard}>
+          <Ionicons name="grid-outline" size={26} color={colors.primary} />
+          <Text
+            style={styles.tileLabel}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {t('dashboard.distributor.allCategories')}
+          </Text>
+        </Card>
+      </Pressable>
+    </View>
+  );
+}
+
+/**
+ * Post-approval distributor home (PRD §6.2). Orders-summary counts come from
+ * `GET /analytics/dashboard` (role-scoped); product categories and recent
+ * orders are wired in their respective phases.
  */
 export function DistributorDashboardScreen() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const { data: summary, isLoading: summaryLoading } =
+    useDistributorOrderSummary();
   const navigation =
     useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const goToOrder = (id: string) =>
+    navigation
+      .getParent<BottomTabNavigationProp<MainTabParamList>>()
+      ?.navigate('Orders', {
+        screen: 'OrderDetail',
+        params: { id },
+        // Keep the Orders list beneath so the detail has a back button.
+        initial: false,
+      });
+  const goToOrders = (initialStatus: OrderStatus) =>
+    navigation
+      .getParent<BottomTabNavigationProp<MainTabParamList>>()
+      ?.navigate('Orders', { screen: 'OrdersList', params: { initialStatus } });
 
   return (
-    <Screen>
+    <Screen
+      edges={['top']}
+      floatingAction={
+        <Pressable
+          style={styles.fab}
+          onPress={() => navigation.navigate('AddProduct')}
+          accessibilityRole="button"
+          accessibilityLabel={t('dashboard.distributor.addProduct')}
+        >
+          <Ionicons name="add" size={18} color="#FFFFFF" />
+          <Text style={styles.fabText}>
+            {t('dashboard.distributor.addProduct')}
+          </Text>
+        </Pressable>
+      }
+    >
       <View style={styles.topBar}>
-        <Text style={typography.h1}>
-          {t('dashboard.greeting', { name: user?.full_name ?? '' })}
-        </Text>
+        <View style={styles.greetingWrap}>
+          <Text style={styles.hello}>{t('dashboard.hello')}</Text>
+          <Text style={typography.h1} numberOfLines={1}>
+            {user?.full_name ?? ''}
+          </Text>
+        </View>
         <LanguageToggle />
       </View>
 
-      <Button
-        label={`+  ${t('dashboard.distributor.newOrder')}`}
-        style={styles.newOrder}
-        onPress={() => navigation.navigate('Products')}
-      />
-
       <Section title={t('dashboard.distributor.ordersSummary')}>
         <View style={styles.statsRow}>
-          <SummaryStat label={t('dashboard.distributor.pending')} value={0} />
-          <SummaryStat label={t('dashboard.distributor.approved')} value={0} />
-          <SummaryStat label={t('dashboard.distributor.dispatched')} value={0} />
+          <SummaryStat
+            label={t('dashboard.distributor.pending')}
+            value={summary?.pending ?? 0}
+            loading={summaryLoading}
+            onPress={() => goToOrders(SUMMARY_TILE_STATUS.pending)}
+          />
+          <SummaryStat
+            label={t('dashboard.distributor.approved')}
+            value={summary?.approved ?? 0}
+            loading={summaryLoading}
+            onPress={() => goToOrders(SUMMARY_TILE_STATUS.approved)}
+          />
+          <SummaryStat
+            label={t('dashboard.distributor.dispatched')}
+            value={summary?.dispatched ?? 0}
+            loading={summaryLoading}
+            onPress={() => goToOrders(SUMMARY_TILE_STATUS.dispatched)}
+          />
         </View>
       </Section>
 
       <Section title={t('dashboard.distributor.productCategories')}>
-        <Card>
-          <Text style={styles.muted}>
-            {t('dashboard.distributor.noCategories')}
-          </Text>
-        </Card>
+        <CategoryRail
+          onOpenCategory={(c) =>
+            navigation.navigate('Products', {
+              categoryId: c.id,
+              categoryName: c.name,
+            })
+          }
+          onShowAll={() => navigation.navigate('Categories')}
+        />
       </Section>
 
       <Section title={t('dashboard.distributor.recentOrders')}>
-        <Card>
-          <Text style={styles.muted}>
-            {t('dashboard.distributor.noRecentOrders')}
-          </Text>
-        </Card>
+        <RecentOrders onOpenOrder={goToOrder} />
       </Section>
     </Screen>
   );
@@ -75,14 +248,57 @@ export function DistributorDashboardScreen() {
 const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: spacing.md,
     marginTop: spacing.sm,
   },
-  newOrder: { marginTop: spacing.lg },
+  greetingWrap: { flex: 1 },
+  hello: { ...typography.body, color: colors.textMuted },
   statsRow: { flexDirection: 'row', gap: spacing.md },
-  stat: { flex: 1, alignItems: 'center', gap: spacing.xs },
+  statPressable: { flex: 1 },
+  stat: { alignItems: 'center', gap: spacing.xs },
   statValue: { ...typography.h2 },
+  // Match the rendered height of statValue so the row doesn't jump on load.
+  statSpinner: { height: typography.h2.lineHeight ?? 28 },
   statLabel: { ...typography.caption, textAlign: 'center' },
   muted: { ...typography.body, color: colors.textMuted },
+  chipsState: { alignItems: 'center' },
+  emptyCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // Row of equal-width Card tiles (max 4: up to 3 categories + All Categories),
+  // matching the Orders Summary row — flex:1 divides the device width evenly.
+  // Row stretches all pressables to the tallest; tileCard flex:1 makes every
+  // card fill that height so they stay equal even when a label wraps to 2 lines.
+  rail: { flexDirection: 'row', gap: spacing.md, alignItems: 'stretch' },
+  tilePressable: { flex: 1 },
+  tilePressed: { opacity: 0.6 },
+  tileCard: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  tileLabel: {
+    ...typography.caption,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  fab: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    height: 44,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  fabText: { ...typography.label, color: '#FFFFFF' },
 });

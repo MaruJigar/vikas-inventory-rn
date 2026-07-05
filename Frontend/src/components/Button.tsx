@@ -4,8 +4,10 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  View,
   ViewStyle,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { colors, radius, spacing, typography } from '@/theme';
 
@@ -17,6 +19,8 @@ interface ButtonProps {
   variant?: Variant;
   loading?: boolean;
   disabled?: boolean;
+  /** Optional leading icon. */
+  icon?: keyof typeof Ionicons.glyphMap;
   style?: ViewStyle;
 }
 
@@ -26,6 +30,7 @@ export function Button({
   variant = 'primary',
   loading = false,
   disabled = false,
+  icon,
   style,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
@@ -52,7 +57,10 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={fg} />
       ) : (
-        <Text style={[typography.title, { color: fg }]}>{label}</Text>
+        <View style={styles.content}>
+          {icon ? <Ionicons name={icon} size={18} color={fg} /> : null}
+          <Text style={[typography.title, { color: fg }]}>{label}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -65,6 +73,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   bordered: { borderWidth: 1, borderColor: colors.border },
   dimmed: { opacity: 0.6 },

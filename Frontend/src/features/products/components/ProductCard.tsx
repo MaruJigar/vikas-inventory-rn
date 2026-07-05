@@ -5,20 +5,59 @@ import { useTranslation } from 'react-i18next';
 
 import { Card } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
+import { resolveMediaUrl } from '@/lib/media';
+import { notify } from '@/lib/dialog';
 import { useCartStore } from '@/store/useCartStore';
-import { distributorUnitPrice, formatINR, toNum } from '@/features/products/pricing';
+import {
+  availableUnits,
+  distributorUnitPrice,
+  formatINR,
+  toNum,
+} from '@/features/products/pricing';
 import type { Product } from '@/types/product';
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({
+  product,
+  addable = true,
+  enforceStock = true,
+  onEdit,
+  onDelete,
+}: {
+  product: Product;
+  /** Show the add-to-cart / quantity controls (only during an active visit). */
+  addable?: boolean;
+  /**
+   * Show available-stock and cap quantity to it. Used by the distributor
+   * managing their catalog; the salesman ordering flow turns this off (they can
+   * order beyond on-hand stock — backorders are handled server-side).
+   */
+  enforceStock?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}) {
   const { t } = useTranslation();
   const qty = useCartStore((s) => s.items[product.id]?.qty ?? 0);
   const add = useCartStore((s) => s.add);
   const increment = useCartStore((s) => s.increment);
   const decrement = useCartStore((s) => s.decrement);
 
+  // null = don't track/limit stock (salesman flow) → no stock label, no cap.
+  const stock = enforceStock ? availableUnits(product) : null;
+  const atStockLimit = stock != null && qty >= stock;
+
+  const handleAdd = () => {
+    if (stock != null && stock < 1) return notify(t('products.outOfStock'));
+    add(product);
+  };
+  const handleIncrement = () => {
+    if (atStockLimit) return notify(t('products.maxStock', { count: stock }));
+    increment(product.id);
+  };
+
   const mrp = toNum(product.mrp);
   const price = distributorUnitPrice(product);
   const discounted = price < mrp;
+  const imageUrl = resolveMediaUrl(product.product_image_url);
   const manufacturer =
     product.manufacturer?.business_name ??
     product.manufacturer?.name ??
@@ -28,20 +67,33 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <Card style={styles.card}>
       <View style={styles.imageWrap}>
-        {product.product_image_url ? (
-          <Image
-            source={{ uri: product.product_image_url }}
-            style={styles.image}
-          />
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.image} />
         ) : (
           <Ionicons name="cube-outline" size={28} color={colors.textMuted} />
         )}
       </View>
 
       <View style={styles.body}>
-        <Text style={typography.title} numberOfLines={2}>
-          {product.name}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={[typography.title, styles.titleText]} numberOfLines={2}>
+            {product.name}
+          </Text>
+          {onEdit || onDelete ? (
+            <View style={styles.manageRow}>
+              {onEdit ? (
+                <Pressable onPress={onEdit} hitSlop={8} accessibilityLabel={t('common.submit')}>
+                  <Ionicons name="create-outline" size={20} color={colors.primary} />
+                </Pressable>
+              ) : null}
+              {onDelete ? (
+                <Pressable onPress={onDelete} hitSlop={8} accessibilityLabel={t('common.cancel')}>
+                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
         {manufacturer ? (
           <Text style={styles.muted} numberOfLines={1}>
             {manufacturer}
@@ -53,15 +105,23 @@ export function ProductCard({ product }: { product: Product }) {
           {discounted ? (
             <Text style={styles.mrp}>{formatINR(mrp)}</Text>
           ) : null}
-          {product.unit ? (
+          {enforceStock && product.unit && stock == null ? (
             <Text style={styles.unit}>/ {product.unit}</Text>
           ) : null}
         </View>
 
-        {qty === 0 ? (
+        {stock != null ? (
+          <Text style={[styles.stock, stock < 1 && styles.stockOut]}>
+            {stock < 1
+              ? t('products.outOfStock')
+              : t('products.inStock', { count: stock })}
+          </Text>
+        ) : null}
+
+        {!addable ? null : qty === 0 ? (
           <Pressable
             style={styles.addBtn}
-            onPress={() => add(product)}
+            onPress={handleAdd}
             accessibilityRole="button"
             accessibilityLabel={t('products.addToCart')}
           >
@@ -79,8 +139,8 @@ export function ProductCard({ product }: { product: Product }) {
             </Pressable>
             <Text style={styles.qty}>{qty}</Text>
             <Pressable
-              style={styles.stepBtn}
-              onPress={() => increment(product.id)}
+              style={[styles.stepBtn, atStockLimit && styles.stepBtnDisabled]}
+              onPress={handleIncrement}
               accessibilityLabel={t('products.increase')}
             >
               <Ionicons name="add" size={18} color={colors.text} />
@@ -104,6 +164,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   image: { width: '100%', height: '100%' },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  titleText: { flex: 1 },
+  manageRow: { flexDirection: 'row', gap: spacing.md },
+  stock: { ...typography.caption, color: colors.textMuted },
+  stockOut: { color: colors.danger },
+  stepBtnDisabled: { opacity: 0.4 },
   body: { flex: 1, gap: spacing.xs },
   muted: { ...typography.caption, color: colors.textMuted },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },

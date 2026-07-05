@@ -9,6 +9,8 @@ import {
 import { Distributor } from '../distributor/distributor.entity';
 import { Shop } from '../shop/shop.entity';
 import { User } from '../user/user.entity';
+import { City } from '../region/entities/city.entity';
+import { State } from '../region/entities/state.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('shop_duplicate_logs')
@@ -33,14 +35,23 @@ export class ShopDuplicateLog {
   @ApiPropertyOptional({ description: 'Attempted phone' })
   attempted_phone: string;
 
-  @Column({
-    type: 'geography',
-    spatialFeatureType: 'Point',
-    srid: 4326,
-    nullable: true,
-  })
-  @ApiPropertyOptional({ description: 'Attempted location' })
-  attempted_location: any;
+  @Column({ type: 'uuid', nullable: true })
+  @ApiPropertyOptional({ description: 'Attempted city id' })
+  attempted_city_id: string;
+
+  @ManyToOne(() => City)
+  @JoinColumn({ name: 'attempted_city_id' })
+  @ApiPropertyOptional({ type: () => City, description: 'Attempted city relation' })
+  attempted_city?: City;
+
+  @Column({ type: 'uuid', nullable: true })
+  @ApiPropertyOptional({ description: 'Attempted state id' })
+  attempted_state_id: string;
+
+  @ManyToOne(() => State)
+  @JoinColumn({ name: 'attempted_state_id' })
+  @ApiPropertyOptional({ type: () => State, description: 'Attempted state relation' })
+  attempted_state?: State;
 
   @Column({ type: 'uuid', nullable: true })
   @ApiPropertyOptional({ description: 'Matched shop id' })

@@ -15,7 +15,7 @@ export function OrderSuccessScreen({
   const { orderNumber } = route.params;
 
   return (
-    <Screen>
+    <Screen edges={['top']}>
       <View style={styles.body}>
         <View style={styles.iconWrap}>
           <Ionicons name="checkmark" size={48} color="#FFFFFF" />

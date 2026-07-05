@@ -8,6 +8,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { SalesmanDashboardScreen } from '@/features/dashboard/screens/SalesmanDashboardScreen';
 import { DistributorDashboardScreen } from '@/features/dashboard/screens/DistributorDashboardScreen';
 import { ProductsScreen } from '@/features/products/screens/ProductsScreen';
+import { CategoriesScreen } from '@/features/products/screens/CategoriesScreen';
+import { AddProductScreen } from '@/features/products/screens/AddProductScreen';
 import { CartScreen } from '@/features/cart/screens/CartScreen';
 import { SelectShopScreen } from '@/features/visit/screens/SelectShopScreen';
 import { OrderSuccessScreen } from '@/features/orders/screens/OrderSuccessScreen';
@@ -28,6 +30,7 @@ export function HomeNavigator() {
         headerTintColor: colors.primary,
         headerStyle: { backgroundColor: colors.background },
         headerShadowVisible: false,
+        headerTitleAlign: 'left',
       }}
     >
       <Stack.Screen
@@ -41,9 +44,22 @@ export function HomeNavigator() {
         options={{ title: t('visit.selectShop'), headerBackTitle: t('common.back') }}
       />
       <Stack.Screen
+        name="Categories"
+        component={CategoriesScreen}
+        options={{
+          title: t('dashboard.distributor.allCategories'),
+          headerBackTitle: t('common.back'),
+        }}
+      />
+      <Stack.Screen
         name="Products"
         component={ProductsScreen}
         options={{ title: t('products.title'), headerBackTitle: t('common.back') }}
+      />
+      <Stack.Screen
+        name="AddProduct"
+        component={AddProductScreen}
+        options={{ title: t('products.form.title'), headerBackTitle: t('common.back') }}
       />
       <Stack.Screen
         name="Cart"

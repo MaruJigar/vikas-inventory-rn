@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 import { Screen, Card, Button, Section, Input, LanguageToggle } from '@/components';
-import { colors, spacing, typography } from '@/theme';
+import { colors, radius, spacing, typography } from '@/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useVisitStore } from '@/store/useVisitStore';
 import { getCurrentCoords, type CoordsResult } from '@/lib/location';
@@ -17,13 +19,23 @@ import {
   useNoOrderVisit,
   useVisitSession,
 } from '@/features/visit/hooks';
-import type { HomeStackParamList } from '@/navigation/types';
+import { RecentOrders } from '@/features/orders/components/RecentOrders';
+import type { HomeStackParamList, MainTabParamList } from '@/navigation/types';
 
 export function SalesmanDashboardScreen() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const navigation =
     useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const goToOrder = (id: string) =>
+    navigation
+      .getParent<BottomTabNavigationProp<MainTabParamList>>()
+      ?.navigate('Orders', {
+        screen: 'OrderDetail',
+        params: { id },
+        // Keep the Orders list beneath so the detail has a back button.
+        initial: false,
+      });
 
   const workingDay = useVisitStore((s) => s.workingDay);
   const activeVisit = useVisitStore((s) => s.activeVisit);
@@ -32,8 +44,9 @@ export function SalesmanDashboardScreen() {
   const reset = useVisitStore((s) => s.reset);
 
   const role = useAuthStore((s) => s.user?.role);
+  const isSalesman = role === 'SALESMAN';
   // Restore real check-in/visit state from the backend (cache is cleared on logout).
-  const session = useVisitSession(role === 'SALESMAN');
+  const session = useVisitSession(isSalesman);
 
   const checkIn = useCheckIn();
   const checkOut = useCheckOut();
@@ -92,14 +105,18 @@ export function SalesmanDashboardScreen() {
   };
 
   return (
-    <Screen>
+    <Screen edges={['top']}>
       <View style={styles.topBar}>
-        <Text style={typography.h1}>
-          {t('dashboard.greeting', { name: user?.full_name ?? '' })}
-        </Text>
+        <View style={styles.greetingWrap}>
+          <Text style={styles.hello}>{t('dashboard.hello')}</Text>
+          <Text style={typography.h1} numberOfLines={1}>
+            {user?.full_name ?? ''}
+          </Text>
+        </View>
         <LanguageToggle />
       </View>
 
+      {isSalesman ? (
       <Card style={styles.checkInCard}>
         <Text style={styles.checkInStatus}>
           {session.isLoading
@@ -113,19 +130,30 @@ export function SalesmanDashboardScreen() {
                 })
               : t('dashboard.salesman.notCheckedIn')}
         </Text>
-        <Button
-          label={
-            checkedIn
-              ? t('dashboard.salesman.checkOut')
-              : t('dashboard.salesman.checkIn')
-          }
-          variant={checkedIn ? 'danger' : 'primary'}
-          loading={busy || session.isLoading}
-          onPress={() => void (checkedIn ? runCheckOut() : runCheckIn())}
-        />
+        <View style={styles.actionRow}>
+          <Button
+            label={
+              checkedIn
+                ? t('dashboard.salesman.checkOut')
+                : t('dashboard.salesman.checkIn')
+            }
+            variant={checkedIn ? 'danger' : 'primary'}
+            loading={busy || session.isLoading}
+            onPress={() => void (checkedIn ? runCheckOut() : runCheckIn())}
+            style={styles.rowBtn}
+          />
+          <Button
+            label={`${t('dashboard.salesman.startVisit')}  →`}
+            variant="secondary"
+            disabled={!checkedIn || !!activeVisit}
+            onPress={() => navigation.navigate('SelectShop')}
+            style={styles.rowBtn}
+          />
+        </View>
       </Card>
+      ) : null}
 
-      {activeVisit ? (
+      {isSalesman && activeVisit ? (
         <Card style={styles.visitCard}>
           <Text style={styles.visitLabel}>{t('visit.activeVisit')}</Text>
           <Text style={typography.title}>{activeVisit.shopName}</Text>
@@ -159,29 +187,24 @@ export function SalesmanDashboardScreen() {
             />
           )}
         </Card>
-      ) : (
-        <Button
-          label={t('dashboard.salesman.startVisit')}
-          variant="secondary"
-          disabled={!checkedIn}
-          onPress={() => navigation.navigate('SelectShop')}
-          style={styles.startVisit}
-        />
-      )}
+      ) : null}
 
-      <Button
-        label={t('dashboard.salesman.browseProducts')}
-        variant="secondary"
-        onPress={() => navigation.navigate('Products')}
-        style={styles.browse}
-      />
+      <Pressable onPress={() => navigation.navigate('Products')}>
+        <Card style={styles.browseCard}>
+          <View style={styles.browseLeft}>
+            <View style={styles.browseIcon}>
+              <Ionicons name="cube-outline" size={22} color={colors.primary} />
+            </View>
+            <Text style={typography.title}>
+              {t('dashboard.salesman.browseProducts')}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Card>
+      </Pressable>
 
       <Section title={t('dashboard.salesman.recentOrders')}>
-        <Card>
-          <Text style={styles.muted}>
-            {t('dashboard.salesman.noRecentOrders')}
-          </Text>
-        </Card>
+        <RecentOrders onOpenOrder={goToOrder} />
       </Section>
     </Screen>
   );
@@ -190,17 +213,36 @@ export function SalesmanDashboardScreen() {
 const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: spacing.md,
     marginTop: spacing.sm,
   },
+  greetingWrap: { flex: 1 },
+  hello: { ...typography.body, color: colors.textMuted },
   checkInCard: { marginTop: spacing.lg, gap: spacing.md },
   checkInStatus: { ...typography.body, color: colors.textMuted },
+  actionRow: { flexDirection: 'row', gap: spacing.md },
+  rowBtn: { flex: 1 },
   visitCard: { marginTop: spacing.lg, gap: spacing.sm },
   visitLabel: { ...typography.label, color: colors.success },
   visitAction: { marginTop: spacing.sm },
   endBox: { marginTop: spacing.sm, gap: spacing.sm },
   startVisit: { marginTop: spacing.lg },
-  browse: { marginTop: spacing.md },
+  browseCard: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  browseLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  browseIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   muted: { ...typography.body, color: colors.textMuted },
 });

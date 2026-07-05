@@ -99,7 +99,7 @@ export function SalesmanDetailScreen({
   if (isLoading) return <Spinner />;
   if (isError || !salesman) {
     return (
-      <Screen>
+      <Screen edges={[]}>
         <EmptyState
           title={t('salesmen.loadError')}
           actionLabel={t('common.retry')}
@@ -110,7 +110,7 @@ export function SalesmanDetailScreen({
   }
 
   return (
-    <Screen>
+    <Screen edges={[]}>
       <Text style={[typography.h1, styles.title]}>{salesman.full_name}</Text>
       <EditForm salesman={salesman} onSaved={() => navigation.goBack()} />
     </Screen>
