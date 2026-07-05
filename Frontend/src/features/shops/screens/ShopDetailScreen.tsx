@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { Screen, Card, Button, Spinner, EmptyState } from '@/components';
@@ -76,9 +77,22 @@ export function ShopDetailScreen({
         <Row label={t('shops.detail.owner')} value={shop.owner_name || dash} />
         <Row label={t('shops.detail.phone')} value={shop.phone} />
         <Row label={t('shops.detail.address')} value={shop.address} />
-        <Row label={t('shops.detail.city')} value={shop.city || dash} />
-        <Row label={t('shops.detail.state')} value={shop.state || dash} />
+        <Row label={t('shops.detail.city')} value={shop.city_name || dash} />
+        <Row label={t('shops.detail.state')} value={shop.state_name || dash} />
         <Row label={t('shops.detail.gst')} value={shop.gst_number || dash} />
+        {shop.maps_link ? (
+          <Pressable
+            style={styles.mapsRow}
+            onPress={() => void Linking.openURL(shop.maps_link as string)}
+            accessibilityRole="link"
+          >
+            <Text style={styles.rowLabel}>{t('shops.detail.maps')}</Text>
+            <View style={styles.mapsLink}>
+              <Ionicons name="location-outline" size={16} color={colors.primary} />
+              <Text style={styles.mapsLinkText}>{t('shops.detail.openMaps')}</Text>
+            </View>
+          </Pressable>
+        ) : null}
         <Row
           label={t('shops.detail.status')}
           value={shop.verification_status}
@@ -121,5 +135,13 @@ const styles = StyleSheet.create({
   },
   rowLabel: { ...typography.label },
   rowValue: { ...typography.body, flexShrink: 1, textAlign: 'right' },
+  mapsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.lg,
+  },
+  mapsLink: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  mapsLinkText: { ...typography.body, color: colors.primary },
   delete: { marginTop: spacing.xl },
 });

@@ -73,9 +73,9 @@ export function SelectShopScreen({ navigation }: HomeScreenProps<'SelectShop'>) 
       <Card style={styles.card}>
         <View style={styles.cardInfo}>
           <Text style={typography.title}>{item.name}</Text>
-          {item.city || item.state ? (
+          {item.city_name || item.state_name ? (
             <Text style={styles.muted}>
-              {[item.city, item.state].filter(Boolean).join(', ')}
+              {[item.city_name, item.state_name].filter(Boolean).join(', ')}
             </Text>
           ) : null}
         </View>

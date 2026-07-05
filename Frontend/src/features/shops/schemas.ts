@@ -10,8 +10,15 @@ export const addShopSchema = z.object({
   owner_name: z.string().trim().optional(),
   phone: z.string().trim().regex(phoneRegex, 'validation.phone'),
   address: z.string().trim().min(1, 'validation.required'),
-  city: z.string().trim().optional(),
-  state: z.string().trim().optional(),
+  // State/City are picked from dropdowns (their names are sent alongside the ids).
+  state_id: z.string().min(1, 'validation.required'),
+  city_id: z.string().min(1, 'validation.required'),
+  maps_link: z
+    .string()
+    .trim()
+    .url('validation.url')
+    .optional()
+    .or(z.literal('')),
   gst_number: z
     .string()
     .trim()

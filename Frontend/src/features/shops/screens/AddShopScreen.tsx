@@ -1,28 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Alert,
-  Image,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { useForm } from 'react-hook-form';
+import React, { useMemo, useState } from 'react';
+import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 
-import { Screen, Button, Card, ControlledInput, Input } from '@/components';
+import { Screen, Button, Card, ControlledInput, Select } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { confirmAction, notify } from '@/lib/dialog';
-import { searchPlaces, type PlaceResult } from '@/lib/geocode';
-import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { addShopSchema, type AddShopForm } from '@/features/shops/schemas';
 import { useCheckDuplicate, useCreateShop } from '@/features/shops/hooks';
+import { useCities, useStates } from '@/features/region/hooks';
 import type {
   CreateShopPayload,
   DuplicateMatch,
@@ -30,106 +20,40 @@ import type {
 } from '@/types/shop';
 import type { ShopsScreenProps } from '@/navigation/types';
 
-type Coords = { latitude: number; longitude: number };
-
 export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
   const { t } = useTranslation();
-  const [coords, setCoords] = useState<Coords | null>(null);
-  const [locating, setLocating] = useState(false);
   const [image, setImage] = useState<PickedImage | null>(null);
-  const [locationLabel, setLocationLabel] = useState<string | null>(null);
-  const [placeQuery, setPlaceQuery] = useState('');
-  const [results, setResults] = useState<PlaceResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const debouncedPlace = useDebouncedValue(placeQuery.trim(), 400);
-
-  // Live search as the user types (one field, no separate button).
-  useEffect(() => {
-    if (debouncedPlace.length < 3) {
-      setResults([]);
-      return;
-    }
-    let active = true;
-    setSearching(true);
-    searchPlaces(debouncedPlace)
-      .then((r) => active && setResults(r))
-      .catch(() => active && setResults([]))
-      .finally(() => active && setSearching(false));
-    return () => {
-      active = false;
-    };
-  }, [debouncedPlace]);
-
-  const selectPlace = (place: PlaceResult) => {
-    setCoords({ latitude: place.latitude, longitude: place.longitude });
-    setLocationLabel(place.label);
-    setResults([]);
-    setPlaceQuery('');
-  };
 
   const checkDuplicate = useCheckDuplicate();
   const createShop = useCreateShop();
   const busy = checkDuplicate.isPending || createShop.isPending;
 
-  const { control, handleSubmit } = useForm<AddShopForm>({
+  const { control, handleSubmit, watch, setValue } = useForm<AddShopForm>({
     resolver: zodResolver(addShopSchema),
     defaultValues: {
       name: '',
       owner_name: '',
       phone: '',
       address: '',
-      city: '',
-      state: '',
+      state_id: '',
+      city_id: '',
+      maps_link: '',
       gst_number: '',
     },
   });
 
-  const captureLocation = async () => {
-    setLocating(true);
-    try {
-      if (Platform.OS === 'web') {
-        // Browsers block geolocation on insecure origins (non-HTTPS,
-        // non-localhost) and report "denied" without ever prompting.
-        if ((globalThis as { isSecureContext?: boolean }).isSecureContext === false) {
-          notify(t('shops.form.locationInsecure'));
-          return;
-        }
-        // On web the prompt fires on the position request itself, not on the
-        // permission request — so call it directly to trigger the dialog.
-        const pos = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
-        setCoords({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-        });
-        setLocationLabel(t('shops.form.currentLocation'));
-        return;
-      }
+  const stateId = watch('state_id');
+  const statesQuery = useStates();
+  const citiesQuery = useCities(stateId || undefined);
 
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        notify(t('shops.form.locationPermission'));
-        return;
-      }
-      const pos = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      setCoords({
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-      });
-      setLocationLabel(t('shops.form.currentLocation'));
-    } catch {
-      notify(
-        Platform.OS === 'web'
-          ? t('shops.form.locationDenied')
-          : t('shops.form.locationError'),
-      );
-    } finally {
-      setLocating(false);
-    }
-  };
+  const stateOptions = useMemo(
+    () => (statesQuery.data ?? []).map((s) => ({ label: s.name, value: s.id })),
+    [statesQuery.data],
+  );
+  const cityOptions = useMemo(
+    () => (citiesQuery.data ?? []).map((c) => ({ label: c.name, value: c.id })),
+    [citiesQuery.data],
+  );
 
   const toPickedImage = (
     asset: ImagePicker.ImagePickerAsset,
@@ -182,18 +106,19 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
 
   const buildPayload = (
     values: AddShopForm,
-    location: Coords,
     bypass?: DuplicateMatch,
   ): CreateShopPayload => ({
     name: values.name,
     phone: values.phone,
     address: values.address,
     owner_name: values.owner_name || undefined,
-    city: values.city || undefined,
-    state: values.state || undefined,
+    state_id: values.state_id,
+    city_id: values.city_id,
+    // Send the picked names too — the backend stores them as city_name/state_name.
+    state: stateOptions.find((o) => o.value === values.state_id)?.label,
+    city: cityOptions.find((o) => o.value === values.city_id)?.label,
+    maps_link: values.maps_link || undefined,
     gst_number: values.gst_number || undefined,
-    latitude: location.latitude,
-    longitude: location.longitude,
     duplicate_bypass: bypass
       ? { matched_shop_id: bypass.shop.id, match_type: bypass.match_type }
       : undefined,
@@ -211,16 +136,12 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
   };
 
   const onSubmit = async (values: AddShopForm) => {
-    if (!coords) {
-      notify(t('shops.form.locationRequired'));
-      return;
-    }
     try {
       const matches = await checkDuplicate.mutateAsync({
         name: values.name,
         phone: values.phone,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
+        city_id: values.city_id,
+        state_id: values.state_id,
       });
 
       if (matches.length > 0) {
@@ -233,12 +154,12 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
           )}`,
           confirmLabel: t('shops.duplicate.addAnyway'),
           cancelLabel: t('shops.duplicate.cancel'),
-          onConfirm: () => submitShop(buildPayload(values, coords, top)),
+          onConfirm: () => submitShop(buildPayload(values, top)),
         });
         return;
       }
 
-      submitShop(buildPayload(values, coords));
+      submitShop(buildPayload(values));
     } catch (err) {
       notify(getApiErrorMessage(err, t));
     }
@@ -270,61 +191,69 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
         label={t('shops.form.address')}
         multiline
       />
+
+      <Controller
+        control={control}
+        name="state_id"
+        render={({ field: { value, onChange }, fieldState: { error } }) => (
+          <Select
+            label={t('shops.form.state')}
+            placeholder={t('shops.form.selectState')}
+            value={value}
+            options={stateOptions}
+            loading={statesQuery.isLoading}
+            searchable
+            searchPlaceholder={t('shops.form.searchState')}
+            emptyText={t('shops.form.noStates')}
+            onChange={(v) => {
+              onChange(v);
+              // Reset the dependent city whenever the state changes.
+              setValue('city_id', '', { shouldValidate: false });
+            }}
+            error={error?.message ? t(error.message) : undefined}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="city_id"
+        render={({ field: { value, onChange }, fieldState: { error } }) => (
+          <Select
+            label={t('shops.form.city')}
+            placeholder={
+              stateId
+                ? t('shops.form.selectCity')
+                : t('shops.form.selectStateFirst')
+            }
+            value={value}
+            options={cityOptions}
+            disabled={!stateId}
+            loading={!!stateId && citiesQuery.isFetching}
+            searchable
+            searchPlaceholder={t('shops.form.searchCity')}
+            emptyText={t('shops.form.noCities')}
+            onChange={onChange}
+            error={error?.message ? t(error.message) : undefined}
+          />
+        )}
+      />
+
       <ControlledInput
         control={control}
-        name="city"
-        label={`${t('shops.form.city')} (${t('shops.form.optional')})`}
+        name="maps_link"
+        label={`${t('shops.form.mapsLink')} (${t('shops.form.optional')})`}
+        placeholder={t('shops.form.mapsLinkPlaceholder')}
+        autoCapitalize="none"
+        keyboardType="url"
       />
-      <ControlledInput
-        control={control}
-        name="state"
-        label={`${t('shops.form.state')} (${t('shops.form.optional')})`}
-      />
+
       <ControlledInput
         control={control}
         name="gst_number"
         label={`${t('shops.form.gstNumber')} (${t('shops.form.optional')})`}
         autoCapitalize="characters"
       />
-
-      <Text style={styles.sectionLabel}>{t('shops.form.location')}</Text>
-      <Input
-        value={placeQuery}
-        onChangeText={setPlaceQuery}
-        placeholder={t('shops.form.searchLocationPlaceholder')}
-        returnKeyType="search"
-        rightIcon="locate"
-        rightIconLoading={locating}
-        onRightIconPress={() => void captureLocation()}
-        rightIconLabel={t('shops.form.captureLocation')}
-      />
-      {searching ? (
-        <Text style={styles.searchHint}>{t('common.loading')}</Text>
-      ) : null}
-
-      {results.map((r, i) => (
-        <Pressable
-          key={`${r.latitude}-${r.longitude}-${i}`}
-          onPress={() => selectPlace(r)}
-        >
-          <Card style={styles.resultRow}>
-            <Ionicons name="location-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.resultText} numberOfLines={2}>
-              {r.label}
-            </Text>
-          </Card>
-        </Pressable>
-      ))}
-
-      {coords ? (
-        <View style={styles.coordsRow}>
-          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-          <Text style={styles.coords} numberOfLines={2}>
-            {locationLabel ??
-              `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`}
-          </Text>
-        </View>
-      ) : null}
 
       <Text style={styles.sectionLabel}>{t('shops.form.photo')}</Text>
       {image ? (
@@ -372,27 +301,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
-  orText: {
-    ...typography.caption,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginVertical: spacing.sm,
-  },
-  searchHint: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
-  resultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  resultText: { ...typography.caption, color: colors.text, flex: 1 },
-  coordsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  coords: { ...typography.caption, color: colors.text, flex: 1 },
   muted: { ...typography.body, color: colors.textMuted },
   photoPlaceholder: {
     alignItems: 'center',

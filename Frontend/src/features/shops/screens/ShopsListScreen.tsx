@@ -46,9 +46,9 @@ export function ShopsListScreen({ navigation }: ShopsScreenProps<'ShopsList'>) {
           <Text style={styles.muted}>{item.owner_name}</Text>
         ) : null}
         <Text style={styles.muted}>{item.phone}</Text>
-        {item.city || item.state ? (
+        {item.city_name || item.state_name ? (
           <Text style={styles.location}>
-            {[item.city, item.state].filter(Boolean).join(', ')}
+            {[item.city_name, item.state_name].filter(Boolean).join(', ')}
           </Text>
         ) : null}
       </Card>
