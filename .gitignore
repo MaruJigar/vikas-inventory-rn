@@ -51,3 +51,4 @@ generated/prisma
 .prompt
 .md
 
+/ssh-tool
