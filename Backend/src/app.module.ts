@@ -41,6 +41,7 @@ import { VisitModule } from './visit/visit.module';
 import { QueueModule } from './queue/queue.module';
 import { EmailModule } from './email/email.module';
 import { RegionModule } from './region/region.module';
+import { OrderStatusModule } from './order-status/order-status.module';
 
 import { appConfig } from './config/app.config';
 import { databaseConfig } from './config/database.config';
@@ -142,6 +143,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     QueueModule.forRoot(),
     EmailModule,
     RegionModule,
+    OrderStatusModule,
   ],
   controllers: [AppController],
   providers: [

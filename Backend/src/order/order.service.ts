@@ -30,15 +30,10 @@ import { UpdateOrderDto, CancelOrderDto } from './dto/update-order.dto';
 import { OrderListQueryDto } from './dto/order-list-query.dto';
 import { BackorderListQueryDto } from './dto/backorder-list-query.dto';
 import { ResolveBackorderDto } from './dto/resolve-backorder.dto';
-import {
-  UpdateOrderStatusDto,
-  ALLOWED_STATUS_TRANSITIONS,
-} from './dto/update-order-status.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { OrderStatusService } from '../order-status/order-status.service';
 import * as ExcelJS from 'exceljs';
 import * as stream from 'stream';
-
-// ─── Status constants ─────────────────────────────────────────────────────────
-const PRE_DISPATCH_STATUSES = ['CREATED', 'CONFIRMED', 'PROCESSING', 'PACKED'];
 
 @Injectable()
 export class OrderService {
@@ -67,6 +62,7 @@ export class OrderService {
     private dataSource: DataSource,
     private auditLogService: AuditLogService,
     private socketGateway: AppSocketGateway,
+    private orderStatusService: OrderStatusService,
   ) {}
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -187,6 +183,8 @@ export class OrderService {
     if (!dto.products || dto.products.length === 0)
       throw new BadRequestException('At least one product is required');
 
+    const initialStatus = await this.orderStatusService.getInitialStatus();
+
     const { savedOrder, createdBackorders } = await this.dataSource.transaction(
       async (manager) => {
         let grossOrderAmount = 0;
@@ -258,8 +256,7 @@ export class OrderService {
             backordered_quantity: backorderQty,
             dispatched_quantity: 0,
             delivered_quantity: 0,
-            status:
-              backorderQty > 0 && reservable === 0 ? 'BACKORDERED' : 'RESERVED',
+            status_id: initialStatus.id,
           });
 
           inventoryActions.push({
@@ -287,7 +284,7 @@ export class OrderService {
           shop_id: shop.id,
           salesman_id: salesman.id,
           distributor_id: salesman.distributor_id,
-          status: 'CREATED',
+          status_id: initialStatus.id,
           gross_order_amount: grossOrderAmount,
           total_product_discount_amount: totalProductDiscountAmount,
           bill_discount_type: billDiscountType,
@@ -374,8 +371,8 @@ export class OrderService {
         // Status history
         await manager.getRepository(OrderStatusHistory).save({
           order_id: savedOrderRec.id,
-          old_status: '',
-          new_status: 'CREATED',
+          old_status_id: undefined,
+          new_status_id: initialStatus.id,
           changed_by_user_id: userId,
         });
 
@@ -444,18 +441,26 @@ export class OrderService {
 
   async updateOrder(userId: string, orderId: string, dto: UpdateOrderDto) {
     const salesman = await this.getSalesmanOrFail(userId);
-    const order = await this.orderRepo.findOne({ where: { id: orderId } });
+    const order = await this.orderRepo.findOne({
+      where: { id: orderId },
+      relations: { status: true },
+    });
     if (!order) throw new NotFoundException('Order not found');
     if (order.salesman_id !== salesman.id)
       throw new ForbiddenException('Not your order');
-    if (order.status === 'CANCELLED' || order.status === 'DELIVERED') {
+    const finalStatus = await this.orderStatusService.getFinalDeliveredStatus();
+    const preDispatchStatuses = await this.orderStatusService.getPreDispatchStatuses();
+
+    if (order.status.is_cancel_status || order.status_id === finalStatus.id) {
       throw new BadRequestException(
         'Cannot edit a cancelled or delivered order',
       );
     }
 
-    const isPostDispatch = !PRE_DISPATCH_STATUSES.includes(order.status);
+    const isPostDispatch = !preDispatchStatuses.includes(order.status_id);
     const oldData = { ...order };
+
+    const initialStatus = await this.orderStatusService.getInitialStatus();
 
     const savedOrder = await this.dataSource.transaction(async (manager) => {
       const existingItems = await manager
@@ -582,8 +587,7 @@ export class OrderService {
           backordered_quantity: backorderQty,
           dispatched_quantity: 0,
           delivered_quantity: 0,
-          status:
-            backorderQty > 0 && reservable === 0 ? 'BACKORDERED' : 'RESERVED',
+          status_id: initialStatus.id,
         });
       }
 
@@ -624,7 +628,7 @@ export class OrderService {
         new_data: newData as any,
         changed_by_user_id: userId,
         changed_by_role: 'SALESMAN',
-        order_status_at_time: order.status,
+        order_status_at_time: order.status_id,
         reason: dto.reason || null,
         distributor_notified: false,
       } as any);
@@ -660,11 +664,18 @@ export class OrderService {
     orderId: string,
     dto: CancelOrderDto,
   ) {
-    const order = await this.orderRepo.findOne({ where: { id: orderId } });
+    const order = await this.orderRepo.findOne({
+      where: { id: orderId },
+      relations: { status: true },
+    });
     if (!order) throw new NotFoundException('Order not found');
-    if (order.status === 'CANCELLED')
+    const cancelStatus = await this.orderStatusService.getCancelStatus();
+    const finalStatus = await this.orderStatusService.getFinalDeliveredStatus();
+    const preDispatchStatuses = await this.orderStatusService.getPreDispatchStatuses();
+
+    if (order.status.is_cancel_status)
       throw new BadRequestException('Order already cancelled');
-    if (order.status === 'DELIVERED')
+    if (order.status_id === finalStatus.id)
       throw new BadRequestException('Cannot cancel a delivered order');
 
     // Role-based access control
@@ -676,7 +687,7 @@ export class OrderService {
       });
       if (!salesman || salesman.id !== order.salesman_id)
         throw new ForbiddenException('Not your order');
-      if (!PRE_DISPATCH_STATUSES.includes(order.status)) {
+      if (!preDispatchStatuses.includes(order.status_id)) {
         throw new BadRequestException(
           'Salesman can only cancel orders before dispatch',
         );
@@ -689,7 +700,7 @@ export class OrderService {
       throw new ForbiddenException('Unauthorized role');
     }
 
-    const oldStatus = order.status;
+    const oldStatusId = order.status_id;
 
     await this.dataSource.transaction(async (manager) => {
       const items = await manager
@@ -745,11 +756,11 @@ export class OrderService {
         }
         await manager
           .getRepository(OrderItem)
-          .update(item.id, { status: 'CANCELLED' });
+          .update(item.id, { status_id: cancelStatus.id });
       }
 
       await manager.getRepository(Order).update(order.id, {
-        status: 'CANCELLED',
+        status_id: cancelStatus.id,
         cancelled_at: new Date(),
         cancelled_by_user_id: userId,
         cancellation_reason: dto.cancellationReason,
@@ -757,8 +768,8 @@ export class OrderService {
 
       await manager.getRepository(OrderStatusHistory).save({
         order_id: order.id,
-        old_status: oldStatus,
-        new_status: 'CANCELLED',
+        old_status_id: oldStatusId,
+        new_status_id: cancelStatus.id,
         changed_by_user_id: userId,
         reason: dto.cancellationReason,
       });
@@ -804,26 +815,32 @@ export class OrderService {
     orderId: string,
     dto: UpdateOrderStatusDto,
   ) {
-    const order = await this.orderRepo.findOne({ where: { id: orderId } });
+    const order = await this.orderRepo.findOne({
+      where: { id: orderId },
+      relations: { status: true },
+    });
     if (!order) throw new NotFoundException('Order not found');
 
     // Verify ownership (SUPER_ADMIN, DISTRIBUTOR_ADMIN, MANUFACTURER_ADMIN)
     await this.verifyOrderOwnership(order, role, userId);
 
     // Validate transition
-    const allowed = ALLOWED_STATUS_TRANSITIONS[order.status] ?? [];
-    if (!allowed.includes(dto.status)) {
+    const nextStatus = await this.orderStatusService.getNextStatus(
+      order.status_id,
+    );
+    if (dto.status_id !== nextStatus.id) {
       throw new BadRequestException(
-        `Cannot transition order from ${order.status} to ${dto.status}. ` +
-          `Allowed: [${allowed.join(', ') || 'none'}]`,
+        `Cannot transition order from ${order.status.name} to the requested status. ` +
+          `Allowed: [${nextStatus.name}]`,
       );
     }
 
-    const oldStatus = order.status;
+    const newStatus = await this.orderStatusService.findOne(dto.status_id);
+    const oldStatusId = order.status_id;
 
     await this.dataSource.transaction(async (manager) => {
       // Inventory: on DISPATCHED, release reserved → deduct from available
-      if (dto.status === 'DISPATCHED') {
+      if (newStatus.is_dispatch_status) {
         const items = await manager
           .getRepository(OrderItem)
           .find({ where: { order_id: order.id } });
@@ -863,13 +880,14 @@ export class OrderService {
             .getRepository(OrderItem)
             .update(item.id, {
               dispatched_quantity: item.reserved_quantity,
-              status: 'DISPATCHED',
+              status_id: newStatus.id,
             });
         }
       }
 
       // Inventory: on DELIVERED, update delivered_quantity on items
-      if (dto.status === 'DELIVERED') {
+      const finalStatus = await this.orderStatusService.getFinalDeliveredStatus();
+      if (newStatus.id === finalStatus.id) {
         const items = await manager
           .getRepository(OrderItem)
           .find({ where: { order_id: order.id } });
@@ -878,21 +896,21 @@ export class OrderService {
             .getRepository(OrderItem)
             .update(item.id, {
               delivered_quantity: item.dispatched_quantity,
-              status: 'DELIVERED',
+              status_id: newStatus.id,
             });
         }
       }
 
       // Update order status
       await manager.getRepository(Order).update(order.id, {
-        status: dto.status,
+        status_id: newStatus.id,
       });
 
       // OrderStatusHistory record
       await manager.getRepository(OrderStatusHistory).save({
         order_id: order.id,
-        old_status: oldStatus,
-        new_status: dto.status,
+        old_status_id: oldStatusId,
+        new_status_id: newStatus.id,
         changed_by_user_id: userId,
         reason: dto.notes || undefined,
       });
@@ -901,9 +919,9 @@ export class OrderService {
       await manager.getRepository(FulfillmentLog).save({
         order_id: order.id,
         distributor_id: order.distributor_id,
-        action: dto.status,
-        old_status: oldStatus,
-        new_status: dto.status,
+        action: newStatus.name,
+        old_status: order.status.name,
+        new_status: newStatus.name,
         performed_by_user_id: userId,
         notes: dto.notes || undefined,
       });
@@ -914,19 +932,19 @@ export class OrderService {
       'ORDER',
       order.id,
       userId,
-      { from: oldStatus, to: dto.status },
+      { from: oldStatusId, to: newStatus.id },
     );
 
     // Emit websocket events per status
-    const socketEvent = `ORDER_${dto.status}`;
+    const socketEvent = `ORDER_${newStatus.name}`;
     this.socketGateway.broadcastToRoom(
       `distributor:${order.distributor_id}`,
       socketEvent,
       {
         orderId: order.id,
         orderNumber: order.order_number,
-        from: oldStatus,
-        to: dto.status,
+        from: oldStatusId,
+        to: newStatus.id,
         timestamp: new Date(),
       },
     );
@@ -936,8 +954,8 @@ export class OrderService {
       {
         orderId: order.id,
         orderNumber: order.order_number,
-        from: oldStatus,
-        to: dto.status,
+        from: oldStatusId,
+        to: newStatus.id,
         timestamp: new Date(),
       },
     );
@@ -1029,7 +1047,7 @@ export class OrderService {
 
     // Phase 5: Validated typed filters (no `as any`)
     if (status)
-      qb.andWhere('order.status = :status', { status });
+      qb.andWhere('order.status_id = :status', { status });
     if (salesman_id)
       qb.andWhere('order.salesman_id = :sId', { sId: salesman_id });
     if (shop_id)
@@ -1193,7 +1211,7 @@ export class OrderService {
     }
 
     if (queryDto.status) {
-      qb.andWhere('order.status = :status', { status: queryDto.status });
+      qb.andWhere('order.status_id = :status', { status: queryDto.status });
     }
     if (queryDto.salesman_id) {
       qb.andWhere('order.salesman_id = :salesman_id', { salesman_id: queryDto.salesman_id });
@@ -1226,6 +1244,7 @@ export class OrderService {
     query: OrderListQueryDto,
   ): Promise<stream.PassThrough> {
     const qb = await this.buildOrdersQuery(userId, role, query);
+    qb.leftJoinAndSelect('order.status', 'status');
     qb.take(10000);
 
     const orders = await qb.getMany();
@@ -1249,7 +1268,7 @@ export class OrderService {
         shop_name: o.shop?.name,
         salesman_name: o.salesman?.full_name,
         distributor_name: o.distributor?.business_name,
-        status: o.status,
+        status: o.status?.name,
         final_amount: o.final_order_amount,
         created_at: o.created_at.toISOString(),
       });
@@ -1266,6 +1285,7 @@ export class OrderService {
     query: OrderListQueryDto,
   ): Promise<stream.PassThrough> {
     const qb = await this.buildOrdersQuery(userId, role, query);
+    qb.leftJoinAndSelect('order.status', 'status');
     qb.take(10000);
 
     const orders = await qb.getMany();
@@ -1289,7 +1309,7 @@ export class OrderService {
         shop_name: o.shop?.name,
         salesman_name: o.salesman?.full_name,
         distributor_name: o.distributor?.business_name,
-        status: o.status,
+        status: o.status?.name,
         final_amount: o.final_order_amount,
         created_at: o.created_at.toISOString(),
       });

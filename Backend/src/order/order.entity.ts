@@ -17,12 +17,13 @@ import { Salesman } from '../salesman/salesman.entity';
 import { Distributor } from '../distributor/distributor.entity';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
 import { User } from '../user/user.entity';
+import { OrderStatus } from '../order-status/order-status.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('orders')
-@Index('idx_orders_shop_status', ['shop_id', 'status'])
-@Index('idx_orders_salesman_status', ['salesman_id', 'status'])
-@Index('idx_orders_dist_status', ['distributor_id', 'status'])
+@Index('idx_orders_shop_status', ['shop_id', 'status_id'])
+@Index('idx_orders_salesman_status', ['salesman_id', 'status_id'])
+@Index('idx_orders_dist_status', ['distributor_id', 'status_id'])
 @Index('idx_orders_created_at', ['created_at'])
 @Index('idx_orders_idempotency_key', ['idempotency_key'], {
   unique: true,
@@ -77,9 +78,13 @@ export class Order {
   @JoinColumn({ name: 'manufacturer_id' })
   manufacturer: Manufacturer;
 
-  @Column({ type: 'varchar', length: 50, default: 'CREATED' })
-  @ApiProperty({ description: 'Status' })
-  status: string;
+  @Column({ type: 'uuid', nullable: true })
+  @ApiProperty({ description: 'Status ID' })
+  status_id: string;
+
+  @ManyToOne(() => OrderStatus)
+  @JoinColumn({ name: 'status_id' })
+  status: OrderStatus;
 
   @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
   @ApiProperty({ description: 'Gross order amount' })

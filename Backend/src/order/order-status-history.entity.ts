@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Order } from './order.entity';
 import { User } from '../user/user.entity';
+import { OrderStatus } from '../order-status/order-status.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('order_status_history')
@@ -24,13 +25,21 @@ export class OrderStatusHistory {
   @JoinColumn({ name: 'order_id' })
   order: Order;
 
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  @ApiPropertyOptional({ description: 'Old status' })
-  old_status: string;
+  @Column({ type: 'uuid', nullable: true })
+  @ApiPropertyOptional({ description: 'Old status ID' })
+  old_status_id: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  @ApiProperty({ description: 'New status' })
-  new_status: string;
+  @ManyToOne(() => OrderStatus)
+  @JoinColumn({ name: 'old_status_id' })
+  old_status: OrderStatus;
+
+  @Column({ type: 'uuid', nullable: true })
+  @ApiProperty({ description: 'New status ID' })
+  new_status_id: string;
+
+  @ManyToOne(() => OrderStatus)
+  @JoinColumn({ name: 'new_status_id' })
+  new_status: OrderStatus;
 
   @Column({ type: 'uuid', nullable: true })
   @ApiPropertyOptional({ description: 'Changed by user id' })

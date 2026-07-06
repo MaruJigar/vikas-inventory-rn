@@ -315,7 +315,27 @@ async function bootstrap() {
     }
   }
 
-  // 8. ORDERS
+  // 8. ORDER STATUSES
+  console.log('[SEED] Seeding Order Statuses...');
+  const orderStatusRepo = getRepo(require('../../order-status/order-status.entity').OrderStatus);
+  const statuses = [
+    { name: 'PENDING', sequence: 1, is_cancel_status: false, is_dispatch_status: false },
+    { name: 'ORDERED', sequence: 2, is_cancel_status: false, is_dispatch_status: false },
+    { name: 'DELIVERED', sequence: 3, is_cancel_status: false, is_dispatch_status: true },
+  ];
+  const orderStatuses: any[] = [];
+  for (const s of statuses) {
+    let os = await orderStatusRepo.findOne({ where: { name: s.name } });
+    if (!os) {
+      os = await orderStatusRepo.save(orderStatusRepo.create(s));
+    }
+    orderStatuses.push(os);
+  }
+  const pendingStatus = orderStatuses[0];
+  const orderedStatus = orderStatuses[1];
+  const deliveredStatus = orderStatuses[2];
+
+  // 9. ORDERS
   console.log('[SEED] Seeding Orders...');
   for (let i = 1; i <= 20; i++) {
     const s = shops[i % 20];
@@ -365,7 +385,7 @@ async function bootstrap() {
         is_offline_created: false,
         post_dispatch_edited: false,
         post_delivery_edited: false,
-        status: i % 2 === 0 ? 'DELIVERED' : 'PENDING',
+        status_id: i % 2 === 0 ? deliveredStatus.id : pendingStatus.id,
       });
       o = await orderRepo.save(orderDraft);
       if (!o) throw new Error('Failed to seed Order');
@@ -388,7 +408,7 @@ async function bootstrap() {
         backordered_quantity: 0,
         dispatched_quantity: 0,
         delivered_quantity: 0,
-        status: 'ORDERED',
+        status_id: orderedStatus.id,
       });
       await itemRepo.save(itemDraft);
     }

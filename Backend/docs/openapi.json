@@ -3795,6 +3795,155 @@
         ]
       }
     },
+    "/v1/order-status": {
+      "post": {
+        "operationId": "OrderStatusController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderStatus"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create a new order status",
+        "tags": [
+          "Order Statuses"
+        ]
+      },
+      "get": {
+        "operationId": "OrderStatusController_findAll_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderStatus"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get all order statuses",
+        "tags": [
+          "Order Statuses"
+        ]
+      }
+    },
+    "/v1/order-status/{id}": {
+      "get": {
+        "operationId": "OrderStatusController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderStatus"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get a single order status by id",
+        "tags": [
+          "Order Statuses"
+        ]
+      },
+      "put": {
+        "operationId": "OrderStatusController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrderStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderStatus"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update an order status",
+        "tags": [
+          "Order Statuses"
+        ]
+      }
+    },
+    "/v1/order-status/{id}/next": {
+      "get": {
+        "operationId": "OrderStatusController_getNextStatus_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "summary": "Get the next active order status based on sequence",
+        "tags": [
+          "Order Statuses"
+        ]
+      }
+    },
     "/v1/locations": {
       "post": {
         "operationId": "LocationController_uploadLocation_v1",
@@ -6654,9 +6803,9 @@
             "type": "string",
             "description": "Manufacturer id"
           },
-          "status": {
+          "status_id": {
             "type": "string",
-            "description": "Status"
+            "description": "Status ID"
           },
           "gross_order_amount": {
             "type": "number",
@@ -6742,7 +6891,7 @@
           "shop_id",
           "salesman_id",
           "distributor_id",
-          "status",
+          "status_id",
           "gross_order_amount",
           "total_product_discount_amount",
           "bill_discount_type",
@@ -6817,24 +6966,127 @@
       "UpdateOrderStatusDto": {
         "type": "object",
         "properties": {
-          "status": {
+          "name": {
             "type": "string",
-            "description": "Target order status",
-            "enum": [
-              "CONFIRMED",
-              "PROCESSING",
-              "PACKED",
-              "DISPATCHED",
-              "DELIVERED"
-            ]
+            "description": "Name of the order status"
           },
-          "notes": {
+          "sequence": {
+            "type": "number",
+            "description": "Sequence number for ordering statuses (must be > 0)"
+          },
+          "can_cancel_order": {
+            "type": "boolean",
+            "description": "Whether an order can be cancelled in this status"
+          },
+          "isactive": {
+            "type": "boolean",
+            "description": "Whether this status is active"
+          },
+          "is_cancel_status": {
+            "type": "boolean",
+            "description": "Whether this is a cancellation status"
+          },
+          "is_dispatch_status": {
+            "type": "boolean",
+            "description": "Whether this is a dispatch status"
+          }
+        }
+      },
+      "CreateOrderStatusDto": {
+        "type": "object",
+        "properties": {
+          "name": {
             "type": "string",
-            "description": "Optional notes for the transition"
+            "description": "Name of the order status"
+          },
+          "sequence": {
+            "type": "number",
+            "description": "Sequence number for ordering statuses (must be > 0)"
+          },
+          "can_cancel_order": {
+            "type": "boolean",
+            "description": "Whether an order can be cancelled in this status"
+          },
+          "isactive": {
+            "type": "boolean",
+            "description": "Whether this status is active"
+          },
+          "is_cancel_status": {
+            "type": "boolean",
+            "description": "Whether this is a cancellation status"
+          },
+          "is_dispatch_status": {
+            "type": "boolean",
+            "description": "Whether this is a dispatch status"
           }
         },
         "required": [
-          "status"
+          "name",
+          "sequence",
+          "can_cancel_order",
+          "isactive",
+          "is_cancel_status",
+          "is_dispatch_status"
+        ]
+      },
+      "OrderStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the order status"
+          },
+          "sequence": {
+            "type": "number",
+            "description": "Sequence number for ordering statuses"
+          },
+          "can_cancel_order": {
+            "type": "boolean",
+            "description": "Whether an order can be cancelled in this status"
+          },
+          "isactive": {
+            "type": "boolean",
+            "description": "Whether this status is active"
+          },
+          "is_cancel_status": {
+            "type": "boolean",
+            "description": "Whether this is a cancellation status"
+          },
+          "is_dispatch_status": {
+            "type": "boolean",
+            "description": "Whether this is a dispatch status"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Created at"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Updated at"
+          },
+          "deleted_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Deleted at"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sequence",
+          "can_cancel_order",
+          "isactive",
+          "is_cancel_status",
+          "is_dispatch_status",
+          "created_at",
+          "updated_at",
+          "deleted_at"
         ]
       },
       "CreateLocationDto": {

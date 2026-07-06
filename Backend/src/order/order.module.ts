@@ -19,6 +19,7 @@ import { DistributorInventory } from '../inventory/distributor-inventory.entity'
 import { InventoryMovement } from '../inventory/inventory-movement.entity';
 import { AuditLogModule } from '../audit-log/audit-log.module';
 import { SocketGatewayModule } from '../socket-gateway/socket-gateway.module';
+import { OrderStatusModule } from '../order-status/order-status.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { SocketGatewayModule } from '../socket-gateway/socket-gateway.module';
     ]),
     AuditLogModule,
     SocketGatewayModule,
+    OrderStatusModule,
   ],
   controllers: [OrdersController],
   providers: [OrderService],

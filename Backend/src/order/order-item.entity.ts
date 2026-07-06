@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Order } from './order.entity';
 import { Product } from '../product/product.entity';
+import { OrderStatus } from '../order-status/order-status.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('order_items')
@@ -89,9 +90,13 @@ export class OrderItem {
   @ApiProperty({ description: 'Delivered quantity' })
   delivered_quantity: number;
 
-  @Column({ type: 'varchar', length: 50, default: 'ORDERED' })
-  @ApiProperty({ description: 'Status' })
-  status: string;
+  @Column({ type: 'uuid', nullable: true })
+  @ApiProperty({ description: 'Status ID' })
+  status_id: string;
+
+  @ManyToOne(() => OrderStatus)
+  @JoinColumn({ name: 'status_id' })
+  status: OrderStatus;
 
   @CreateDateColumn()
   @ApiProperty({ description: 'Created at' })

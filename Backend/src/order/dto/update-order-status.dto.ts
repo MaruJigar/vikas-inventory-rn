@@ -1,23 +1,12 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
-  CREATED: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['PROCESSING', 'CANCELLED'],
-  PROCESSING: ['PACKED', 'CANCELLED'],
-  PACKED: ['DISPATCHED', 'CANCELLED'],
-  DISPATCHED: ['DELIVERED'],
-  DELIVERED: [],
-  CANCELLED: [],
-};
-
 export class UpdateOrderStatusDto {
-  @IsEnum(['CONFIRMED', 'PROCESSING', 'PACKED', 'DISPATCHED', 'DELIVERED'])
+  @IsUUID()
   @ApiProperty({
-    description: 'Target order status',
-    enum: ['CONFIRMED', 'PROCESSING', 'PACKED', 'DISPATCHED', 'DELIVERED'],
+    description: 'Target order status ID',
   })
-  status: string;
+  status_id: string;
 
   @IsOptional()
   @IsString()
