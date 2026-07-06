@@ -70,16 +70,20 @@ export const getShopsColumns = ({
   {
     accessorKey: 'city',
     header: 'City',
-    cell: ({ row }) => (
-      <div className="text-slate-600">{row.original.city || '-'}</div>
-    ),
+    cell: ({ row }) => {
+      const city = row.original.city;
+      const cityName = city && typeof city === 'object' ? (city as any).name : city;
+      return <div className="text-slate-600">{cityName || '-'}</div>;
+    },
   },
   {
     accessorKey: 'state',
     header: 'State',
-    cell: ({ row }) => (
-      <div className="text-slate-600">{row.original.state || '-'}</div>
-    ),
+    cell: ({ row }) => {
+      const state = row.original.state;
+      const stateName = state && typeof state === 'object' ? (state as any).name : state;
+      return <div className="text-slate-600">{stateName || '-'}</div>;
+    },
   },
   {
     accessorKey: 'verification_status',
