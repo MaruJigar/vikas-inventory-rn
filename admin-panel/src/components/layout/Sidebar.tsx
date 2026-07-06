@@ -58,7 +58,7 @@ export function Sidebar() {
   const filteredItems = role ? navItems.filter(item => hasRole(role, item.roles)) : [];
 
   return (
-    <div className="w-64 bg-slate-900 text-white min-h-screen flex flex-col">
+    <div className="w-64 bg-slate-900 text-white h-full flex flex-col">
       <div className="p-6 font-bold text-xl border-b border-slate-800">
         Vikas Admin
       </div>
