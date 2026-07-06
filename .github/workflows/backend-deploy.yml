@@ -4,9 +4,19 @@ on:
   push:
     branches:
       - devlopment
+    paths:
+      # Source code
+      - "Backend/**"
+      - "admin-panel/**"
+      # This workflow file itself
+      - ".github/workflows/backend-deploy.yml"
   pull_request:
     branches:
       - devlopment
+    paths:
+      - "Backend/**"
+      - "admin-panel/**"
+      - ".github/workflows/backend-deploy.yml"
 
 concurrency:
   group: backend-production
@@ -118,7 +128,7 @@ jobs:
             # ── 3. Run DB migrations ─────────────────────────────────────
             npm run migration:run
 
-            # ── 4. Reload Backend ─────────────────────────────────────────
+            # ── 4. Reload Backend ────────────────────────────────────────
             pm2 reload ecosystem.config.js --update-env
             pm2 save
 

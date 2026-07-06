@@ -1,11 +1,12 @@
 name: Frontend Web CI/CD Pipeline
 
-# Runs when Frontend code is pushed to the `devlopment` branch.
 on:
   push:
     branches: [devlopment]
     paths:
+      # Expo application source
       - "Frontend/**"
+      # This workflow file itself
       - ".github/workflows/frontend-build.yml"
 
 # Only keep the newest run; cancel superseded ones.
@@ -44,14 +45,13 @@ jobs:
   build-and-deploy-web:
     name: Expo Web Export & Deploy
     needs: typecheck
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: Frontend
 
     env:
-      # Production API base URL — must include /v1 prefix, no trailing slash
+      # Production API base URL — /v1 prefix, no trailing slash
       EXPO_PUBLIC_API_URL: https://api.vikas-marketing.work.gd/v1
 
     steps:
@@ -103,7 +103,7 @@ jobs:
             cd "$REPO/Frontend"
             npm ci
 
-            # ── 3. Write production env (CI sets EXPO_PUBLIC_API_URL)  ───
+            # ── 3. Write production env ─────────────────────────────────
             echo "EXPO_PUBLIC_API_URL=https://api.vikas-marketing.work.gd/v1" > .env
             echo "EXPO_PUBLIC_API_URL=https://api.vikas-marketing.work.gd/v1" > .env.production
 
@@ -111,8 +111,7 @@ jobs:
             rm -rf .expo dist
             npx expo export --platform web
 
-            # ── 5. Caddy reloads automatically (static file_server) ─────
-            #    No Caddy restart required; dist/ is served directly.
+            # ── 5. Caddy serves dist/ directly — no restart required ────
             echo "✅ Static files deployed to dist/"
 
             # ── 6. Verify web app is reachable ──────────────────────────
