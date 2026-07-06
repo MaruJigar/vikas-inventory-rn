@@ -94,27 +94,24 @@ jobs:
 
             REPO=/var/www/vikas-inventory-rn
 
-            # ── 1. Pull latest code ─────────────────────────────────────
+            # ── 1. Pull latest code ──────────────────────────────────────
             cd "$REPO"
             git fetch origin
-            git reset --hard origin/devlopment
+            git checkout devlopment
+            git pull --ff-only origin devlopment
 
             # ── 2. Install deps ─────────────────────────────────────────
             cd "$REPO/Frontend"
             npm ci
 
-            # ── 3. Write production env ─────────────────────────────────
-            echo "EXPO_PUBLIC_API_URL=https://api.vikas-marketing.work.gd/v1" > .env
-            echo "EXPO_PUBLIC_API_URL=https://api.vikas-marketing.work.gd/v1" > .env.production
-
-            # ── 4. Clear Metro cache and export ─────────────────────────
+            # ── 3. Clear Metro cache and export ──────────────────────────
             rm -rf .expo dist
             npx expo export --platform web
 
-            # ── 5. Caddy serves dist/ directly — no restart required ────
+            # ── 4. Caddy serves dist/ directly — no restart required ────
             echo "✅ Static files deployed to dist/"
 
-            # ── 6. Verify web app is reachable ──────────────────────────
+            # ── 5. Verify web app is reachable ────────────────────────────
             sleep 3
             curl -sf https://app.vikas-marketing.work.gd > /dev/null \
               && echo "✅ Expo Web: healthy" \
