@@ -100,3 +100,42 @@ jobs:
               }]
             }')
           curl -sf -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK"
+
+  # 4) Export Expo Web app and upload as deployment artifact
+  build-web:
+    name: Expo Web Export
+    needs: typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+          
+      - name: Install dependencies
+        run: |
+          npm ci
+          # Automatically install required web dependencies if they are missing
+          npx expo install react-native-web react-dom @expo/metro-runtime -- --legacy-peer-deps
+          
+      - name: Export Web Build
+        run: npx expo export --platform web --non-interactive
+        
+      - name: Determine Output Directory
+        id: outdir
+        run: |
+          # Do not hardcode paths, inspect Expo config gracefully
+          DIR=$(node -e "const fs=require('fs');const app=fs.existsSync('./app.json')?require('./app.json'):{};console.log(app.expo?.web?.outputDir || 'dist')")
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          
+      - name: Upload Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: expo-web-build
+          path: Frontend/${{ steps.outdir.outputs.dir }}
