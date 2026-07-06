@@ -408,7 +408,7 @@ async function bootstrap() {
 
   // --- PHASE 5 & 6: VISITS & ORDERS ---
   console.log('[SEED] Seeding Order Statuses...');
-  const orderStatuses = [];
+  const orderStatuses: any[] = [];
   const statusNames = ['PENDING', 'ORDERED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
   for (let i = 0; i < statusNames.length; i++) {
     const isCancel = statusNames[i] === 'CANCELLED';
