@@ -35,7 +35,7 @@ async function bootstrap() {
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:8081',
-      appConfig.adminPanelUrl,
+      'https://app.vikas-marketing.work.gd', 'https://www.app.vikas-marketing.work.gd', 'https://admin.vikas-marketing.work.gd', appConfig.adminPanelUrl,
       appConfig.reactNativeWebUrl,
     ].filter(Boolean) as string[],
     credentials: true,
