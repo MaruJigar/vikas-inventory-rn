@@ -1,141 +1,122 @@
-name: Frontend Build
+name: Frontend Web CI/CD Pipeline
 
-# Runs when the frontend code is pushed to the `frontend` branch.
+# Runs when Frontend code is pushed to the `devlopment` branch.
 on:
   push:
-    branches: [frontend]
+    branches: [devlopment]
     paths:
       - "Frontend/**"
       - ".github/workflows/frontend-build.yml"
 
-# Only keep the newest run per branch; cancel superseded ones.
+# Only keep the newest run; cancel superseded ones.
 concurrency:
   group: frontend-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # 1) Fast gate: fail the pipeline before spending an EAS build if types break.
+  # ─────────────────────────────────────────────
+  # JOB 1: Type-check gate
+  # ─────────────────────────────────────────────
   typecheck:
-    name: Typecheck (gate)
+    name: TypeScript Typecheck (gate)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: Frontend
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: Frontend/package-lock.json
+
       - name: Install dependencies
         run: npm ci
+
       - name: TypeScript typecheck
         run: npx tsc --noEmit
 
-  # # 2) Cloud build on Expo's EAS servers (Android APK, `preview` profile).
-  # build:
-  #   name: EAS Android APK
-  #   needs: typecheck
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: Frontend
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 20
-  #         cache: npm
-  #         cache-dependency-path: Frontend/package-lock.json
-  #     - name: Set up EAS CLI
-  #       uses: expo/expo-github-action@v8
-  #       with:
-  #         eas-version: latest
-  #         token: ${{ secrets.EXPO_TOKEN }}
-  #     - name: Install dependencies
-  #       run: npm ci
-  #     - name: Build Android APK on EAS (wait for result)
-  #       id: eas
-  #       run: |
-  #         eas build \
-  #           --platform android \
-  #           --profile preview \
-  #           --non-interactive \
-  #           --wait \
-  #           --json > build.json
-  #         echo "url=$(jq -r '.[0].artifacts.applicationArchiveUrl // .[0].artifacts.buildUrl // empty' build.json)" >> "$GITHUB_OUTPUT"
-  #         echo "id=$(jq -r '.[0].id // empty' build.json)" >> "$GITHUB_OUTPUT"
-
-    # # 3) Notify Discord — only reached when the build above succeeded.
-    # - name: Notify Discord
-      #   if: success()
-      #   env:
-      #     DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-      #     APK_URL: ${{ steps.eas.outputs.url }}
-      #     BUILD_ID: ${{ steps.eas.outputs.id }}
-      #     BRANCH: ${{ github.ref_name }}
-      #     SHA: ${{ github.sha }}
-      #     ACTOR: ${{ github.actor }}
-      #     RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      #   run: |
-      #     payload=$(jq -n \
-      #       --arg branch "$BRANCH" \
-      #       --arg sha "${SHA:0:7}" \
-      #       --arg actor "$ACTOR" \
-      #       --arg apk "${APK_URL:-See Expo dashboard}" \
-      #       --arg run "$RUN_URL" \
-      #       '{
-      #         username: "Vikas CI",
-      #         embeds: [{
-      #           title: "✅ Frontend build succeeded",
-      #           color: 3066993,
-      #           fields: [
-      #             { name: "Branch",  value: $branch, inline: true },
-      #             { name: "Commit",  value: $sha,    inline: true },
-      #             { name: "By",      value: $actor,  inline: true },
-      #             { name: "APK",     value: $apk },
-      #             { name: "CI run",  value: $run }
-      #           ]
-      #         }]
-      #       }')
-      #     curl -sf -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK"
-
-  # 4) Export Expo Web app and upload as deployment artifact
-  build-web:
-    name: Expo Web Export
+  # ─────────────────────────────────────────────
+  # JOB 2: Export Expo Web and deploy to VPS
+  # ─────────────────────────────────────────────
+  build-and-deploy-web:
+    name: Expo Web Export & Deploy
     needs: typecheck
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: Frontend
+
+    env:
+      # Production API base URL — must include /v1 prefix, no trailing slash
+      EXPO_PUBLIC_API_URL: https://api.vikas-marketing.work.gd/v1
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: Frontend/package-lock.json
-          
+
       - name: Install dependencies
-        run: |
-          npm ci
-          # Automatically install required web dependencies if they are missing
-          npx expo install react-native-web react-dom @expo/metro-runtime -- --legacy-peer-deps
-          
+        run: npm ci
+
       - name: Export Web Build
         run: npx expo export --platform web --non-interactive
-        
+
       - name: Determine Output Directory
         id: outdir
         run: |
-          # Do not hardcode paths, inspect Expo config gracefully
           DIR=$(node -e "const fs=require('fs');const app=fs.existsSync('./app.json')?require('./app.json'):{};console.log(app.expo?.web?.outputDir || 'dist')")
           echo "dir=$DIR" >> "$GITHUB_OUTPUT"
-          
+
       - name: Upload Web Artifact
         uses: actions/upload-artifact@v4
         with:
           name: expo-web-build
           path: Frontend/${{ steps.outdir.outputs.dir }}
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+
+          script: |
+            set -e
+
+            REPO=/var/www/vikas-inventory-rn
+
+            # ── 1. Pull latest code ─────────────────────────────────────
+            cd "$REPO"
+            git fetch origin
+            git reset --hard origin/devlopment
+
+            # ── 2. Install deps ─────────────────────────────────────────
+            cd "$REPO/Frontend"
+            npm ci
+
+            # ── 3. Write production env (CI sets EXPO_PUBLIC_API_URL)  ───
+            echo "EXPO_PUBLIC_API_URL=https://api.vikas-marketing.work.gd/v1" > .env
+            echo "EXPO_PUBLIC_API_URL=https://api.vikas-marketing.work.gd/v1" > .env.production
+
+            # ── 4. Clear Metro cache and export ─────────────────────────
+            rm -rf .expo dist
+            npx expo export --platform web
+
+            # ── 5. Caddy reloads automatically (static file_server) ─────
+            #    No Caddy restart required; dist/ is served directly.
+            echo "✅ Static files deployed to dist/"
+
+            # ── 6. Verify web app is reachable ──────────────────────────
+            sleep 3
+            curl -sf https://app.vikas-marketing.work.gd > /dev/null \
+              && echo "✅ Expo Web: healthy" \
+              || (echo "❌ Expo Web: unhealthy" && exit 1)
