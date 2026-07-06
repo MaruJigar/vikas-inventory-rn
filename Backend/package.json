@@ -19,7 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:admin": "ts-node -r tsconfig-paths/register src/database/seeds/super-admin.seed.ts",
-    "seed:dev": "ts-node -T -r tsconfig-paths/register src/database/seeds/dev.seed.ts",
+    "seed:dev": "ts-node -T -r tsconfig-paths/register src/database/seeds/seed-dev-full.ts",
     "seed:dev:full": "ts-node -T -r tsconfig-paths/register src/database/seeds/seed-dev-full.ts",
     "seed:all": "npm run seed:admin && npm run seed:dev",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",

@@ -23,6 +23,7 @@ import { LocationLog } from '../../location/location-log.entity';
 import { WorkingDay } from '../../working-day/working-day.entity';
 import { City } from '../../region/entities/city.entity';
 import { State } from '../../region/entities/state.entity';
+import { OrderStatus } from '../../order-status/order-status.entity';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -51,17 +52,18 @@ async function bootstrap() {
   const fileRepo = getRepo(UploadedFile);
   const locRepo = getRepo(LocationLog);
   const wdRepo = getRepo(WorkingDay);
+  const orderStatusRepo = getRepo(OrderStatus);
 
   console.log('[SEED] Starting Comprehensive Dev Seeding Process...');
 
   // --- WIPE ALL DATA ---
   console.log('[SEED] Wiping existing data (CASCADE)...');
   const entities = [
-    'order_items', 'orders', 'shop_visits', 'distributor_inventory',
+    'order_items', 'orders',    'shop_visits', 'distributor_inventory',
     'shops', 'products', 'product_categories', 'salesmen',
     'manufacturer_distributors', 'distributors', 'manufacturers',
     'approval_requests', 'uploaded_files', 'location_logs', 'latest_locations',
-    'working_days', 'users'
+    'working_days', 'users', 'order_statuses'
   ];
   for (const table of entities) {
     try {
@@ -405,6 +407,30 @@ async function bootstrap() {
   }
 
   // --- PHASE 5 & 6: VISITS & ORDERS ---
+  console.log('[SEED] Seeding Order Statuses...');
+  const orderStatuses = [];
+  const statusNames = ['PENDING', 'ORDERED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+  for (let i = 0; i < statusNames.length; i++) {
+    const isCancel = statusNames[i] === 'CANCELLED';
+    const isDispatch = statusNames[i] === 'SHIPPED';
+    const os = await orderStatusRepo.save(
+      orderStatusRepo.create({
+        name: statusNames[i],
+        sequence: i + 1,
+        can_cancel_order: i < 3,
+        isactive: true,
+        is_cancel_status: isCancel,
+        is_dispatch_status: isDispatch,
+      })
+    );
+    orderStatuses.push(os);
+  }
+
+  const pendingStatusId = orderStatuses.find((s) => s.name === 'PENDING').id;
+  const orderedStatusId = orderStatuses.find((s) => s.name === 'ORDERED').id;
+  const deliveredStatusId = orderStatuses.find((s) => s.name === 'DELIVERED').id;
+  const cancelledStatusId = orderStatuses.find((s) => s.name === 'CANCELLED').id;
+
   console.log('[SEED] Creating 500 Visits and 500 Orders...');
   for (let i = 0; i < 500; i++) {
     const shop = faker.helpers.arrayElement(shops);
@@ -428,7 +454,10 @@ async function bootstrap() {
 
     if (visitStatus === 'COMPLETED') {
       // Create an order for completed visits
-      const orderStatus = faker.helpers.arrayElement(['PENDING', 'DELIVERED', 'CANCELLED']);
+      const randomStatusStr = faker.helpers.arrayElement(['PENDING', 'DELIVERED', 'CANCELLED']);
+      let orderStatusId = pendingStatusId;
+      if (randomStatusStr === 'DELIVERED') orderStatusId = deliveredStatusId;
+      if (randomStatusStr === 'CANCELLED') orderStatusId = cancelledStatusId;
 
       const o = await orderRepo.save(orderRepo.create({
         order_number: 'ORD-' + faker.string.alphanumeric(8).toUpperCase(),
@@ -440,7 +469,7 @@ async function bootstrap() {
         manufacturer_id: products[0].manufacturer_id,
         gross_order_amount: 0, // Calculated below
         final_order_amount: 0,
-        status: orderStatus as any,
+        status_id: orderStatusId,
       }));
 
       // Add 1 to 5 random items
@@ -464,6 +493,7 @@ async function bootstrap() {
           mrp: prod.mrp,
           gross_line_amount: lineAmount,
           net_line_amount: lineAmount,
+          status_id: orderStatusId, // inherit order status
         }));
       }
 
