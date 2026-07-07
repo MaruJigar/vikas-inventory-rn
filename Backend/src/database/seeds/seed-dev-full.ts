@@ -408,7 +408,7 @@ async function bootstrap() {
 
   // --- PHASE 5 & 6: VISITS & ORDERS ---
   console.log('[SEED] Seeding Order Statuses...');
-  const orderStatuses = [];
+  const orderStatuses: OrderStatus[] = [];
   const statusNames = ['PENDING', 'ORDERED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
   for (let i = 0; i < statusNames.length; i++) {
     const isCancel = statusNames[i] === 'CANCELLED';
@@ -426,10 +426,10 @@ async function bootstrap() {
     orderStatuses.push(os);
   }
 
-  const pendingStatusId = orderStatuses.find((s) => s.name === 'PENDING').id;
-  const orderedStatusId = orderStatuses.find((s) => s.name === 'ORDERED').id;
-  const deliveredStatusId = orderStatuses.find((s) => s.name === 'DELIVERED').id;
-  const cancelledStatusId = orderStatuses.find((s) => s.name === 'CANCELLED').id;
+  const pendingStatusId = orderStatuses.find((s) => s.name === 'PENDING')!.id;
+  const orderedStatusId = orderStatuses.find((s) => s.name === 'ORDERED')!.id;
+  const deliveredStatusId = orderStatuses.find((s) => s.name === 'DELIVERED')!.id;
+  const cancelledStatusId = orderStatuses.find((s) => s.name === 'CANCELLED')!.id;
 
   console.log('[SEED] Creating 500 Visits and 500 Orders...');
   for (let i = 0; i < 500; i++) {
