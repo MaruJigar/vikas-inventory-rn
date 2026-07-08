@@ -3,13 +3,20 @@ import type { NextRequest } from 'next/server';
 import { ADMIN_ROLES } from './lib/auth/rbac';
 import type { UserRole } from './store/useAuthStore';
 
-function getRoleFromToken(token: string): string | null {
+function getRoleFromToken(token: string, hasRefreshToken: boolean): string | null {
   try {
     const base64Url = token.split('.')[1];
     if (!base64Url) return null;
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const jsonPayload = atob(base64);
     const payload = JSON.parse(jsonPayload);
+    
+    // Check if token is expired, but ONLY if we don't have a refresh token
+    // If we have a refresh token, we let the client-side axios interceptor handle the refresh process
+    if (!hasRefreshToken && payload.exp && payload.exp * 1000 < Date.now()) {
+      return null;
+    }
+    
     return payload.role || null;
   } catch {
     return null;
@@ -40,16 +47,24 @@ export function middleware(request: NextRequest) {
 
   const isAdminPath = adminPaths.some(path => pathname === path || pathname.startsWith(path + '/'));
 
+  const hasRefreshToken = request.cookies.has('refreshToken');
+
   if (isAdminPath) {
-    if (!token) {
+    if (!token && !hasRefreshToken) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
-    const role = getRoleFromToken(token);
-    if (!role || !ADMIN_ROLES.includes(role as UserRole)) {
-      // Not an admin, redirect to login to avoid infinite loop with / -> /dashboard
-      const response = NextResponse.redirect(new URL('/login', request.url));
-      response.cookies.delete('accessToken');
-      return response;
+    
+    // If we only have a refresh token but no access token, we still let it pass to the client
+    // so that the client-side axios interceptor can attempt a refresh.
+    // If we have an access token, we check its role.
+    if (token) {
+      const role = getRoleFromToken(token, hasRefreshToken);
+      if (!role || !ADMIN_ROLES.includes(role as UserRole)) {
+        // Not an admin, redirect to login
+        const response = NextResponse.redirect(new URL('/login', request.url));
+        response.cookies.delete('accessToken');
+        return response;
+      }
     }
   }
 
@@ -58,7 +73,7 @@ export function middleware(request: NextRequest) {
     if (role && ADMIN_ROLES.includes(role as UserRole)) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     } else {
-      const response = NextResponse.redirect(new URL('/login', request.url));
+      const response = NextResponse.next();
       response.cookies.delete('accessToken');
       return response;
     }
