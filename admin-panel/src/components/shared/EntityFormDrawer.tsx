@@ -49,7 +49,7 @@ export function EntityFormDrawer({
           )}
         >
           {/* Header */}
-          <div className="flex items-start justify-between border-b px-6 py-4">
+          <div className="flex items-center justify-between border-b px-6 py-4">
             <div>
               <DialogPrimitive.Title className="text-lg font-semibold leading-none tracking-tight">
                 {title}
