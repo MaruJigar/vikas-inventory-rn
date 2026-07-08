@@ -7,5 +7,9 @@ export function getImageUrl(url?: string | null): string {
     return url;
   }
 
-  return `${process.env.NEXT_PUBLIC_BACKEND_URL}${url}`;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  // Strip version suffix like '/v1' from the API URL since static files are served at the root
+  const baseUrl = apiUrl.replace(/\/v\d+\/?$/, '');
+
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
 }
