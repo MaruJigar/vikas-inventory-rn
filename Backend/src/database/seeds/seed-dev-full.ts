@@ -14,6 +14,7 @@ import { ProductCategory } from '../../product/product-category.entity';
 import { Product } from '../../product/product.entity';
 import { Shop } from '../../shop/shop.entity';
 import { DistributorInventory } from '../../inventory/distributor-inventory.entity';
+import { ManufacturerInventory } from '../../inventory/manufacturer-inventory.entity';
 import { Order } from '../../order/order.entity';
 import { OrderItem } from '../../order/order-item.entity';
 import { ShopVisit } from '../../visit/shop-visit.entity';
@@ -45,6 +46,7 @@ async function bootstrap() {
   const prodRepo = getRepo(Product);
   const shopRepo = getRepo(Shop);
   const invRepo = getRepo(DistributorInventory);
+  const mfrInvRepo = getRepo(ManufacturerInventory);
   const orderRepo = getRepo(Order);
   const itemRepo = getRepo(OrderItem);
   const visitRepo = getRepo(ShopVisit);
@@ -59,7 +61,7 @@ async function bootstrap() {
   // --- WIPE ALL DATA ---
   console.log('[SEED] Wiping existing data (CASCADE)...');
   const entities = [
-    'order_items', 'orders',    'shop_visits', 'distributor_inventory',
+    'order_items', 'orders',    'shop_visits', 'distributor_inventory', 'manufacturer_inventory',
     'shops', 'products', 'product_categories', 'salesmen',
     'manufacturer_distributors', 'distributors', 'manufacturers',
     'approval_requests', 'uploaded_files', 'location_logs', 'latest_locations',
@@ -402,6 +404,18 @@ async function bootstrap() {
         available_quantity: qty,
         low_stock_threshold: 50,
         reserved_quantity: faker.number.int({ min: 0, max: 10 }),
+      }));
+    }
+
+    // Seed manufacturer inventory
+    const mfrExists = await mfrInvRepo.findOne({ where: { manufacturer_id: prod.manufacturer_id, product_id: prod.id } });
+    if (!mfrExists) {
+      await mfrInvRepo.save(mfrInvRepo.create({
+        manufacturer_id: prod.manufacturer_id,
+        product_id: prod.id,
+        available_quantity: faker.number.int({ min: 100, max: 5000 }),
+        low_stock_threshold: 100,
+        reserved_quantity: faker.number.int({ min: 0, max: 50 }),
       }));
     }
   }

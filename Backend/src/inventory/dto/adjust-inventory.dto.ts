@@ -18,9 +18,14 @@ export enum MovementType {
 
 export class AdjustInventoryDto {
   @IsUUID()
-  @IsNotEmpty()
-  @ApiProperty({ description: 'Distributor id' })
-  distributor_id: string;
+  @IsOptional()
+  @ApiPropertyOptional({ description: 'Distributor id' })
+  distributor_id?: string;
+
+  @IsUUID()
+  @IsOptional()
+  @ApiPropertyOptional({ description: 'Manufacturer id' })
+  manufacturer_id?: string;
 
   @IsUUID()
   @IsNotEmpty()

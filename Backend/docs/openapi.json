@@ -2331,6 +2331,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -6306,6 +6314,10 @@
             "type": "string",
             "description": "Distributor id"
           },
+          "manufacturer_id": {
+            "type": "string",
+            "description": "Manufacturer id"
+          },
           "product_id": {
             "type": "string",
             "description": "Product id"
@@ -6324,7 +6336,6 @@
           }
         },
         "required": [
-          "distributor_id",
           "product_id",
           "movement_type",
           "quantity_change"

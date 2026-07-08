@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DistributorInventory } from './distributor-inventory.entity';
 import { InventoryMovement } from './inventory-movement.entity';
+import { ManufacturerInventory } from './manufacturer-inventory.entity';
+import { ManufacturerInventoryMovement } from './manufacturer-inventory-movement.entity';
 import { InventoryController } from './inventory.controller';
 import { InventoryService } from './inventory.service';
 import { BackordersController } from './backorders.controller';
@@ -20,6 +22,8 @@ import { NotificationModule } from '../notification/notification.module';
     TypeOrmModule.forFeature([
       DistributorInventory,
       InventoryMovement,
+      ManufacturerInventory,
+      ManufacturerInventoryMovement,
       Distributor,
       Product,
       Backorder,
