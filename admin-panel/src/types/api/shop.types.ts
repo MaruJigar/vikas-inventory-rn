@@ -8,11 +8,12 @@ export interface CreateShopDto {
   owner_name?: string;
   phone: string;
   address: string;
+  city_id?: string;
+  state_id?: string;
   city?: string;
   state?: string;
   gst_number?: string;
-  latitude: number;
-  longitude: number;
+  distributor_id?: string;
   verification_photo_url?: string | null;
   duplicate_bypass?: DuplicateBypassDto;
 }
@@ -22,8 +23,8 @@ export type UpdateShopDto = Partial<CreateShopDto>;
 export interface CheckDuplicateDto {
   name: string;
   phone: string;
-  latitude: number;
-  longitude: number;
+  city_id?: string;
+  state_id?: string;
 }
 
 export interface ShopDto {
@@ -37,6 +38,8 @@ export interface ShopDto {
   address: string;
   city: string | null;
   state: string | null;
+  city_id: string | null;
+  state_id: string | null;
   gst_number: string | null;
   location: { type: 'Point'; coordinates: [number, number] } | null;
   verification_photo_url: string | null;

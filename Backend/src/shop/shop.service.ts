@@ -284,7 +284,11 @@ export class ShopService {
       throw new ForbiddenException('You can only modify shops you created');
     }
 
-    Object.assign(shop, dto);
+    const { city, state, ...restDto } = dto;
+    if (city !== undefined) shop.city_name = city;
+    if (state !== undefined) shop.state_name = state;
+
+    Object.assign(shop, restDto);
 
     return this.shopRepo.save(shop);
   }
