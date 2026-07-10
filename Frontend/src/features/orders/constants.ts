@@ -78,6 +78,22 @@ export function nextStatus(
 }
 
 /**
+ * Whether an order at `statusId` is still pre-dispatch — i.e. its sequence is
+ * below the dispatch status (`is_dispatch_status`). Mirrors the backend
+ * `OrderStatusService.getPreDispatchStatuses`. Salesman edits are only allowed
+ * here. Returns false if there's no status/dispatch status to compare against.
+ */
+export function isPreDispatch(
+  list: OrderStatusRecord[],
+  statusId: string | null | undefined,
+): boolean {
+  const current = list.find((s) => s.id === statusId);
+  const dispatch = list.find((s) => s.isactive && s.is_dispatch_status);
+  if (!current || !dispatch || current.is_cancel_status) return false;
+  return current.sequence < dispatch.sequence;
+}
+
+/**
  * Verb for the "advance to next status" button. Status names are admin-defined,
  * so map the known lifecycle names to nicer verbs and fall back to a generic
  * "Mark as {name}" for anything custom.

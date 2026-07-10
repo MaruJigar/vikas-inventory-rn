@@ -6,6 +6,7 @@ import type { OrdersStackParamList } from '@/navigation/types';
 import { colors } from '@/theme';
 import { OrdersListScreen } from '@/features/orders/screens/OrdersListScreen';
 import { OrderDetailScreen } from '@/features/orders/screens/OrderDetailScreen';
+import { EditOrderScreen } from '@/features/orders/screens/EditOrderScreen';
 
 const Stack = createNativeStackNavigator<OrdersStackParamList>();
 
@@ -32,6 +33,11 @@ export function OrdersNavigator() {
         name="OrderDetail"
         component={OrderDetailScreen}
         options={{ title: '' }}
+      />
+      <Stack.Screen
+        name="EditOrder"
+        component={EditOrderScreen}
+        options={{ title: t('orders.edit.title') }}
       />
     </Stack.Navigator>
   );

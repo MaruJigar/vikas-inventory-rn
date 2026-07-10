@@ -18,6 +18,7 @@ import {
 import {
   advanceActionLabel,
   formatINR,
+  isPreDispatch,
   nextStatus,
   statusColor,
   statusLabel,
@@ -75,6 +76,7 @@ function Row({
 
 export function OrderDetailScreen({
   route,
+  navigation,
 }: OrdersScreenProps<'OrderDetail'>) {
   const { t } = useTranslation();
   const { id } = route.params;
@@ -123,6 +125,8 @@ export function OrderDetailScreen({
   const inFlight = !isCancelled && !!next;
   const showAdvance = isDistributor && inFlight;
   const showCancel = inFlight && (isDistributor || role === 'SALESMAN');
+  // Salesman may edit an order's items while it's still pre-dispatch.
+  const showEdit = role === 'SALESMAN' && isPreDispatch(statuses, order.status_id);
 
   const onAdvance = () => {
     if (!next) return;
@@ -189,7 +193,7 @@ export function OrderDetailScreen({
         </Text>
       </View>
 
-      {showAdvance || showCancel ? (
+      {showAdvance || showEdit || showCancel ? (
         <View style={styles.actions}>
           {showAdvance && next ? (
             <Button
@@ -197,6 +201,15 @@ export function OrderDetailScreen({
               icon="arrow-forward"
               loading={advance.isPending}
               onPress={onAdvance}
+            />
+          ) : null}
+
+          {showEdit ? (
+            <Button
+              label={t('orders.edit.editOrder')}
+              variant="secondary"
+              icon="create-outline"
+              onPress={() => navigation.navigate('EditOrder', { id })}
             />
           ) : null}
 

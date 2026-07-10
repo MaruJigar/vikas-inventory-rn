@@ -55,11 +55,12 @@ export type ShopsStackParamList = {
 export type ShopsScreenProps<T extends keyof ShopsStackParamList> =
   NativeStackScreenProps<ShopsStackParamList, T>;
 
-/** Orders tab stack (listing → detail). */
+/** Orders tab stack (listing → detail → edit). */
 export type OrdersStackParamList = {
   /** `initialStatus` pre-selects a status filter by status_id (e.g. a tile). */
   OrdersList: { initialStatus?: string } | undefined;
   OrderDetail: { id: string };
+  EditOrder: { id: string };
 };
 
 export type OrdersScreenProps<T extends keyof OrdersStackParamList> =

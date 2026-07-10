@@ -5,6 +5,7 @@ import type {
   Order,
   OrderStatusHistoryEntry,
   OrderStatusRecord,
+  UpdateOrderPayload,
 } from '@/types/order';
 
 export interface OrderListQuery extends ListQuery {
@@ -15,6 +16,10 @@ export interface OrderListQuery extends ListQuery {
 export const ordersApi = {
   create: (payload: CreateOrderPayload) =>
     apiClient.post<Order>('/orders', payload).then((r) => r.data),
+
+  /** PATCH /v1/orders/:id — salesman edits a pre-dispatch order. */
+  update: (id: string, payload: UpdateOrderPayload) =>
+    apiClient.patch<Order>(`/orders/${id}`, payload).then((r) => r.data),
 
   list: (query: OrderListQuery) =>
     apiClient

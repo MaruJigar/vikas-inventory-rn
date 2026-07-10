@@ -74,6 +74,13 @@ export interface CreateOrderPayload {
   products: CreateOrderProduct[];
 }
 
+/** PATCH /v1/orders/:id — salesman edits a pre-dispatch order. `products`
+ * fully REPLACES the order's items; bill discount is preserved when omitted. */
+export interface UpdateOrderPayload {
+  products: CreateOrderProduct[];
+  reason?: string;
+}
+
 /** A row from GET /orders/:id/status-history. Statuses are FK ids now. */
 export interface OrderStatusHistoryEntry {
   id: string;

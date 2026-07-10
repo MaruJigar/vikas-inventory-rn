@@ -9,7 +9,7 @@ import {
 
 import { ordersApi, orderStatusApi } from '@/features/orders/api';
 import { indexStatuses } from '@/features/orders/constants';
-import type { CreateOrderPayload } from '@/types/order';
+import type { CreateOrderPayload, UpdateOrderPayload } from '@/types/order';
 
 const PAGE_SIZE = 20;
 
@@ -73,6 +73,15 @@ export function useUpdateOrderStatus(id: string) {
   return useMutation({
     mutationFn: (body: { status_id: string; notes?: string }) =>
       ordersApi.updateStatus(id, body),
+    onSuccess: () => invalidateAfterOrderChange(qc, id),
+  });
+}
+
+/** Salesman edits the items of a pre-dispatch order. */
+export function useEditOrder(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateOrderPayload) => ordersApi.update(id, payload),
     onSuccess: () => invalidateAfterOrderChange(qc, id),
   });
 }
