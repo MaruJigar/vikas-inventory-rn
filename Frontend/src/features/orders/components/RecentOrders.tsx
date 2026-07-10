@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Card } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
-import { useRecentOrders } from '@/features/orders/hooks';
+import { useRecentOrders, useStatusIndex } from '@/features/orders/hooks';
 import { formatINR, statusColor, statusLabel, toNum } from '@/features/orders/constants';
 
 export function RecentOrders({
@@ -13,6 +13,7 @@ export function RecentOrders({
   onOpenOrder: (id: string) => void;
 }) {
   const { t } = useTranslation();
+  const { index: statusIndex } = useStatusIndex();
   const { data, isLoading, isError } = useRecentOrders(5);
   const orders = data ?? [];
 
@@ -65,11 +66,11 @@ export function RecentOrders({
             <View
               style={[
                 styles.badge,
-                { backgroundColor: statusColor(order.status) },
+                { backgroundColor: statusColor(statusIndex, order.status_id) },
               ]}
             >
               <Text style={styles.badgeText}>
-                {statusLabel(t, order.status)}
+                {statusLabel(t, statusIndex, order.status_id)}
               </Text>
             </View>
           </View>

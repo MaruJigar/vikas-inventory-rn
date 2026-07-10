@@ -2,7 +2,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { Product } from '@/types/product';
-import type { OrderStatus } from '@/types/order';
 
 /**
  * Auth flow (shown when unauthenticated). The app is login-only — distributors
@@ -58,8 +57,8 @@ export type ShopsScreenProps<T extends keyof ShopsStackParamList> =
 
 /** Orders tab stack (listing → detail). */
 export type OrdersStackParamList = {
-  /** `initialStatus` pre-selects a status filter (e.g. from a dashboard tile). */
-  OrdersList: { initialStatus?: OrderStatus } | undefined;
+  /** `initialStatus` pre-selects a status filter by status_id (e.g. a tile). */
+  OrdersList: { initialStatus?: string } | undefined;
   OrderDetail: { id: string };
 };
 

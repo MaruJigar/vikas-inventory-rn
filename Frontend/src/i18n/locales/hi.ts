@@ -191,13 +191,17 @@ export const hi: TranslationResources = {
     noResults: 'आपके फ़िल्टर से कोई ऑर्डर मेल नहीं खाता।',
     loadError: 'ऑर्डर लोड नहीं हो सके।',
     filterAll: 'सभी',
+    // Status names are admin-defined (dynamic); these are best-effort labels —
+    // any unmapped name falls back to the raw backend value.
     status: {
       PENDING: 'लंबित',
       CREATED: 'बनाया गया',
+      ORDERED: 'ऑर्डर किया गया',
       CONFIRMED: 'पुष्ट',
       APPROVED: 'स्वीकृत',
       PROCESSING: 'प्रक्रियाधीन',
       PACKED: 'पैक किया गया',
+      SHIPPED: 'भेजा गया',
       DISPATCHED: 'भेजा गया',
       DELIVERED: 'वितरित',
       CANCELLED: 'रद्द',

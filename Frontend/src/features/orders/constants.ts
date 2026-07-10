@@ -1,43 +1,68 @@
 import type { TFunction } from 'i18next';
 
 import { colors } from '@/theme';
-import type { OrderStatus } from '@/types/order';
+import type { OrderStatusRecord } from '@/types/order';
 
-/** The lifecycle statuses, in order, plus terminal CANCELLED. */
-export const ORDER_STATUSES: OrderStatus[] = [
-  'PENDING',
-  'CREATED',
-  'CONFIRMED',
-  'APPROVED',
-  'PROCESSING',
-  'PACKED',
-  'DISPATCHED',
-  'DELIVERED',
-  'CANCELLED',
-];
+/**
+ * Statuses are dynamic (Backend `order_statuses`), and orders reference them by
+ * `status_id` only — the list/detail endpoints don't join the name. We fetch
+ * the status catalogue once (`useOrderStatuses`) and build this index to
+ * resolve a `status_id` into a display name + badge colour.
+ */
+export interface StatusMeta {
+  id: string;
+  name: string;
+  color: string;
+  isCancel: boolean;
+}
 
-/** Badge colour per status (monochrome palette + restrained semantics). */
-export function statusColor(status: string): string {
-  switch (status) {
-    case 'DELIVERED':
-    case 'APPROVED':
-      return colors.success;
-    case 'DISPATCHED':
-    case 'PACKED':
-      return colors.primary;
-    case 'CANCELLED':
-      return colors.danger;
-    default:
-      return colors.warning;
+/** Build an id → {name, colour, …} lookup from the fetched status catalogue. */
+export function indexStatuses(
+  list: OrderStatusRecord[],
+): Map<string, StatusMeta> {
+  // The terminal/success status is the highest-sequence active, non-cancel one.
+  const finalSeq = list
+    .filter((s) => s.isactive && !s.is_cancel_status)
+    .reduce((max, s) => Math.max(max, s.sequence), -Infinity);
+
+  const map = new Map<string, StatusMeta>();
+  for (const s of list) {
+    let color: string = colors.warning;
+    if (s.is_cancel_status) color = colors.danger;
+    else if (s.sequence === finalSeq) color = colors.success;
+    else if (s.is_dispatch_status) color = colors.primary;
+    map.set(s.id, {
+      id: s.id,
+      name: s.name,
+      color,
+      isCancel: s.is_cancel_status,
+    });
   }
+  return map;
 }
 
 /**
- * Translate a status, falling back to the raw value for any status the backend
- * sends that we haven't mapped — never render a raw i18n key.
+ * Resolve a `status_id` to a display label via the index. Status names are
+ * admin-defined, so translate known ones and fall back to the raw name; if the
+ * id isn't in the catalogue yet, render an em-dash rather than a raw uuid.
  */
-export function statusLabel(t: TFunction, status: string): string {
-  return t(`orders.status.${status}`, { defaultValue: status });
+export function statusLabel(
+  t: TFunction,
+  index: Map<string, StatusMeta>,
+  statusId: string | null | undefined,
+): string {
+  if (!statusId) return '—';
+  const meta = index.get(statusId);
+  if (!meta) return '—';
+  return t(`orders.status.${meta.name}`, { defaultValue: meta.name });
+}
+
+/** Resolve a `status_id` to its badge colour via the index. */
+export function statusColor(
+  index: Map<string, StatusMeta>,
+  statusId: string | null | undefined,
+): string {
+  return (statusId ? index.get(statusId)?.color : undefined) ?? colors.textMuted;
 }
 
 /** Numeric DB columns arrive as strings over JSON — coerce safely. */

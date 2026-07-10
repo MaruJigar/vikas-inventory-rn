@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -5,18 +6,46 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 
-import { ordersApi } from '@/features/orders/api';
-import type { CreateOrderPayload, OrderStatus } from '@/types/order';
+import { ordersApi, orderStatusApi } from '@/features/orders/api';
+import { indexStatuses } from '@/features/orders/constants';
+import type { CreateOrderPayload } from '@/types/order';
 
 const PAGE_SIZE = 20;
 
 export const orderKeys = {
   all: ['orders'] as const,
-  list: (search: string, status: OrderStatus | null) =>
-    ['orders', 'list', search, status ?? 'ALL'] as const,
+  statuses: ['order-statuses'] as const,
+  list: (search: string, statusId: string | null) =>
+    ['orders', 'list', search, statusId ?? 'ALL'] as const,
   detail: (id: string) => ['orders', 'detail', id] as const,
   history: (id: string) => ['orders', 'history', id] as const,
 };
+
+/** The dynamic status catalogue (GET /order-status) — cached, rarely changes. */
+export function useOrderStatuses() {
+  return useQuery({
+    queryKey: orderKeys.statuses,
+    queryFn: () => orderStatusApi.list(),
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+/**
+ * Convenience over `useOrderStatuses`: an id → meta index (for badges/labels)
+ * plus the active statuses sorted by sequence (for filter chips).
+ */
+export function useStatusIndex() {
+  const { data, isLoading } = useOrderStatuses();
+  const index = useMemo(() => indexStatuses(data ?? []), [data]);
+  const activeStatuses = useMemo(
+    () =>
+      (data ?? [])
+        .filter((s) => s.isactive)
+        .sort((a, b) => a.sequence - b.sequence),
+    [data],
+  );
+  return { index, activeStatuses, isLoading };
+}
 
 export function useCreateOrder() {
   const qc = useQueryClient();
@@ -28,15 +57,15 @@ export function useCreateOrder() {
   });
 }
 
-export function useOrders(search: string, status: OrderStatus | null) {
+export function useOrders(search: string, statusId: string | null) {
   return useInfiniteQuery({
-    queryKey: orderKeys.list(search, status),
+    queryKey: orderKeys.list(search, statusId),
     queryFn: ({ pageParam }) =>
       ordersApi.list({
         page: pageParam,
         limit: PAGE_SIZE,
         search: search || undefined,
-        status: status ?? undefined,
+        status: statusId ?? undefined,
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>

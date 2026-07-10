@@ -7,20 +7,29 @@ import type { TFunction } from 'i18next';
 import { Screen, Card, Spinner, EmptyState, Section } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { notify } from '@/lib/dialog';
-import { useOrder, useOrderStatusHistory } from '@/features/orders/hooks';
+import {
+  useOrder,
+  useOrderStatusHistory,
+  useStatusIndex,
+} from '@/features/orders/hooks';
 import {
   formatINR,
   statusColor,
   statusLabel,
   toNum,
+  type StatusMeta,
 } from '@/features/orders/constants';
 import type { Order } from '@/types/order';
 import type { OrdersScreenProps } from '@/navigation/types';
 
-function buildShareText(order: Order, t: TFunction): string {
+function buildShareText(
+  order: Order,
+  t: TFunction,
+  statusIndex: Map<string, StatusMeta>,
+): string {
   const lines = [
     `${t('orders.detail.order')} ${order.order_number}`,
-    `${t('orders.detail.status')}: ${statusLabel(t, order.status)}`,
+    `${t('orders.detail.status')}: ${statusLabel(t, statusIndex, order.status_id)}`,
     order.shop ? `${t('orders.detail.shop')}: ${order.shop.name}` : '',
     new Date(order.created_at).toLocaleString(),
     '',
@@ -64,6 +73,7 @@ export function OrderDetailScreen({
 }: OrdersScreenProps<'OrderDetail'>) {
   const { t } = useTranslation();
   const { id } = route.params;
+  const { index: statusIndex } = useStatusIndex();
   const { data: order, isLoading, isError, refetch } = useOrder(id);
   const { data: history } = useOrderStatusHistory(id);
 
@@ -82,7 +92,7 @@ export function OrderDetailScreen({
 
   const onShare = async () => {
     try {
-      await Share.share({ message: buildShareText(order, t) });
+      await Share.share({ message: buildShareText(order, t, statusIndex) });
     } catch {
       notify(t('orders.detail.shareError'));
     }
@@ -91,6 +101,9 @@ export function OrderDetailScreen({
   const items = order.items ?? [];
   const productDiscount = toNum(order.total_product_discount_amount);
   const billDiscount = toNum(order.bill_discount_amount);
+  const isCancelled = order.status_id
+    ? (statusIndex.get(order.status_id)?.isCancel ?? false)
+    : false;
 
   return (
     <Screen edges={[]}>
@@ -110,9 +123,14 @@ export function OrderDetailScreen({
 
       <View style={styles.metaRow}>
         <View
-          style={[styles.badge, { backgroundColor: statusColor(order.status) }]}
+          style={[
+            styles.badge,
+            { backgroundColor: statusColor(statusIndex, order.status_id) },
+          ]}
         >
-          <Text style={styles.badgeText}>{statusLabel(t, order.status)}</Text>
+          <Text style={styles.badgeText}>
+            {statusLabel(t, statusIndex, order.status_id)}
+          </Text>
         </View>
         <Text style={styles.date}>
           {new Date(order.created_at).toLocaleString()}
@@ -180,7 +198,7 @@ export function OrderDetailScreen({
         />
       </Card>
 
-      {order.status === 'CANCELLED' && order.cancellation_reason ? (
+      {isCancelled && order.cancellation_reason ? (
         <Card style={styles.cancelCard}>
           <Text style={styles.cancelLabel}>
             {t('orders.detail.cancellationReason')}
@@ -197,7 +215,7 @@ export function OrderDetailScreen({
                 <View style={styles.dot} />
                 <View style={styles.timelineInfo}>
                   <Text style={typography.body}>
-                    {statusLabel(t, h.new_status)}
+                    {statusLabel(t, statusIndex, h.new_status_id)}
                   </Text>
                   <Text style={styles.muted}>
                     {new Date(h.created_at).toLocaleString()}

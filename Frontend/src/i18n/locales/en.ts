@@ -195,13 +195,17 @@ export const en = {
     noResults: 'No orders match your filter.',
     loadError: 'Could not load orders.',
     filterAll: 'All',
+    // Status names are admin-defined (dynamic); these are best-effort labels —
+    // any unmapped name falls back to the raw backend value.
     status: {
       PENDING: 'Pending',
       CREATED: 'Created',
+      ORDERED: 'Ordered',
       CONFIRMED: 'Confirmed',
       APPROVED: 'Approved',
       PROCESSING: 'Processing',
       PACKED: 'Packed',
+      SHIPPED: 'Shipped',
       DISPATCHED: 'Dispatched',
       DELIVERED: 'Delivered',
       CANCELLED: 'Cancelled',

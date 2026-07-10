@@ -1,43 +1,67 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { dashboardApi } from '@/features/dashboard/api';
-import type { OrderStatusCount } from '@/features/dashboard/types';
+import { useOrderStatuses } from '@/features/orders/hooks';
 
 export const dashboardKeys = {
   analytics: ['dashboard', 'analytics'] as const,
 };
 
-/** Sum the counts for the given order statuses out of the distribution rows. */
-function sumStatuses(rows: OrderStatusCount[] | undefined, statuses: string[]) {
-  if (!rows) return 0;
-  return rows
-    .filter((r) => statuses.includes(r.status))
-    .reduce((acc, r) => acc + r.count, 0);
-}
-
 /**
- * Status each summary tile maps to. Kept as single statuses so a tile's count
- * matches the Orders list when filtered by that same status (the list filter
- * accepts one status at a time).
+ * Legacy summary tiles predate the dynamic `order_statuses` table, so each maps
+ * to a list of candidate status names — the first one that exists in the live
+ * catalogue wins. Analytics `statusDistribution.status` is now a status_id, so
+ * we resolve the name → id and match on that. A tile with no matching status
+ * shows 0 and navigates unfiltered.
  */
-export const SUMMARY_TILE_STATUS = {
-  pending: 'CREATED',
-  approved: 'CONFIRMED',
-  dispatched: 'DISPATCHED',
+const TILE_STATUS_NAMES = {
+  pending: ['PENDING', 'CREATED', 'ORDERED'],
+  approved: ['CONFIRMED', 'APPROVED', 'PROCESSING', 'PACKED'],
+  dispatched: ['SHIPPED', 'DISPATCHED'],
 } as const;
+
+export interface OrderSummaryTile {
+  count: number;
+  /** Resolved status_id to pre-filter the Orders list, if one matched. */
+  statusId?: string;
+}
 
 /** Distributor orders-summary counts derived from the analytics dashboard. */
 export function useDistributorOrderSummary() {
-  return useQuery({
+  const { data: statuses } = useOrderStatuses();
+  const analytics = useQuery({
     queryKey: dashboardKeys.analytics,
     queryFn: () => dashboardApi.analytics(),
-    select: (data) => {
-      const rows = data.orders?.statusDistribution;
-      return {
-        pending: sumStatuses(rows, [SUMMARY_TILE_STATUS.pending]),
-        approved: sumStatuses(rows, [SUMMARY_TILE_STATUS.approved]),
-        dispatched: sumStatuses(rows, [SUMMARY_TILE_STATUS.dispatched]),
-      };
-    },
   });
+
+  const data = useMemo(() => {
+    const rows = analytics.data?.orders?.statusDistribution ?? [];
+    const idByName = new Map(
+      (statuses ?? []).map((s) => [s.name.toUpperCase(), s.id]),
+    );
+    const resolveId = (names: readonly string[]): string | undefined => {
+      for (const n of names) {
+        const id = idByName.get(n);
+        if (id) return id;
+      }
+      return undefined;
+    };
+    const tile = (names: readonly string[]): OrderSummaryTile => {
+      const statusId = resolveId(names);
+      const count = statusId
+        ? rows
+            .filter((r) => r.status === statusId)
+            .reduce((acc, r) => acc + r.count, 0)
+        : 0;
+      return { count, statusId };
+    };
+    return {
+      pending: tile(TILE_STATUS_NAMES.pending),
+      approved: tile(TILE_STATUS_NAMES.approved),
+      dispatched: tile(TILE_STATUS_NAMES.dispatched),
+    };
+  }, [analytics.data, statuses]);
+
+  return { data, isLoading: analytics.isLoading, isError: analytics.isError };
 }

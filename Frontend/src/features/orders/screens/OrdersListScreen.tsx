@@ -14,15 +14,14 @@ import { Screen, Card, Input, EmptyState, Spinner } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { usePullToRefresh } from '@/lib/usePullToRefresh';
-import { useOrders } from '@/features/orders/hooks';
+import { useOrders, useStatusIndex } from '@/features/orders/hooks';
 import {
-  ORDER_STATUSES,
   formatINR,
   statusColor,
   statusLabel,
   toNum,
 } from '@/features/orders/constants';
-import type { Order, OrderStatus } from '@/types/order';
+import type { Order } from '@/types/order';
 import type { OrdersScreenProps } from '@/navigation/types';
 
 export function OrdersListScreen({
@@ -30,9 +29,10 @@ export function OrdersListScreen({
   route,
 }: OrdersScreenProps<'OrdersList'>) {
   const { t } = useTranslation();
+  const { index: statusIndex, activeStatuses } = useStatusIndex();
   const [query, setQuery] = useState('');
-  // Seed the filter from a navigation param (e.g. a dashboard summary tile).
-  const [status, setStatus] = useState<OrderStatus | null>(
+  // Seed the filter from a navigation param (a dashboard tile passes status_id).
+  const [status, setStatus] = useState<string | null>(
     route.params?.initialStatus ?? null,
   );
   const search = useDebouncedValue(query.trim(), 350);
@@ -68,9 +68,14 @@ export function OrdersListScreen({
         <View style={styles.cardTop}>
           <Text style={typography.title}>{item.order_number}</Text>
           <View
-            style={[styles.badge, { backgroundColor: statusColor(item.status) }]}
+            style={[
+              styles.badge,
+              { backgroundColor: statusColor(statusIndex, item.status_id) },
+            ]}
           >
-            <Text style={styles.badgeText}>{statusLabel(t, item.status)}</Text>
+            <Text style={styles.badgeText}>
+              {statusLabel(t, statusIndex, item.status_id)}
+            </Text>
           </View>
         </View>
         {item.shop ? (
@@ -113,12 +118,12 @@ export function OrdersListScreen({
             active={status === null}
             onPress={() => setStatus(null)}
           />
-          {ORDER_STATUSES.map((s) => (
+          {activeStatuses.map((s) => (
             <Chip
-              key={s}
-              label={statusLabel(t, s)}
-              active={status === s}
-              onPress={() => setStatus(s)}
+              key={s.id}
+              label={statusLabel(t, statusIndex, s.id)}
+              active={status === s.id}
+              onPress={() => setStatus(s.id)}
             />
           ))}
         </ScrollView>

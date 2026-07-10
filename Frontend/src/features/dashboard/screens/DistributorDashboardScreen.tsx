@@ -15,15 +15,11 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Screen, Card, Section, LanguageToggle } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useAuthStore } from '@/store/useAuthStore';
-import {
-  useDistributorOrderSummary,
-  SUMMARY_TILE_STATUS,
-} from '@/features/dashboard/hooks';
+import { useDistributorOrderSummary } from '@/features/dashboard/hooks';
 import { useCategories } from '@/features/products/hooks';
 import { iconForCategory } from '@/features/products/categoryIcons';
 import type { Category } from '@/types/product';
 import { RecentOrders } from '@/features/orders/components/RecentOrders';
-import type { OrderStatus } from '@/types/order';
 import type { HomeStackParamList, MainTabParamList } from '@/navigation/types';
 
 /** A single labelled, tappable count in the orders-summary row. */
@@ -171,7 +167,7 @@ export function DistributorDashboardScreen() {
         // Keep the Orders list beneath so the detail has a back button.
         initial: false,
       });
-  const goToOrders = (initialStatus: OrderStatus) =>
+  const goToOrders = (initialStatus?: string) =>
     navigation
       .getParent<BottomTabNavigationProp<MainTabParamList>>()
       ?.navigate('Orders', { screen: 'OrdersList', params: { initialStatus } });
@@ -207,21 +203,21 @@ export function DistributorDashboardScreen() {
         <View style={styles.statsRow}>
           <SummaryStat
             label={t('dashboard.distributor.pending')}
-            value={summary?.pending ?? 0}
+            value={summary?.pending.count ?? 0}
             loading={summaryLoading}
-            onPress={() => goToOrders(SUMMARY_TILE_STATUS.pending)}
+            onPress={() => goToOrders(summary?.pending.statusId)}
           />
           <SummaryStat
             label={t('dashboard.distributor.approved')}
-            value={summary?.approved ?? 0}
+            value={summary?.approved.count ?? 0}
             loading={summaryLoading}
-            onPress={() => goToOrders(SUMMARY_TILE_STATUS.approved)}
+            onPress={() => goToOrders(summary?.approved.statusId)}
           />
           <SummaryStat
             label={t('dashboard.distributor.dispatched')}
-            value={summary?.dispatched ?? 0}
+            value={summary?.dispatched.count ?? 0}
             loading={summaryLoading}
-            onPress={() => goToOrders(SUMMARY_TILE_STATUS.dispatched)}
+            onPress={() => goToOrders(summary?.dispatched.statusId)}
           />
         </View>
       </Section>

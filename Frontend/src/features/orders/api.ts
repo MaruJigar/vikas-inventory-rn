@@ -3,12 +3,13 @@ import type { ListQuery, Paginated } from '@/api/types';
 import type {
   CreateOrderPayload,
   Order,
-  OrderStatus,
   OrderStatusHistoryEntry,
+  OrderStatusRecord,
 } from '@/types/order';
 
 export interface OrderListQuery extends ListQuery {
-  status?: OrderStatus;
+  /** Now a status_id (uuid), matching the dynamic order_statuses table. */
+  status?: string;
 }
 
 export const ordersApi = {
@@ -29,4 +30,10 @@ export const ordersApi = {
         params: { limit: 50, sortOrder: 'ASC' },
       })
       .then((r) => r.data),
+};
+
+/** GET /v1/order-status — the dynamic status catalogue (plain array, sorted). */
+export const orderStatusApi = {
+  list: () =>
+    apiClient.get<OrderStatusRecord[]>('/order-status').then((r) => r.data),
 };
