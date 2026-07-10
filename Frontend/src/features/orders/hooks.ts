@@ -4,6 +4,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from '@tanstack/react-query';
 
 import { ordersApi, orderStatusApi } from '@/features/orders/api';
@@ -44,7 +45,7 @@ export function useStatusIndex() {
         .sort((a, b) => a.sequence - b.sequence),
     [data],
   );
-  return { index, activeStatuses, isLoading };
+  return { index, activeStatuses, all: data ?? [], isLoading };
 }
 
 export function useCreateOrder() {
@@ -54,6 +55,35 @@ export function useCreateOrder() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: orderKeys.all });
     },
+  });
+}
+
+/** Invalidate everything a status change can affect: this order's detail +
+ * timeline, every orders list, and the distributor dashboard counts. */
+function invalidateAfterOrderChange(qc: QueryClient, id: string) {
+  void qc.invalidateQueries({ queryKey: orderKeys.detail(id) });
+  void qc.invalidateQueries({ queryKey: orderKeys.history(id) });
+  void qc.invalidateQueries({ queryKey: orderKeys.all });
+  void qc.invalidateQueries({ queryKey: ['dashboard'] });
+}
+
+/** Distributor advances an order to the next lifecycle status. */
+export function useUpdateOrderStatus(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { status_id: string; notes?: string }) =>
+      ordersApi.updateStatus(id, body),
+    onSuccess: () => invalidateAfterOrderChange(qc, id),
+  });
+}
+
+/** Salesman (own) or distributor cancels an order with a reason. */
+export function useCancelOrder(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { cancellationReason: string }) =>
+      ordersApi.cancel(id, body),
+    onSuccess: () => invalidateAfterOrderChange(qc, id),
   });
 }
 

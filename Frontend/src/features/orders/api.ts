@@ -30,6 +30,15 @@ export const ordersApi = {
         params: { limit: 50, sortOrder: 'ASC' },
       })
       .then((r) => r.data),
+
+  /** PATCH /v1/orders/:id/status — distributor drives the lifecycle forward.
+   * Backend only accepts the single next status by sequence (`status_id`). */
+  updateStatus: (id: string, body: { status_id: string; notes?: string }) =>
+    apiClient.patch<Order>(`/orders/${id}/status`, body).then((r) => r.data),
+
+  /** PATCH /v1/orders/:id/cancel — salesman (own) or distributor cancels. */
+  cancel: (id: string, body: { cancellationReason: string }) =>
+    apiClient.patch<Order>(`/orders/${id}/cancel`, body).then((r) => r.data),
 };
 
 /** GET /v1/order-status — the dynamic status catalogue (plain array, sorted). */

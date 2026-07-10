@@ -226,6 +226,26 @@ export const en = {
       share: 'Share',
       shareError: 'Could not share the order.',
     },
+    actions: {
+      // Verbs for advancing to a known lifecycle status; unknown/custom
+      // statuses fall back to "Mark as {status}".
+      CONFIRMED: 'Confirm order',
+      APPROVED: 'Approve order',
+      PROCESSING: 'Start processing',
+      PACKED: 'Mark packed',
+      DISPATCHED: 'Dispatch order',
+      SHIPPED: 'Ship order',
+      DELIVERED: 'Mark delivered',
+      markAs: 'Mark as {{status}}',
+      confirmTitle: 'Update order status?',
+      confirmMessage: 'Move this order to “{{status}}”. This cannot be undone.',
+      updateError: 'Could not update the order status.',
+      cancel: 'Cancel order',
+      cancelReasonLabel: 'Reason for cancellation',
+      cancelReasonPlaceholder: 'Why is this order being cancelled?',
+      confirmCancel: 'Cancel order',
+      cancelError: 'Could not cancel the order.',
+    },
   },
   account: {
     title: 'Account',
