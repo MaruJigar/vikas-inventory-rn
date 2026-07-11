@@ -38,7 +38,9 @@ export class ShopService {
 
     if (userRole === 'SUPER_ADMIN') {
       if (!dto.distributor_id) {
-        throw new BadRequestException('SUPER_ADMIN must provide a distributor_id');
+        throw new BadRequestException(
+          'SUPER_ADMIN must provide a distributor_id',
+        );
       }
       distributorId = dto.distributor_id;
     } else if (userRole === 'SALESMAN') {
@@ -130,7 +132,8 @@ export class ShopService {
     } = queryDto as any;
     const skip = (page - 1) * limit;
 
-    const qb = this.shopRepo.createQueryBuilder('shop')
+    const qb = this.shopRepo
+      .createQueryBuilder('shop')
       .leftJoinAndSelect('shop.distributor', 'distributor')
       .leftJoinAndSelect('shop.created_by_salesman', 'created_by_salesman')
       .leftJoinAndSelect('shop.city', 'city')
@@ -164,6 +167,14 @@ export class ShopService {
       qb.andWhere('shop.distributor_id = :distId', {
         distId: salesman.distributor_id,
       });
+      if (salesman.state_id) {
+        qb.andWhere('shop.state_id = :sStateId', {
+          sStateId: salesman.state_id,
+        });
+        if (salesman.city_id) {
+          qb.andWhere('shop.city_id = :sCityId', { sCityId: salesman.city_id });
+        }
+      }
     } else {
       throw new ForbiddenException('Unauthorized role');
     }
@@ -179,7 +190,9 @@ export class ShopService {
       qb.andWhere('shop.verification_status = :status', { status });
     }
     if (verification_status) {
-      qb.andWhere('shop.verification_status = :vStatus', { vStatus: verification_status });
+      qb.andWhere('shop.verification_status = :vStatus', {
+        vStatus: verification_status,
+      });
     }
     if (is_active !== undefined) {
       if (is_active === 'true' || is_active === true) {
@@ -290,7 +303,13 @@ export class ShopService {
 
     Object.assign(shop, restDto);
 
-    return this.shopRepo.save(shop);
+    // Remove relation objects so TypeORM doesn't overwrite our updated foreign keys
+    delete shop.city;
+    delete shop.state;
+
+    await this.shopRepo.save(shop);
+
+    return this.getShopById(id, userId, userRole);
   }
 
   async deleteShop(id: string, userId: string, userRole: string) {
@@ -325,7 +344,7 @@ export class ShopService {
 
       // 3. Then soft delete shop
       await queryRunner.manager.softDelete(Shop, shop.id);
-      
+
       await this.auditLogService.logAction(
         'SHOP_DELETED',
         'SHOP',

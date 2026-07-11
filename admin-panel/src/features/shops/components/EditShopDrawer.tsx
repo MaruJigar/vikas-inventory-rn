@@ -43,15 +43,16 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
   const updateShopMutation = useUpdateShopMutation();
 
   const dynamicSchema = useMemo(() => {
-    let schema = updateShopBaseSchema;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let schema: any = updateShopBaseSchema;
 
     if (user?.role === 'SUPER_ADMIN') {
       schema = schema.extend({
-        distributor_id: z.string({ required_error: 'Distributor is required' }).min(1, 'Distributor is required'),
+        distributor_id: z.string().min(1, 'Distributor is required'),
       });
     }
 
-    return schema.superRefine((data, ctx) => {
+    return schema.superRefine((data: Record<string, unknown>, ctx: z.RefinementCtx) => {
       if (data.state_id && !data.city_id) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -71,7 +72,7 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
     setError,
     formState: { errors, isSubmitting },
   } = useForm<UpdateShopInput>({
-    // @ts-expect-error ZodResolver type mismatch with coerced numbers
+    // ZodResolver type mismatch with coerced numbers
     resolver: zodResolver(dynamicSchema),
     defaultValues: {
       name: '',
@@ -219,7 +220,8 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
                     key={states ? 'loaded' : 'loading'}
                     onValueChange={(value) => {
                       field.onChange(value);
-                      reset({ ...watch(), state_id: value, city_id: '' });
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      reset({ ...(watch() as any), state_id: value, city_id: '' });
                     }}
                     value={isLoadingStates ? '' : (field.value || '')}
                     disabled={isLoadingStates}

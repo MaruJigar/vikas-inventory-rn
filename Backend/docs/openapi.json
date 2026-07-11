@@ -5861,6 +5861,22 @@
             "type": "string",
             "description": "Distributor ID (Required if Manufacturer Admin is creating)",
             "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "state_id": {
+            "type": "string",
+            "description": "State id"
+          },
+          "state": {
+            "type": "string",
+            "description": "State name"
+          },
+          "city_id": {
+            "type": "string",
+            "description": "City id"
+          },
+          "city": {
+            "type": "string",
+            "description": "City name"
           }
         },
         "required": [
@@ -5868,7 +5884,48 @@
           "email",
           "phone",
           "password",
-          "distributor_id"
+          "distributor_id",
+          "state_id",
+          "state"
+        ]
+      },
+      "City": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          },
+          "state_id": {
+            "type": "string",
+            "description": "State id"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "state_id"
+        ]
+      },
+      "State": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name"
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ]
       },
       "Salesman": {
@@ -5923,6 +5980,38 @@
             "type": "string",
             "description": "Rejected reason"
           },
+          "city_name": {
+            "type": "string",
+            "description": "City name text"
+          },
+          "state_name": {
+            "type": "string",
+            "description": "State name text"
+          },
+          "city_id": {
+            "type": "string",
+            "description": "City id"
+          },
+          "city": {
+            "description": "City relation",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/City"
+              }
+            ]
+          },
+          "state_id": {
+            "type": "string",
+            "description": "State id"
+          },
+          "state": {
+            "description": "State relation",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/State"
+              }
+            ]
+          },
           "is_active": {
             "type": "boolean",
             "description": "Is active"
@@ -5969,6 +6058,22 @@
           "email": {
             "type": "string",
             "description": "Email"
+          },
+          "state": {
+            "type": "string",
+            "description": "State name"
+          },
+          "state_id": {
+            "type": "string",
+            "description": "State id"
+          },
+          "city": {
+            "type": "string",
+            "description": "City name"
+          },
+          "city_id": {
+            "type": "string",
+            "description": "City id"
           }
         }
       },
@@ -6509,46 +6614,11 @@
         "required": [
           "name",
           "phone",
-          "address"
-        ]
-      },
-      "City": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Id"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name"
-          },
-          "state_id": {
-            "type": "string",
-            "description": "State id"
-          }
-        },
-        "required": [
-          "id",
-          "name",
+          "address",
+          "city",
+          "state",
+          "city_id",
           "state_id"
-        ]
-      },
-      "State": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Id"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name"
-          }
-        },
-        "required": [
-          "id",
-          "name"
         ]
       },
       "Shop": {

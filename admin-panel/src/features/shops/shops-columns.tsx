@@ -72,7 +72,7 @@ export const getShopsColumns = ({
     header: 'City',
     cell: ({ row }) => {
       const city = row.original.city;
-      const cityName = city && typeof city === 'object' ? (city as any).name : city;
+      const cityName = city && typeof city === 'object' ? (city as Record<string, string>).name : city;
       return <div className="text-slate-600">{cityName || '-'}</div>;
     },
   },
@@ -81,7 +81,7 @@ export const getShopsColumns = ({
     header: 'State',
     cell: ({ row }) => {
       const state = row.original.state;
-      const stateName = state && typeof state === 'object' ? (state as any).name : state;
+      const stateName = state && typeof state === 'object' ? (state as Record<string, string>).name : state;
       return <div className="text-slate-600">{stateName || '-'}</div>;
     },
   },

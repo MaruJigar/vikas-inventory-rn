@@ -46,15 +46,16 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
   const checkDuplicateMutation = useCheckDuplicateMutation();
 
   const dynamicSchema = useMemo(() => {
-    let schema = createShopBaseSchema;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let schema: any = createShopBaseSchema;
     
     if (user?.role === 'SUPER_ADMIN') {
       schema = schema.extend({
-        distributor_id: z.string({ required_error: 'Distributor is required' }).min(1, 'Distributor is required'),
+        distributor_id: z.string().min(1, 'Distributor is required'),
       });
     }
 
-    return schema.superRefine((data, ctx) => {
+    return schema.superRefine((data: Record<string, unknown>, ctx: z.RefinementCtx) => {
       if (data.state_id && !data.city_id) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -75,7 +76,7 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
     setError,
     formState: { errors, isSubmitting },
   } = useForm<CreateShopInput>({
-    // @ts-expect-error ZodResolver type mismatch with coerced numbers
+    // ZodResolver type mismatch with coerced numbers
     resolver: zodResolver(dynamicSchema),
     defaultValues: {
       name: '',
@@ -200,7 +201,7 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
     }
   };
 
-  // @ts-expect-error type mismatch
+  // type mismatch
   const formSubmit = handleSubmit(onSubmit);
 
   return (
