@@ -47,14 +47,14 @@ export class CreateShopDto {
   address: string;
 
   @IsString()
-  @IsOptional()
-  @ApiPropertyOptional({ description: 'City' })
-  city?: string;
+  @IsNotEmpty()
+  @ApiProperty({ description: 'City' })
+  city: string;
 
   @IsString()
-  @IsOptional()
-  @ApiPropertyOptional({ description: 'State' })
-  state?: string;
+  @IsNotEmpty()
+  @ApiProperty({ description: 'State' })
+  state: string;
 
   @IsString()
   @IsOptional()
@@ -67,14 +67,14 @@ export class CreateShopDto {
   maps_link?: string;
 
   @IsString()
-  @IsOptional()
-  @ApiPropertyOptional({ description: 'City ID' })
-  city_id?: string;
+  @IsNotEmpty()
+  @ApiProperty({ description: 'City ID' })
+  city_id: string;
 
   @IsString()
-  @IsOptional()
-  @ApiPropertyOptional({ description: 'State ID' })
-  state_id?: string;
+  @IsNotEmpty()
+  @ApiProperty({ description: 'State ID' })
+  state_id: string;
 
   @IsOptional()
   @IsString()

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { EntityFormDrawer } from '@/components/shared/EntityFormDrawer';
@@ -10,6 +10,15 @@ import { Label } from '@/components/ui/label';
 import { createSalesmanSchema, CreateSalesmanInput } from '@/lib/validation/salesmen/schema';
 import { useCreateSalesmanMutation } from '@/hooks/salesmen/useCreateSalesmanMutation';
 import { useDistributorsQuery } from '@/hooks/distributors/useDistributorsQuery';
+import { useStates } from '@/hooks/locations/useStates';
+import { useCities } from '@/hooks/locations/useCities';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface CreateSalesmanDrawerProps {
   isOpen: boolean;
@@ -27,11 +36,15 @@ export function CreateSalesmanDrawer({ isOpen, onClose }: CreateSalesmanDrawerPr
   const { data: distributorsResponse, isLoading: isLoadingDistributors } = useDistributorsQuery({ limit: 100 });
   const distributors = distributorsResponse?.data || [];
 
+  const { data: states, isLoading: isLoadingStates } = useStates();
+
   const {
     register,
     control,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateSalesmanInput>({
     resolver: zodResolver(createSalesmanSchema),
@@ -41,20 +54,49 @@ export function CreateSalesmanDrawer({ isOpen, onClose }: CreateSalesmanDrawerPr
       phone: '',
       password: '',
       distributor_id: '',
+      state_id: '',
+      city_id: '',
     },
   });
+
+  const selectedStateId = watch('state_id');
+  const { data: cities, isLoading: isLoadingCities } = useCities(selectedStateId);
+
+  useEffect(() => {
+    if (isOpen) {
+      setErrorMsg(null);
+      setSuccessMsg(null);
+      reset();
+    }
+  }, [isOpen, reset]);
 
   const onSubmit = async (data: CreateSalesmanInput) => {
     setErrorMsg(null);
     setSuccessMsg(null);
 
     try {
-      await createSalesmanMutation.mutateAsync(data);
+      // Map names before submission
+      const stateName = states?.find(s => s.id === data.state_id)?.name;
+      const cityName = cities?.find(c => c.id === data.city_id)?.name;
+      
+      const payload: CreateSalesmanInput & { city?: string; city_id?: string; state: string } = {
+        ...data,
+        state: stateName || '',
+      };
+
+      if (cityName && data.city_id) {
+        payload.city = cityName;
+        payload.city_id = data.city_id;
+      } else {
+        delete payload.city_id;
+        delete payload.city;
+      }
+
+      await createSalesmanMutation.mutateAsync(payload);
       setSuccessMsg('Salesman registered successfully.');
       setTimeout(() => {
-        reset();
         onClose();
-      }, 1500);
+      }, 1000);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       const errorMessage = axiosErr?.response?.data?.message || (err as Error).message || 'Salesman registration failed';
@@ -70,7 +112,6 @@ export function CreateSalesmanDrawer({ isOpen, onClose }: CreateSalesmanDrawerPr
       open={isOpen}
       onOpenChange={(open) => {
         if (!open) {
-          reset();
           setErrorMsg(null);
           setSuccessMsg(null);
           onClose();
@@ -121,26 +162,105 @@ export function CreateSalesmanDrawer({ isOpen, onClose }: CreateSalesmanDrawerPr
               name="distributor_id"
               control={control}
               render={({ field }) => (
-                <select
-                  {...field}
-                  disabled={isLoadingDistributors}
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="" disabled>
-                    {isLoadingDistributors ? 'Loading...' : 'Select a distributor'}
-                  </option>
-                  {distributors.map((distributor) => (
-                    <option key={distributor.id} value={distributor.id}>
-                      {distributor.business_name || distributor.id}
-                    </option>
-                  ))}
-                  {!isLoadingDistributors && distributors.length === 0 && (
-                    <option value="none" disabled>No distributors found</option>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value}
+                disabled={isLoadingDistributors}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {isLoadingDistributors 
+                      ? 'Loading...' 
+                      : (distributors.find(d => d.id === field.value)?.business_name || distributors.find(d => d.id === field.value)?.id || 'Select a distributor')
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {distributors.length === 0 && !isLoadingDistributors ? (
+                    <SelectItem value="none" disabled>No distributors found</SelectItem>
+                  ) : (
+                    distributors.map((distributor) => (
+                      <SelectItem key={distributor.id} value={distributor.id}>
+                        {distributor.business_name || distributor.id}
+                      </SelectItem>
+                    ))
                   )}
-                </select>
+                </SelectContent>
+              </Select>
               )}
             />
             {errors.distributor_id && <p className="text-red-500 text-xs mt-1">{errors.distributor_id.message}</p>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="state_id">State *</Label>
+              <Controller
+                control={control}
+                name="state_id"
+                render={({ field }) => (
+                  <Select
+                    key={states ? 'loaded' : 'loading'}
+                    value={field.value || ""}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setValue("city_id", "");
+                    }}
+                    disabled={isLoadingStates}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {isLoadingStates 
+                          ? "Loading states..." 
+                          : (states?.find((s) => s.id === field.value)?.name || "Select State")
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {states?.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.state_id && <p className="text-red-500 text-xs mt-1">{errors.state_id.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="city_id">City</Label>
+              <Controller
+                control={control}
+                name="city_id"
+                render={({ field }) => (
+                  <Select
+                    key={cities ? 'loaded' : 'loading'}
+                    onValueChange={field.onChange}
+                    value={isLoadingCities ? '' : (field.value || '')}
+                    disabled={!selectedStateId || isLoadingCities}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {isLoadingCities
+                          ? "Loading cities..."
+                          : (cities?.find((c) => c.id === field.value)?.name || "Select City")
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cities?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.city_id && <p className="text-red-500 text-xs mt-1">{errors.city_id.message}</p>}
+            </div>
           </div>
         </div>
 

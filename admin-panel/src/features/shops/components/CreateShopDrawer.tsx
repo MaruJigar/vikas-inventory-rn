@@ -46,16 +46,17 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
   const checkDuplicateMutation = useCheckDuplicateMutation();
 
   const dynamicSchema = useMemo(() => {
-    let schema = createShopBaseSchema;
-    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let schema: any = createShopBaseSchema;
+
     if (user?.role === 'SUPER_ADMIN') {
       // @ts-ignore
       schema = schema.extend({
-        distributor_id: z.string({ message: 'Distributor is required' }).min(1, 'Distributor is required'),
+        distributor_id: z.string().min(1, 'Distributor is required'),
       });
     }
 
-    return schema.superRefine((data, ctx) => {
+    return schema.superRefine((data: Record<string, unknown>, ctx: z.RefinementCtx) => {
       if (data.state_id && !data.city_id) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -76,6 +77,7 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
     setError,
     formState: { errors, isSubmitting },
   } = useForm<CreateShopInput>({
+    // ZodResolver type mismatch with coerced numbers
     resolver: zodResolver(dynamicSchema),
     defaultValues: {
       name: '',
@@ -200,6 +202,7 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
     }
   };
 
+  // type mismatch
   const formSubmit = handleSubmit(onSubmit);
 
   return (
@@ -285,8 +288,8 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue>
-                          {isLoadingStates 
-                            ? "Loading states..." 
+                          {isLoadingStates
+                            ? "Loading states..."
                             : (states?.find((s) => s.id === field.value)?.name || "Select State")
                           }
                         </SelectValue>
@@ -318,14 +321,14 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
                     value={isLoadingCities ? '' : (field.value || '')}
                     disabled={!selectedStateId || isLoadingCities}
                   >
-                      <SelectTrigger className="w-full">
-                        <SelectValue>
-                          {isLoadingCities
-                            ? "Loading cities..."
-                            : (cities?.find((c) => c.id === field.value)?.name || "Select City")
-                          }
-                        </SelectValue>
-                      </SelectTrigger>
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {isLoadingCities
+                          ? "Loading cities..."
+                          : (cities?.find((c) => c.id === field.value)?.name || "Select City")
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
                     <SelectContent>
                       {cities?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>

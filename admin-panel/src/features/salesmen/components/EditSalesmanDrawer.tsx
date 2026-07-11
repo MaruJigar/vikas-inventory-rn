@@ -10,6 +10,16 @@ import { Label } from '@/components/ui/label';
 import { updateSalesmanSchema, UpdateSalesmanInput } from '@/lib/validation/salesmen/schema';
 import { useUpdateSalesmanMutation } from '@/hooks/salesmen/useUpdateSalesmanMutation';
 import { useSalesmanQuery } from '@/hooks/salesmen/useSalesmanQuery';
+import { useStates } from '@/hooks/locations/useStates';
+import { useCities } from '@/hooks/locations/useCities';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Controller } from 'react-hook-form';
 
 interface EditSalesmanDrawerProps {
   salesmanId?: string | null;
@@ -22,14 +32,17 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const { data: response, isLoading: isFetching } = useSalesmanQuery(salesmanId || '');
-  const salesman = response?.data;
+  const salesman = response?.data || response; // Handle both nested {data: ...} and flat object structures
 
   const updateSalesmanMutation = useUpdateSalesmanMutation();
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<UpdateSalesmanInput>({
     resolver: zodResolver(updateSalesmanSchema),
@@ -37,17 +50,38 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
       full_name: '',
       email: '',
       phone: '',
+      state_id: '',
+      city_id: '',
     },
   });
 
+  const { data: states, isLoading: isLoadingStates } = useStates();
+
+  const selectedStateId = watch('state_id');
+  const { data: cities, isLoading: isLoadingCities } = useCities(selectedStateId);
+
+  // Clear messages only when drawer opens
+  useEffect(() => {
+    if (isOpen) {
+      setErrorMsg(null);
+      setSuccessMsg(null);
+    }
+  }, [isOpen]);
+
   // Pre-fill existing values
   useEffect(() => {
-    if (salesman && isOpen) {
-      reset({
-        full_name: salesman.full_name || '',
-        email: salesman.email || '',
-        phone: salesman.phone || '',
-      });
+    if (isOpen) {
+      if (salesman) {
+        reset({
+          full_name: salesman.full_name || '',
+          email: salesman.email || '',
+          phone: salesman.phone || '',
+          state_id: salesman.state_id || '',
+          city_id: salesman.city_id || '',
+        });
+      } else {
+        reset();
+      }
     }
   }, [salesman, isOpen, reset]);
 
@@ -57,25 +91,30 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    // Clean up empty strings to undefined if backend treats them differently, 
-    // but DTO supports strings and we defined optional().or(z.literal(''))
-    // Actually, we can just pass the data as is.
-    
-    // Only include properties that were actually changed to be clean, 
-    // or just pass the whole valid payload.
-    const payload = {
-      full_name: data.full_name || undefined,
+    const payload: UpdateSalesmanInput = {
+      full_name: data.full_name,
       email: data.email || undefined,
       phone: data.phone || undefined,
+      state_id: data.state_id || undefined,
+      city_id: data.city_id || undefined,
     };
 
+    if (data.state_id) {
+      payload.state = states?.find(s => s.id === data.state_id)?.name || '';
+    }
+    if (data.city_id) {
+      payload.city = cities?.find(c => c.id === data.city_id)?.name || '';
+    }
+
     try {
-      await updateSalesmanMutation.mutateAsync({ id: salesmanId, data: payload });
+      await updateSalesmanMutation.mutateAsync({
+        id: salesmanId,
+        data: payload,
+      });
       setSuccessMsg('Salesman updated successfully.');
       setTimeout(() => {
-        reset();
         onClose();
-      }, 1500);
+      }, 1000);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       const errorMessage = axiosErr?.response?.data?.message || (err as Error).message || 'Salesman update failed';
@@ -99,7 +138,7 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
       }}
       width="md"
     >
-      {isFetching ? (
+      {(!salesman && isFetching && salesmanId) ? (
         <div className="flex justify-center items-center h-48">
           <p className="text-muted-foreground text-sm">Loading salesman details...</p>
         </div>
@@ -131,8 +170,79 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
 
             <div>
               <Label htmlFor="edit_phone">Phone</Label>
-              <Input id="edit_phone" type="tel" {...register('phone')} />
+              <Input id="phone" type="tel" {...register('phone')} />
               {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="state_id">State</Label>
+              <Controller
+                control={control}
+                name="state_id"
+                render={({ field }) => (
+                  <Select
+                    key={states ? 'loaded' : 'loading'}
+                    value={field.value || ""}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setValue("city_id", "");
+                    }}
+                    disabled={isLoadingStates}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {isLoadingStates 
+                          ? "Loading states..." 
+                          : (states?.find((s) => s.id === field.value)?.name || "Select State")
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {states?.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.state_id && <p className="text-red-500 text-xs mt-1">{errors.state_id.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="city_id">City</Label>
+              <Controller
+                control={control}
+                name="city_id"
+                render={({ field }) => (
+                  <Select
+                    key={cities ? 'loaded' : 'loading'}
+                    onValueChange={field.onChange}
+                    value={isLoadingCities ? '' : (field.value || '')}
+                    disabled={!selectedStateId || isLoadingCities}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {isLoadingCities
+                          ? "Loading cities..."
+                          : (cities?.find((c) => c.id === field.value)?.name || "Select City")
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cities?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.city_id && <p className="text-red-500 text-xs mt-1">{errors.city_id.message}</p>}
             </div>
           </div>
 

@@ -15,8 +15,8 @@ export const useCities = (stateId?: string, options?: { enabled?: boolean }) => 
         .get('/cities', { params: { state_id: stateId } })
         .then((res) => {
           const data = res.data;
-          if (data && Array.isArray((data as any).data)) {
-            return (data as any).data as City[];
+          if (data && Array.isArray((data as Record<string, unknown>).data)) {
+            return (data as Record<string, unknown>).data as City[];
           }
           return data as City[];
         }),

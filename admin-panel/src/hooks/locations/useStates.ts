@@ -12,8 +12,8 @@ export const useStates = (options?: { enabled?: boolean }) => {
     queryFn: () => api.get('/states').then((res) => {
       const data = res.data;
       console.log("response of states =", res.data)
-      if (data && Array.isArray((data as any).data)) {
-        return (data as any).data as State[];
+      if (data && Array.isArray((data as Record<string, unknown>).data)) {
+        return (data as Record<string, unknown>).data as State[];
       }
       return data as State[];
     }),

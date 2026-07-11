@@ -11,6 +11,8 @@ import {
 } from 'typeorm';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Distributor } from '../distributor/distributor.entity';
+import { City } from '../region/entities/city.entity';
+import { State } from '../region/entities/state.entity';
 
 @Entity('salesmen')
 @Index('idx_salesmen_dist_status', ['distributor_id', 'approval_status'])
@@ -60,6 +62,32 @@ export class Salesman {
   @Column({ type: 'text', nullable: true })
   @ApiPropertyOptional({ description: 'Rejected reason' })
   rejected_reason: string;
+
+  @Column({ name: 'city', type: 'varchar', length: 100, nullable: true })
+  @ApiPropertyOptional({ description: 'City name text' })
+  city_name: string;
+
+  @Column({ name: 'state', type: 'varchar', length: 100, nullable: true })
+  @ApiPropertyOptional({ description: 'State name text' })
+  state_name: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  @ApiPropertyOptional({ description: 'City id' })
+  city_id: string;
+
+  @ManyToOne(() => City)
+  @JoinColumn({ name: 'city_id' })
+  @ApiPropertyOptional({ type: () => City, description: 'City relation' })
+  city?: City;
+
+  @Column({ type: 'uuid', nullable: true })
+  @ApiPropertyOptional({ description: 'State id' })
+  state_id: string;
+
+  @ManyToOne(() => State)
+  @JoinColumn({ name: 'state_id' })
+  @ApiPropertyOptional({ type: () => State, description: 'State relation' })
+  state?: State;
 
   @Column({ type: 'boolean', default: false })
   @ApiProperty({ description: 'Is active' })
