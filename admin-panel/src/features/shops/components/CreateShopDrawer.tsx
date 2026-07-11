@@ -49,8 +49,9 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
     let schema = createShopBaseSchema;
     
     if (user?.role === 'SUPER_ADMIN') {
+      // @ts-ignore
       schema = schema.extend({
-        distributor_id: z.string({ required_error: 'Distributor is required' }).min(1, 'Distributor is required'),
+        distributor_id: z.string({ message: 'Distributor is required' }).min(1, 'Distributor is required'),
       });
     }
 
@@ -75,7 +76,6 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
     setError,
     formState: { errors, isSubmitting },
   } = useForm<CreateShopInput>({
-    // @ts-expect-error ZodResolver type mismatch with coerced numbers
     resolver: zodResolver(dynamicSchema),
     defaultValues: {
       name: '',
@@ -200,7 +200,6 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
     }
   };
 
-  // @ts-expect-error type mismatch
   const formSubmit = handleSubmit(onSubmit);
 
   return (

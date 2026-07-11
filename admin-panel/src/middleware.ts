@@ -69,7 +69,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (token && isAuthRoute) {
-    const role = getRoleFromToken(token);
+    const role = getRoleFromToken(token, hasRefreshToken);
     if (role && ADMIN_ROLES.includes(role as UserRole)) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     } else {

@@ -46,8 +46,9 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
     let schema = updateShopBaseSchema;
 
     if (user?.role === 'SUPER_ADMIN') {
+      // @ts-ignore
       schema = schema.extend({
-        distributor_id: z.string({ required_error: 'Distributor is required' }).min(1, 'Distributor is required'),
+        distributor_id: z.string({ message: 'Distributor is required' }).min(1, 'Distributor is required'),
       });
     }
 
@@ -71,7 +72,6 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
     setError,
     formState: { errors, isSubmitting },
   } = useForm<UpdateShopInput>({
-    // @ts-expect-error ZodResolver type mismatch with coerced numbers
     resolver: zodResolver(dynamicSchema),
     defaultValues: {
       name: '',
@@ -148,7 +148,7 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
     }
   };
 
-    const formSubmit = handleSubmit(onSubmit);
+  const formSubmit = handleSubmit(onSubmit);
 
   return (
     <EntityFormDrawer
@@ -219,7 +219,7 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
                     key={states ? 'loaded' : 'loading'}
                     onValueChange={(value) => {
                       field.onChange(value);
-                      reset({ ...watch(), state_id: value, city_id: '' });
+                      reset({ ...watch(), state_id: value || '', city_id: '' });
                     }}
                     value={isLoadingStates ? '' : (field.value || '')}
                     disabled={isLoadingStates}

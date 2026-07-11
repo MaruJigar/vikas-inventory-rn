@@ -6,7 +6,7 @@ export const createShopBaseSchema = z.object({
   address: z.string().min(1, 'Address is required'),
   owner_name: z.string().optional().nullable(),
   city_id: z.string().optional(),
-  state_id: z.string({ required_error: 'State is required' }).min(1, 'State is required'),
+  state_id: z.string({ message: 'State is required' }).min(1, 'State is required'),
   gst_number: z.string().optional().nullable(),
   distributor_id: z.string().optional(),
 });
