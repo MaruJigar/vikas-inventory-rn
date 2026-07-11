@@ -79,9 +79,10 @@ export type OrdersStackParamList = {
 export type OrdersScreenProps<T extends keyof OrdersStackParamList> =
   NativeStackScreenProps<OrdersStackParamList, T>;
 
-/** Account tab stack (account → distributor-only salesmen management). */
+/** Account tab stack (account → profile edit + distributor salesmen mgmt). */
 export type AccountStackParamList = {
   AccountHome: undefined;
+  EditProfile: undefined;
   Salesmen: undefined;
   AddSalesman: undefined;
   SalesmanDetail: { id: string };

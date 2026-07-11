@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { AccountStackParamList } from '@/navigation/types';
 import { colors } from '@/theme';
 import { AccountScreen } from '@/features/profile/screens/AccountScreen';
+import { EditProfileScreen } from '@/features/profile/screens/EditProfileScreen';
 import { SalesmenListScreen } from '@/features/salesman/screens/SalesmenListScreen';
 import { AddSalesmanScreen } from '@/features/salesman/screens/AddSalesmanScreen';
 import { SalesmanDetailScreen } from '@/features/salesman/screens/SalesmanDetailScreen';
@@ -27,6 +28,11 @@ export function AccountNavigator() {
         name="AccountHome"
         component={AccountScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{ title: t('account.profile.title') }}
       />
       <Stack.Screen
         name="Salesmen"

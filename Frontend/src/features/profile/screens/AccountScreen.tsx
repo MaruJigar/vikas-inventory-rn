@@ -3,9 +3,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { Screen, Card, Button, Section, LanguageToggle } from '@/components';
+import { Screen, LanguageToggle } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
+import { confirmAction, notify } from '@/lib/dialog';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useForgotPassword } from '@/features/auth/hooks';
 import type { Role } from '@/types/auth';
 import type { AccountScreenProps } from '@/navigation/types';
 
@@ -16,9 +18,90 @@ const ROLE_LABELS: Record<Role, string> = {
   SUPER_ADMIN: 'Admin',
 };
 
+/** A rounded, tinted container for a row's leading icon. */
+function IconChip({
+  icon,
+  tone = 'default',
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  tone?: 'default' | 'danger';
+}) {
+  return (
+    <View style={[styles.chip, tone === 'danger' && styles.chipDanger]}>
+      <Ionicons
+        name={icon}
+        size={18}
+        color={tone === 'danger' ? colors.danger : colors.text}
+      />
+    </View>
+  );
+}
+
+/** A single settings row. Renders as a button when `onPress` is given. */
+function Row({
+  icon,
+  label,
+  tone = 'default',
+  value,
+  trailing,
+  chevron = true,
+  divider = true,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  tone?: 'default' | 'danger';
+  value?: string;
+  trailing?: React.ReactNode;
+  chevron?: boolean;
+  divider?: boolean;
+  onPress?: () => void;
+}) {
+  const body = (
+    <View style={[styles.row, divider && styles.rowDivider]}>
+      <IconChip icon={icon} tone={tone} />
+      <Text
+        style={[styles.rowLabel, tone === 'danger' && styles.rowLabelDanger]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+      {value ? (
+        <Text style={styles.rowValue} numberOfLines={1}>
+          {value}
+        </Text>
+      ) : null}
+      {trailing}
+      {chevron && onPress ? (
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      ) : null}
+    </View>
+  );
+
+  if (!onPress) return body;
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => (pressed ? styles.rowPressed : undefined)}
+      accessibilityRole="button"
+    >
+      {body}
+    </Pressable>
+  );
+}
+
+function Group({ children }: { children: React.ReactNode }) {
+  return <View style={styles.group}>{children}</View>;
+}
+
+function GroupLabel({ children }: { children: string }) {
+  return <Text style={styles.groupLabel}>{children}</Text>;
+}
+
 /**
- * Account tab home. Surfaces identity, language and logout, plus a
- * distributor-only entry into salesman management.
+ * Account tab home — a modern grouped-settings layout. Surfaces the profile,
+ * account actions (edit profile / reset password), distributor management,
+ * language and logout.
  */
 export function AccountScreen({
   navigation,
@@ -26,112 +109,243 @@ export function AccountScreen({
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const forgot = useForgotPassword();
   const isDistributor = user?.role === 'DISTRIBUTOR_ADMIN';
 
   const name = user?.full_name ?? '';
   const initial = name.trim().charAt(0).toUpperCase() || '?';
   const roleLabel = user ? ROLE_LABELS[user.role] ?? user.role : '';
 
+  // No in-app change-password endpoint exists — the backend only supports an
+  // emailed reset link, so "Reset password" triggers that flow.
+  const onResetPassword = () => {
+    const email = user?.email;
+    if (!email) {
+      notify(t('account.security.noEmail'));
+      return;
+    }
+    confirmAction({
+      title: t('account.security.resetTitle'),
+      message: t('account.security.resetMessage', { email }),
+      confirmLabel: t('account.security.resetConfirm'),
+      cancelLabel: t('common.cancel'),
+      onConfirm: () =>
+        forgot.mutate(email, {
+          onSuccess: () => notify(t('account.security.resetSent')),
+          onError: () => notify(t('account.security.resetError')),
+        }),
+    });
+  };
+
+  const confirmLogout = () =>
+    confirmAction({
+      title: t('account.logoutConfirmTitle'),
+      confirmLabel: t('account.logout'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+      onConfirm: () => void logout(),
+    });
+
   return (
     <Screen edges={['top']}>
       <Text style={[typography.h1, styles.title]}>{t('account.title')}</Text>
 
-      <View style={styles.profile}>
+      {/* Profile header */}
+      <View style={styles.hero}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initial}</Text>
         </View>
-        <Text style={typography.h2}>{name}</Text>
-        {user?.email ? <Text style={styles.muted}>{user.email}</Text> : null}
-        <Text style={styles.muted}>{user?.phone ?? ''}</Text>
+        <View style={styles.heroInfo}>
+          <Text style={styles.heroName} numberOfLines={1}>
+            {name}
+          </Text>
+          <View style={styles.pills}>
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>{roleLabel}</Text>
+            </View>
+            <View style={[styles.pill, styles.pillOk]}>
+              <View style={styles.pillDot} />
+              <Text style={[styles.pillText, styles.pillOkText]}>
+                {t('account.statusApproved')}
+              </Text>
+            </View>
+          </View>
+          {user?.email ? (
+            <Text style={styles.heroMeta} numberOfLines={1}>
+              {user.email}
+            </Text>
+          ) : null}
+          {user?.phone ? (
+            <Text style={styles.heroMeta} numberOfLines={1}>
+              {user.phone}
+            </Text>
+          ) : null}
+        </View>
       </View>
 
-      <Card style={styles.infoCard}>
-        <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>{t('account.role')}</Text>
-          <Text style={styles.metaValue}>{roleLabel}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>{t('account.status')}</Text>
-          <Text style={[styles.metaValue, styles.approved]}>
-            {t('account.statusApproved')}
-          </Text>
-        </View>
-      </Card>
+      {/* Account actions */}
+      <GroupLabel>{t('account.account')}</GroupLabel>
+      <Group>
+        {isDistributor ? (
+          <Row
+            icon="person-outline"
+            label={t('account.profile.edit')}
+            onPress={() => navigation.navigate('EditProfile')}
+          />
+        ) : null}
+        <Row
+          icon="key-outline"
+          label={t('account.security.resetPassword')}
+          divider={false}
+          onPress={onResetPassword}
+        />
+      </Group>
 
+      {/* Distributor management */}
       {isDistributor ? (
-        <Section title={t('account.management')}>
-          <Pressable onPress={() => navigation.navigate('Salesmen')}>
-            <Card style={styles.menuRow}>
-              <View style={styles.menuLeft}>
-                <Ionicons name="people-outline" size={22} color={colors.text} />
-                <Text style={typography.body}>{t('salesmen.title')}</Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={colors.textMuted}
-              />
-            </Card>
-          </Pressable>
-        </Section>
+        <>
+          <GroupLabel>{t('account.management')}</GroupLabel>
+          <Group>
+            <Row
+              icon="people-outline"
+              label={t('salesmen.title')}
+              divider={false}
+              onPress={() => navigation.navigate('Salesmen')}
+            />
+          </Group>
+        </>
       ) : null}
 
-      <Section title={t('common.language')}>
-        <Card style={styles.languageCard}>
-          <LanguageToggle />
-        </Card>
-      </Section>
+      {/* Preferences */}
+      <GroupLabel>{t('common.language')}</GroupLabel>
+      <Group>
+        <Row
+          icon="language-outline"
+          label={t('common.language')}
+          chevron={false}
+          divider={false}
+          trailing={<LanguageToggle />}
+        />
+      </Group>
 
-      <View style={styles.spacer} />
-      <Text style={styles.hint}>{t('account.profileHint')}</Text>
-      <Button
-        label={t('account.logout')}
-        variant="danger"
-        onPress={() => void logout()}
-        style={styles.logout}
-      />
+      {/* Session */}
+      <View style={styles.logoutWrap}>
+        <Group>
+          <Row
+            icon="log-out-outline"
+            label={t('account.logout')}
+            tone="danger"
+            chevron={false}
+            divider={false}
+            onPress={confirmLogout}
+          />
+        </Group>
+      </View>
+
+      <Text style={styles.appName}>Vikas Inventory</Text>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { marginTop: spacing.sm },
-  profile: {
+  title: { marginTop: spacing.sm, marginBottom: spacing.lg },
+
+  /* Hero */
+  hero: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.lg,
-    marginBottom: spacing.lg,
+    gap: spacing.lg,
+    padding: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    marginBottom: spacing.xl,
   },
   avatar: {
-    width: 72,
-    height: 72,
+    width: 60,
+    height: 60,
     borderRadius: radius.pill,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarText: { fontSize: 26, fontWeight: '700', color: '#FFFFFF' },
+  heroInfo: { flex: 1, gap: 6 },
+  heroName: { fontSize: 20, fontWeight: '700', color: colors.text },
+  heroMeta: { ...typography.caption },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  pillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
+    letterSpacing: 0.2,
+  },
+  pillOk: { backgroundColor: 'rgba(21,128,61,0.10)', borderColor: 'transparent' },
+  pillOkText: { color: colors.success },
+  pillDot: {
+    width: 6,
+    height: 6,
+    borderRadius: radius.pill,
+    backgroundColor: colors.success,
+  },
+
+  /* Grouped list */
+  groupLabel: {
+    ...typography.label,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
     marginBottom: spacing.sm,
+    marginLeft: spacing.xs,
   },
-  avatarText: { fontSize: 30, fontWeight: '700', color: '#FFFFFF' },
-  infoCard: { gap: spacing.sm },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  group: {
+    backgroundColor: colors.background,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+    marginBottom: spacing.xl,
   },
-  metaLabel: { ...typography.label },
-  metaValue: { ...typography.body },
-  approved: { color: colors.success },
-  divider: { height: 1, backgroundColor: colors.border },
-  languageCard: { alignItems: 'flex-start' },
-  menuRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingVertical: 13,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.background,
   },
-  menuLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  muted: { ...typography.body, color: colors.textMuted },
-  spacer: { flex: 1, minHeight: spacing.lg },
-  hint: { ...typography.caption, marginBottom: spacing.md, textAlign: 'center' },
-  logout: {},
+  rowPressed: { opacity: 0.6 },
+  rowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  rowLabel: { ...typography.body, flex: 1 },
+  rowLabelDanger: { color: colors.danger, fontWeight: '600' },
+  rowValue: { ...typography.body, color: colors.textMuted },
+  chip: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipDanger: { backgroundColor: 'rgba(185,28,28,0.10)' },
+
+  logoutWrap: { marginTop: spacing.sm },
+  appName: {
+    ...typography.caption,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+  },
 });
