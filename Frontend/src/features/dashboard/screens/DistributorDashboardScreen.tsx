@@ -230,7 +230,7 @@ export function DistributorDashboardScreen() {
         onPress={goToBackorders}
         accessibilityRole="button"
         accessibilityLabel={t('backorders.title')}
-        style={({ pressed }) => [styles.tilePressable, pressed && styles.tilePressed]}
+        style={({ pressed }) => (pressed ? styles.tilePressed : undefined)}
       >
         <Card style={styles.backorderCard}>
           <Ionicons name="cube-outline" size={24} color={colors.primary} />

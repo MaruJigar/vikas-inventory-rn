@@ -82,7 +82,11 @@ export function OrderDetailScreen({
 }: OrdersScreenProps<'OrderDetail'>) {
   const { t } = useTranslation();
   const { id } = route.params;
-  const { index: statusIndex, all: statuses } = useStatusIndex();
+  const {
+    index: statusIndex,
+    all: statuses,
+    notConfigured: statusesNotConfigured,
+  } = useStatusIndex();
   const role = useAuthStore((s) => s.user?.role);
   const { data: order, isLoading, isError, refetch } = useOrder(id);
   const { data: history } = useOrderStatusHistory(id);
@@ -165,8 +169,49 @@ export function OrderDetailScreen({
     );
   };
 
+  const hasActions = showAdvance || showEdit || showCancel;
+  const showActionRow = showEdit || showCancel;
+
+  // Order management lives in a pinned bottom bar. Hidden while entering a
+  // cancellation reason (that flow renders inline so the keyboard doesn't cover
+  // it), and absent entirely for terminal orders / when statuses aren't set up.
+  const actionBar =
+    hasActions && !cancelling ? (
+      <View style={styles.actionBar}>
+        {showAdvance && next ? (
+          <Button
+            label={advanceActionLabel(t, next.name)}
+            icon="arrow-forward"
+            loading={advance.isPending}
+            onPress={onAdvance}
+          />
+        ) : null}
+        {showActionRow ? (
+          <View style={styles.actionBarRow}>
+            {showEdit ? (
+              <Button
+                label={t('orders.edit.editOrder')}
+                variant="secondary"
+                icon="create-outline"
+                style={styles.flex1}
+                onPress={() => navigation.navigate('EditOrder', { id })}
+              />
+            ) : null}
+            {showCancel ? (
+              <Button
+                label={t('orders.actions.cancel')}
+                variant="secondary"
+                style={styles.flex1}
+                onPress={() => setCancelling(true)}
+              />
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+    ) : null;
+
   return (
-    <Screen edges={[]}>
+    <Screen edges={['bottom']} floatingAction={actionBar}>
       <View style={styles.header}>
         <Text style={[typography.h1, styles.orderNumber]} numberOfLines={1}>
           {order.order_number}
@@ -197,69 +242,48 @@ export function OrderDetailScreen({
         </Text>
       </View>
 
-      {showAdvance || showEdit || showCancel ? (
-        <View style={styles.actions}>
-          {showAdvance && next ? (
-            <Button
-              label={advanceActionLabel(t, next.name)}
-              icon="arrow-forward"
-              loading={advance.isPending}
-              onPress={onAdvance}
-            />
-          ) : null}
+      {statusesNotConfigured ? (
+        <Card style={styles.noticeCard}>
+          <Ionicons name="warning-outline" size={18} color={colors.warning} />
+          <Text style={styles.noticeText}>
+            {t('orders.statusesNotConfigured')}
+          </Text>
+        </Card>
+      ) : null}
 
-          {showEdit ? (
+      {showCancel && cancelling ? (
+        <Card style={styles.cancelBox}>
+          <Text style={styles.cancelBoxLabel}>
+            {t('orders.actions.cancelReasonLabel')}
+          </Text>
+          <Input
+            value={reason}
+            onChangeText={setReason}
+            placeholder={t('orders.actions.cancelReasonPlaceholder')}
+            multiline
+            maxLength={200}
+            autoFocus
+          />
+          <View style={styles.cancelRow}>
             <Button
-              label={t('orders.edit.editOrder')}
+              label={t('common.back')}
               variant="secondary"
-              icon="create-outline"
-              onPress={() => navigation.navigate('EditOrder', { id })}
+              style={styles.flex1}
+              onPress={() => {
+                setCancelling(false);
+                setReason('');
+              }}
             />
-          ) : null}
-
-          {showCancel && !cancelling ? (
             <Button
-              label={t('orders.actions.cancel')}
-              variant="secondary"
-              onPress={() => setCancelling(true)}
+              label={t('orders.actions.confirmCancel')}
+              variant="danger"
+              style={styles.flex1}
+              loading={cancelOrder.isPending}
+              disabled={!reason.trim()}
+              onPress={onSubmitCancel}
             />
-          ) : null}
-
-          {showCancel && cancelling ? (
-            <Card style={styles.cancelBox}>
-              <Text style={styles.cancelBoxLabel}>
-                {t('orders.actions.cancelReasonLabel')}
-              </Text>
-              <Input
-                value={reason}
-                onChangeText={setReason}
-                placeholder={t('orders.actions.cancelReasonPlaceholder')}
-                multiline
-                maxLength={200}
-                autoFocus
-              />
-              <View style={styles.cancelRow}>
-                <Button
-                  label={t('common.back')}
-                  variant="secondary"
-                  style={styles.flex1}
-                  onPress={() => {
-                    setCancelling(false);
-                    setReason('');
-                  }}
-                />
-                <Button
-                  label={t('orders.actions.confirmCancel')}
-                  variant="danger"
-                  style={styles.flex1}
-                  loading={cancelOrder.isPending}
-                  disabled={!reason.trim()}
-                  onPress={onSubmitCancel}
-                />
-              </View>
-            </Card>
-          ) : null}
-        </View>
+          </View>
+        </Card>
       ) : null}
 
       {order.shop ? (
@@ -422,8 +446,24 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   date: { ...typography.caption },
-  actions: { marginTop: spacing.lg, gap: spacing.sm },
-  cancelBox: { gap: spacing.sm },
+  noticeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  noticeText: { ...typography.caption, color: colors.textMuted, flex: 1 },
+  actionBar: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    gap: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  actionBarRow: { flexDirection: 'row', gap: spacing.sm },
+  cancelBox: { gap: spacing.sm, marginTop: spacing.md },
   cancelBoxLabel: { ...typography.label, color: colors.danger },
   cancelRow: { flexDirection: 'row', gap: spacing.sm },
   flex1: { flex: 1 },

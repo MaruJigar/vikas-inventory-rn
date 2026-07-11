@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 
-import { Screen, Card, Button, ControlledInput, Spinner, EmptyState } from '@/components';
+import {
+  Screen,
+  Card,
+  Button,
+  ControlledInput,
+  Select,
+  Spinner,
+  EmptyState,
+} from '@/components';
+import { useCities, useStates } from '@/features/region/hooks';
 import { colors, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { confirmAction, notify } from '@/lib/dialog';
@@ -39,23 +48,52 @@ function EditForm({
   const [isActive, setIsActive] = useState(salesman.is_active);
   const saving = update.isPending || status.isPending;
 
-  const { control, handleSubmit } = useForm<EditSalesmanForm>({
+  const { control, handleSubmit, watch, setValue } = useForm<EditSalesmanForm>({
     resolver: zodResolver(editSalesmanSchema),
     defaultValues: {
       full_name: salesman.full_name,
       email: salesman.email ?? '',
       phone: salesman.phone ?? '',
+      state_id: salesman.state_id ?? '',
+      city_id: salesman.city_id ?? '',
     },
   });
 
+  const stateId = watch('state_id');
+  const statesQuery = useStates();
+  const citiesQuery = useCities(stateId || undefined);
+  const stateOptions = useMemo(
+    () => (statesQuery.data ?? []).map((s) => ({ label: s.name, value: s.id })),
+    [statesQuery.data],
+  );
+  const cityOptions = useMemo(
+    () => (citiesQuery.data ?? []).map((c) => ({ label: c.name, value: c.id })),
+    [citiesQuery.data],
+  );
+
   const onSubmit = (values: EditSalesmanForm) => {
     const statusChanged = isActive !== salesman.is_active;
+    const stateName = values.state_id
+      ? stateOptions.find((o) => o.value === values.state_id)?.label
+      : undefined;
+    const cityName = values.city_id
+      ? cityOptions.find((o) => o.value === values.city_id)?.label
+      : undefined;
+    const payload = {
+      full_name: values.full_name,
+      email: values.email,
+      phone: values.phone,
+      ...(values.state_id
+        ? { state_id: values.state_id, state: stateName }
+        : {}),
+      ...(values.city_id ? { city_id: values.city_id, city: cityName } : {}),
+    };
 
     // Persist details (PUT) and, if it changed, the active/inactive status
     // (PATCH) together as a single save.
     const run = async () => {
       try {
-        await update.mutateAsync(values);
+        await update.mutateAsync(payload);
         if (statusChanged) await status.mutateAsync({ is_active: isActive });
         onSaved();
       } catch (err) {
@@ -122,6 +160,46 @@ function EditForm({
         name="phone"
         label={t('salesmen.form.phone')}
         keyboardType="phone-pad"
+      />
+      <Controller
+        control={control}
+        name="state_id"
+        render={({ field: { value, onChange }, fieldState: { error } }) => (
+          <Select
+            label={t('salesmen.form.state')}
+            placeholder={t('salesmen.form.selectState')}
+            value={value}
+            options={stateOptions}
+            loading={statesQuery.isLoading}
+            searchable
+            searchPlaceholder={t('salesmen.form.searchState')}
+            emptyText={t('salesmen.form.noStates')}
+            onChange={(v) => {
+              onChange(v);
+              setValue('city_id', '', { shouldValidate: false });
+            }}
+            error={error?.message ? t(error.message) : undefined}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="city_id"
+        render={({ field: { value, onChange }, fieldState: { error } }) => (
+          <Select
+            label={t('salesmen.form.city')}
+            placeholder={t('salesmen.form.selectCity')}
+            value={value}
+            options={cityOptions}
+            loading={citiesQuery.isLoading}
+            disabled={!stateId}
+            searchable
+            searchPlaceholder={t('salesmen.form.searchCity')}
+            emptyText={t('salesmen.form.noCities')}
+            onChange={onChange}
+            error={error?.message ? t(error.message) : undefined}
+          />
+        )}
       />
 
       <Button

@@ -9,13 +9,18 @@ export const addSalesmanSchema = z.object({
   email: z.string().trim().email('validation.email'),
   phone: z.string().trim().regex(phoneRegex, 'validation.phone'),
   password: z.string().min(6, 'validation.passwordMin'),
+  // Backend requires state; city is optional.
+  state_id: z.string().min(1, 'validation.required'),
+  city_id: z.string().optional(),
 });
 export type AddSalesmanForm = z.infer<typeof addSalesmanSchema>;
 
-/** Edit omits password (backend update accepts name/phone/email only). */
+/** Edit omits password. Region is editable (all optional on the backend). */
 export const editSalesmanSchema = z.object({
   full_name: z.string().trim().min(1, 'validation.required'),
   email: z.string().trim().email('validation.email'),
   phone: z.string().trim().regex(phoneRegex, 'validation.phone'),
+  state_id: z.string().optional(),
+  city_id: z.string().optional(),
 });
 export type EditSalesmanForm = z.infer<typeof editSalesmanSchema>;

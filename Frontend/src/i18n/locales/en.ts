@@ -199,6 +199,8 @@ export const en = {
     filteredBy: 'Filtered by {{label}}',
     filterScope: 'selection',
     clearFilter: 'Clear filter',
+    statusesNotConfigured:
+      'Order statuses are not configured yet, so status filtering and workflow actions are unavailable. An admin needs to set up order statuses on the backend.',
     // Status names are admin-defined (dynamic); these are best-effort labels —
     // any unmapped name falls back to the raw backend value.
     status: {
@@ -344,6 +346,14 @@ export const en = {
       email: 'Email',
       phone: 'Phone',
       password: 'Temporary password',
+      state: 'State',
+      selectState: 'Select state',
+      searchState: 'Search states',
+      noStates: 'No states found',
+      city: 'City (optional)',
+      selectCity: 'Select city',
+      searchCity: 'Search cities',
+      noCities: 'No cities found',
       submit: 'Create salesman',
       createError: 'Could not create the salesman. Please try again.',
     },

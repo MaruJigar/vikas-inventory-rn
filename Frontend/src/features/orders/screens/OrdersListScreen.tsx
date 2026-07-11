@@ -30,7 +30,11 @@ export function OrdersListScreen({
   route,
 }: OrdersScreenProps<'OrdersList'>) {
   const { t } = useTranslation();
-  const { index: statusIndex, activeStatuses } = useStatusIndex();
+  const {
+    index: statusIndex,
+    activeStatuses,
+    notConfigured: statusesNotConfigured,
+  } = useStatusIndex();
   const [query, setQuery] = useState('');
   // Seed the filter from a navigation param (a dashboard tile passes status_id).
   const [status, setStatus] = useState<string | null>(
@@ -134,27 +138,40 @@ export function OrdersListScreen({
         returnKeyType="search"
       />
 
-      <View style={styles.filterRow}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chips}
-        >
-          <Chip
-            label={t('orders.filterAll')}
-            active={status === null}
-            onPress={() => setStatus(null)}
+      {statusesNotConfigured ? (
+        <Card style={styles.noticeCard}>
+          <Ionicons
+            name="warning-outline"
+            size={18}
+            color={colors.warning}
           />
-          {activeStatuses.map((s) => (
+          <Text style={styles.noticeText}>
+            {t('orders.statusesNotConfigured')}
+          </Text>
+        </Card>
+      ) : (
+        <View style={styles.filterRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chips}
+          >
             <Chip
-              key={s.id}
-              label={statusLabel(t, statusIndex, s.id)}
-              active={status === s.id}
-              onPress={() => setStatus(s.id)}
+              label={t('orders.filterAll')}
+              active={status === null}
+              onPress={() => setStatus(null)}
             />
-          ))}
-        </ScrollView>
-      </View>
+            {activeStatuses.map((s) => (
+              <Chip
+                key={s.id}
+                label={statusLabel(t, statusIndex, s.id)}
+                active={status === s.id}
+                onPress={() => setStatus(s.id)}
+              />
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {isLoading ? (
         <Spinner />
@@ -237,6 +254,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   scopeText: { ...typography.label, color: colors.primary, flex: 1 },
+  noticeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  noticeText: { ...typography.caption, color: colors.textMuted, flex: 1 },
   filterRow: { marginBottom: spacing.sm },
   chips: { gap: spacing.sm, paddingVertical: spacing.xs },
   chip: {

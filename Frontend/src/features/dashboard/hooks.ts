@@ -9,16 +9,16 @@ export const dashboardKeys = {
 };
 
 /**
- * Legacy summary tiles predate the dynamic `order_statuses` table, so each maps
- * to a list of candidate status names — the first one that exists in the live
- * catalogue wins. Analytics `statusDistribution.status` is now a status_id, so
- * we resolve the name → id and match on that. A tile with no matching status
- * shows 0 and navigates unfiltered.
+ * Summary tiles map to a list of candidate status names (statuses are dynamic).
+ * The analytics `statusDistribution.status` is the status NAME (the backend
+ * groups by `status.name`), so we count rows by name and sum across every
+ * candidate present. `statusId` (for navigating to the filtered Orders list) is
+ * resolved from the first candidate that exists in the catalogue.
  */
 const TILE_STATUS_NAMES = {
-  pending: ['PENDING', 'CREATED', 'ORDERED'],
-  approved: ['CONFIRMED', 'APPROVED', 'PROCESSING', 'PACKED'],
-  dispatched: ['SHIPPED', 'DISPATCHED'],
+  pending: ['PENDING', 'CREATED', 'NEW'],
+  approved: ['ORDERED', 'CONFIRMED', 'APPROVED', 'PROCESSING', 'PACKED', 'ACCEPTED'],
+  dispatched: ['SHIPPED', 'DISPATCHED', 'OUT_FOR_DELIVERY'],
 } as const;
 
 export interface OrderSummaryTile {
@@ -40,20 +40,20 @@ export function useDistributorOrderSummary() {
     const idByName = new Map(
       (statuses ?? []).map((s) => [s.name.toUpperCase(), s.id]),
     );
-    const resolveId = (names: readonly string[]): string | undefined => {
-      for (const n of names) {
-        const id = idByName.get(n);
-        if (id) return id;
-      }
-      return undefined;
-    };
+    // Sum analytics rows (keyed by status NAME) across a tile's candidates, and
+    // resolve the first present candidate's id for list navigation.
+    const countByName = new Map<string, number>();
+    for (const r of rows) {
+      const name = (r.status ?? '').toUpperCase();
+      countByName.set(name, (countByName.get(name) ?? 0) + r.count);
+    }
     const tile = (names: readonly string[]): OrderSummaryTile => {
-      const statusId = resolveId(names);
-      const count = statusId
-        ? rows
-            .filter((r) => r.status === statusId)
-            .reduce((acc, r) => acc + r.count, 0)
-        : 0;
+      let count = 0;
+      let statusId: string | undefined;
+      for (const n of names) {
+        count += countByName.get(n) ?? 0;
+        if (!statusId) statusId = idByName.get(n);
+      }
       return { count, statusId };
     };
     return {

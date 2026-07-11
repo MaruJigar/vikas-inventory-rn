@@ -45,7 +45,7 @@ export function useOrderStatuses() {
  * plus the active statuses sorted by sequence (for filter chips).
  */
 export function useStatusIndex() {
-  const { data, isLoading } = useOrderStatuses();
+  const { data, isLoading, isError } = useOrderStatuses();
   const index = useMemo(() => indexStatuses(data ?? []), [data]);
   const activeStatuses = useMemo(
     () =>
@@ -54,7 +54,18 @@ export function useStatusIndex() {
         .sort((a, b) => a.sequence - b.sequence),
     [data],
   );
-  return { index, activeStatuses, all: data ?? [], isLoading };
+  // The status catalogue loaded but is empty → the admin hasn't configured any
+  // statuses. This breaks filtering, badges, and the whole workflow, so screens
+  // surface it explicitly instead of silently degrading.
+  const notConfigured = !isLoading && !isError && (data?.length ?? 0) === 0;
+  return {
+    index,
+    activeStatuses,
+    all: data ?? [],
+    isLoading,
+    isError,
+    notConfigured,
+  };
 }
 
 export function useCreateOrder() {

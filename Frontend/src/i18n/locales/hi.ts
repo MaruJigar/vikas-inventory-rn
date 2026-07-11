@@ -195,6 +195,8 @@ export const hi: TranslationResources = {
     filteredBy: '{{label}} द्वारा फ़िल्टर किया गया',
     filterScope: 'चयन',
     clearFilter: 'फ़िल्टर हटाएँ',
+    statusesNotConfigured:
+      'ऑर्डर स्थितियाँ अभी तक कॉन्फ़िगर नहीं की गई हैं, इसलिए स्थिति फ़िल्टर और वर्कफ़्लो क्रियाएँ उपलब्ध नहीं हैं। एडमिन को बैकएंड पर ऑर्डर स्थितियाँ सेट करनी होंगी।',
     // Status names are admin-defined (dynamic); these are best-effort labels —
     // any unmapped name falls back to the raw backend value.
     status: {
@@ -337,6 +339,14 @@ export const hi: TranslationResources = {
       email: 'ईमेल',
       phone: 'फ़ोन',
       password: 'अस्थायी पासवर्ड',
+      state: 'राज्य',
+      selectState: 'राज्य चुनें',
+      searchState: 'राज्य खोजें',
+      noStates: 'कोई राज्य नहीं मिला',
+      city: 'शहर (वैकल्पिक)',
+      selectCity: 'शहर चुनें',
+      searchCity: 'शहर खोजें',
+      noCities: 'कोई शहर नहीं मिला',
       submit: 'सेल्समैन बनाएं',
       createError: 'सेल्समैन नहीं बनाया जा सका। कृपया पुनः प्रयास करें।',
     },

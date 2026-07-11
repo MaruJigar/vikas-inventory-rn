@@ -1,14 +1,22 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 
-import { Screen, Button, ControlledInput, Spinner, EmptyState } from '@/components';
+import {
+  Screen,
+  Button,
+  ControlledInput,
+  Select,
+  Spinner,
+  EmptyState,
+} from '@/components';
 import { colors, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { notify } from '@/lib/dialog';
 import { useDistributorProfile } from '@/features/distributor/hooks';
+import { useCities, useStates } from '@/features/region/hooks';
 import { addSalesmanSchema, type AddSalesmanForm } from '@/features/salesman/schemas';
 import { useCreateSalesman } from '@/features/salesman/hooks';
 import type { AccountScreenProps } from '@/navigation/types';
@@ -21,10 +29,29 @@ export function AddSalesmanScreen({
     useDistributorProfile();
   const createSalesman = useCreateSalesman();
 
-  const { control, handleSubmit } = useForm<AddSalesmanForm>({
+  const { control, handleSubmit, watch, setValue } = useForm<AddSalesmanForm>({
     resolver: zodResolver(addSalesmanSchema),
-    defaultValues: { full_name: '', email: '', phone: '', password: '' },
+    defaultValues: {
+      full_name: '',
+      email: '',
+      phone: '',
+      password: '',
+      state_id: '',
+      city_id: '',
+    },
   });
+
+  const stateId = watch('state_id');
+  const statesQuery = useStates();
+  const citiesQuery = useCities(stateId || undefined);
+  const stateOptions = useMemo(
+    () => (statesQuery.data ?? []).map((s) => ({ label: s.name, value: s.id })),
+    [statesQuery.data],
+  );
+  const cityOptions = useMemo(
+    () => (citiesQuery.data ?? []).map((c) => ({ label: c.name, value: c.id })),
+    [citiesQuery.data],
+  );
 
   if (isLoading) return <Spinner />;
   if (isError || !distributor) {
@@ -40,8 +67,22 @@ export function AddSalesmanScreen({
   }
 
   const onSubmit = (values: AddSalesmanForm) => {
+    const stateName =
+      stateOptions.find((o) => o.value === values.state_id)?.label ?? '';
+    const cityName = values.city_id
+      ? cityOptions.find((o) => o.value === values.city_id)?.label
+      : undefined;
     createSalesman.mutate(
-      { ...values, distributor_id: distributor.id },
+      {
+        full_name: values.full_name,
+        email: values.email,
+        phone: values.phone,
+        password: values.password,
+        distributor_id: distributor.id,
+        state_id: values.state_id,
+        state: stateName,
+        ...(values.city_id ? { city_id: values.city_id, city: cityName } : {}),
+      },
       {
         onSuccess: () => navigation.goBack(),
         onError: (err) =>
@@ -73,6 +114,48 @@ export function AddSalesmanScreen({
         label={t('salesmen.form.phone')}
         keyboardType="phone-pad"
       />
+
+      <Controller
+        control={control}
+        name="state_id"
+        render={({ field: { value, onChange }, fieldState: { error } }) => (
+          <Select
+            label={t('salesmen.form.state')}
+            placeholder={t('salesmen.form.selectState')}
+            value={value}
+            options={stateOptions}
+            loading={statesQuery.isLoading}
+            searchable
+            searchPlaceholder={t('salesmen.form.searchState')}
+            emptyText={t('salesmen.form.noStates')}
+            onChange={(v) => {
+              onChange(v);
+              setValue('city_id', '', { shouldValidate: false });
+            }}
+            error={error?.message ? t(error.message) : undefined}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="city_id"
+        render={({ field: { value, onChange }, fieldState: { error } }) => (
+          <Select
+            label={t('salesmen.form.city')}
+            placeholder={t('salesmen.form.selectCity')}
+            value={value}
+            options={cityOptions}
+            loading={citiesQuery.isLoading}
+            disabled={!stateId}
+            searchable
+            searchPlaceholder={t('salesmen.form.searchCity')}
+            emptyText={t('salesmen.form.noCities')}
+            onChange={onChange}
+            error={error?.message ? t(error.message) : undefined}
+          />
+        )}
+      />
+
       <ControlledInput
         control={control}
         name="password"
