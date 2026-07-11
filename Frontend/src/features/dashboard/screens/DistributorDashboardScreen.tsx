@@ -171,6 +171,10 @@ export function DistributorDashboardScreen() {
     navigation
       .getParent<BottomTabNavigationProp<MainTabParamList>>()
       ?.navigate('Orders', { screen: 'OrdersList', params: { initialStatus } });
+  const goToBackorders = () =>
+    navigation
+      .getParent<BottomTabNavigationProp<MainTabParamList>>()
+      ?.navigate('Orders', { screen: 'Backorders' });
 
   return (
     <Screen
@@ -222,6 +226,26 @@ export function DistributorDashboardScreen() {
         </View>
       </Section>
 
+      <Pressable
+        onPress={goToBackorders}
+        accessibilityRole="button"
+        accessibilityLabel={t('backorders.title')}
+        style={({ pressed }) => [styles.tilePressable, pressed && styles.tilePressed]}
+      >
+        <Card style={styles.backorderCard}>
+          <Ionicons name="cube-outline" size={24} color={colors.primary} />
+          <View style={styles.backorderText}>
+            <Text style={typography.title}>{t('backorders.title')}</Text>
+            <Text style={styles.muted}>{t('backorders.dashboardHint')}</Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={colors.textMuted}
+          />
+        </Card>
+      </Pressable>
+
       <Section title={t('dashboard.distributor.productCategories')}>
         <CategoryRail
           onOpenCategory={(c) =>
@@ -259,6 +283,13 @@ const styles = StyleSheet.create({
   statSpinner: { height: typography.h2.lineHeight ?? 28 },
   statLabel: { ...typography.caption, textAlign: 'center' },
   muted: { ...typography.body, color: colors.textMuted },
+  backorderCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  backorderText: { flex: 1, gap: 2 },
   chipsState: { alignItems: 'center' },
   emptyCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   // Row of equal-width Card tiles (max 4: up to 3 categories + All Categories),

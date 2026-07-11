@@ -55,12 +55,25 @@ export type ShopsStackParamList = {
 export type ShopsScreenProps<T extends keyof ShopsStackParamList> =
   NativeStackScreenProps<ShopsStackParamList, T>;
 
-/** Orders tab stack (listing → detail → edit). */
+/** Orders tab stack (listing → detail → edit; distributor-only backorders). */
 export type OrdersStackParamList = {
-  /** `initialStatus` pre-selects a status filter by status_id (e.g. a tile). */
-  OrdersList: { initialStatus?: string } | undefined;
+  /**
+   * `initialStatus` pre-selects a status filter by status_id (e.g. a tile).
+   * `salesmanId` / `shopId` scope the list (from a salesman or shop screen);
+   * `filterLabel` names that scope for the "Filtered by …" banner.
+   */
+  OrdersList:
+    | {
+        initialStatus?: string;
+        salesmanId?: string;
+        shopId?: string;
+        filterLabel?: string;
+      }
+    | undefined;
   OrderDetail: { id: string };
   EditOrder: { id: string };
+  Backorders: undefined;
+  BackorderDetail: { id: string };
 };
 
 export type OrdersScreenProps<T extends keyof OrdersStackParamList> =

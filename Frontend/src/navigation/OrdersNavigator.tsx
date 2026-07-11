@@ -7,6 +7,8 @@ import { colors } from '@/theme';
 import { OrdersListScreen } from '@/features/orders/screens/OrdersListScreen';
 import { OrderDetailScreen } from '@/features/orders/screens/OrderDetailScreen';
 import { EditOrderScreen } from '@/features/orders/screens/EditOrderScreen';
+import { BackordersListScreen } from '@/features/backorders/screens/BackordersListScreen';
+import { BackorderDetailScreen } from '@/features/backorders/screens/BackorderDetailScreen';
 
 const Stack = createNativeStackNavigator<OrdersStackParamList>();
 
@@ -38,6 +40,16 @@ export function OrdersNavigator() {
         name="EditOrder"
         component={EditOrderScreen}
         options={{ title: t('orders.edit.title') }}
+      />
+      <Stack.Screen
+        name="Backorders"
+        component={BackordersListScreen}
+        options={{ title: t('backorders.title') }}
+      />
+      <Stack.Screen
+        name="BackorderDetail"
+        component={BackorderDetailScreen}
+        options={{ title: '' }}
       />
     </Stack.Navigator>
   );

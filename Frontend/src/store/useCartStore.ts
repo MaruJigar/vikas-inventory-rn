@@ -1,23 +1,34 @@
 import { create } from 'zustand';
 
 import type { Product } from '@/types/product';
-import type { CartLine } from '@/features/products/pricing';
+import type {
+  BillDiscount,
+  CartLine,
+  DiscountType,
+} from '@/features/products/pricing';
 
 interface CartState {
   /** Keyed by product id for O(1) qty lookups. */
   items: Record<string, CartLine>;
+  /** A single order-level (bill) discount applied to the whole cart. */
+  billDiscount: BillDiscount;
 
   add: (product: Product) => void;
   increment: (productId: string) => void;
   decrement: (productId: string) => void;
   remove: (productId: string) => void;
+  /** Set (or clear, with NONE/0) the whole-order discount. */
+  setBillDiscount: (type: DiscountType, value: number) => void;
   clear: () => void;
   /** Quantity of a product currently in the cart (0 if absent). */
   qtyOf: (productId: string) => number;
 }
 
+const NO_DISCOUNT: BillDiscount = { type: 'NONE', value: 0 };
+
 export const useCartStore = create<CartState>((set, get) => ({
   items: {},
+  billDiscount: NO_DISCOUNT,
 
   add: (product) =>
     set((state) => {
@@ -69,7 +80,10 @@ export const useCartStore = create<CartState>((set, get) => ({
       return { items: next };
     }),
 
-  clear: () => set({ items: {} }),
+  setBillDiscount: (type, value) =>
+    set({ billDiscount: { type, value: type === 'NONE' ? 0 : value } }),
+
+  clear: () => set({ items: {}, billDiscount: NO_DISCOUNT }),
 
   qtyOf: (productId) => get().items[productId]?.qty ?? 0,
 }));

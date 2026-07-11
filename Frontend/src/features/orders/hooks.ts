@@ -16,10 +16,19 @@ const PAGE_SIZE = 20;
 export const orderKeys = {
   all: ['orders'] as const,
   statuses: ['order-statuses'] as const,
-  list: (search: string, statusId: string | null) =>
-    ['orders', 'list', search, statusId ?? 'ALL'] as const,
+  list: (search: string, statusId: string | null, scope?: OrderScope) =>
+    [
+      'orders',
+      'list',
+      search,
+      statusId ?? 'ALL',
+      scope?.salesmanId ?? '',
+      scope?.shopId ?? '',
+    ] as const,
   detail: (id: string) => ['orders', 'detail', id] as const,
   history: (id: string) => ['orders', 'history', id] as const,
+  revisions: (id: string) => ['orders', 'revisions', id] as const,
+  fulfillment: (id: string) => ['orders', 'fulfillment', id] as const,
 };
 
 /** The dynamic status catalogue (GET /order-status) — cached, rarely changes. */
@@ -96,15 +105,27 @@ export function useCancelOrder(id: string) {
   });
 }
 
-export function useOrders(search: string, statusId: string | null) {
+/** Optional scoping for the orders list (a specific salesman or shop). */
+export interface OrderScope {
+  salesmanId?: string;
+  shopId?: string;
+}
+
+export function useOrders(
+  search: string,
+  statusId: string | null,
+  scope?: OrderScope,
+) {
   return useInfiniteQuery({
-    queryKey: orderKeys.list(search, statusId),
+    queryKey: orderKeys.list(search, statusId, scope),
     queryFn: ({ pageParam }) =>
       ordersApi.list({
         page: pageParam,
         limit: PAGE_SIZE,
         search: search || undefined,
         status: statusId ?? undefined,
+        salesman_id: scope?.salesmanId,
+        shop_id: scope?.shopId,
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
@@ -132,6 +153,24 @@ export function useOrderStatusHistory(id: string) {
   return useQuery({
     queryKey: orderKeys.history(id),
     queryFn: () => ordersApi.statusHistory(id),
+    select: (res) => res.data,
+  });
+}
+
+/** Edit history for an order (revisions). Read-only detail section. */
+export function useOrderRevisions(id: string) {
+  return useQuery({
+    queryKey: orderKeys.revisions(id),
+    queryFn: () => ordersApi.revisions(id),
+    select: (res) => res.data,
+  });
+}
+
+/** Fulfillment trail (reserve/allocate/dispatch actions). Read-only. */
+export function useOrderFulfillmentLogs(id: string) {
+  return useQuery({
+    queryKey: orderKeys.fulfillment(id),
+    queryFn: () => ordersApi.fulfillmentLogs(id),
     select: (res) => res.data,
   });
 }

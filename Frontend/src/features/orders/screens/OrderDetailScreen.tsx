@@ -11,6 +11,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import {
   useOrder,
   useOrderStatusHistory,
+  useOrderRevisions,
+  useOrderFulfillmentLogs,
   useStatusIndex,
   useUpdateOrderStatus,
   useCancelOrder,
@@ -84,6 +86,8 @@ export function OrderDetailScreen({
   const role = useAuthStore((s) => s.user?.role);
   const { data: order, isLoading, isError, refetch } = useOrder(id);
   const { data: history } = useOrderStatusHistory(id);
+  const { data: revisions } = useOrderRevisions(id);
+  const { data: fulfillment } = useOrderFulfillmentLogs(id);
   const advance = useUpdateOrderStatus(id);
   const cancelOrder = useCancelOrder(id);
   const [cancelling, setCancelling] = useState(false);
@@ -347,6 +351,57 @@ export function OrderDetailScreen({
           </Card>
         </Section>
       ) : null}
+
+      {fulfillment && fulfillment.length > 0 ? (
+        <Section title={t('orders.detail.fulfillment')}>
+          <Card style={styles.timeline}>
+            {fulfillment.map((f) => (
+              <View key={f.id} style={styles.logRow}>
+                <View style={styles.logInfo}>
+                  <Text style={typography.body}>
+                    {t(`orders.fulfillmentAction.${f.action}`, {
+                      defaultValue: f.action,
+                    })}
+                    {f.quantity != null ? ` · ${toNum(f.quantity)}` : ''}
+                  </Text>
+                  {f.notes ? (
+                    <Text style={styles.muted}>{f.notes}</Text>
+                  ) : null}
+                  <Text style={styles.muted}>
+                    {[f.performed_by_user?.full_name, new Date(f.created_at).toLocaleString()]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </Card>
+        </Section>
+      ) : null}
+
+      {revisions && revisions.length > 0 ? (
+        <Section title={t('orders.detail.revisions')}>
+          <Card style={styles.timeline}>
+            {revisions.map((r) => (
+              <View key={r.id} style={styles.logRow}>
+                <View style={styles.logInfo}>
+                  <Text style={typography.body}>
+                    {t('orders.detail.revisionN', { n: r.revision_number })}
+                  </Text>
+                  {r.reason ? (
+                    <Text style={styles.muted}>{r.reason}</Text>
+                  ) : null}
+                  <Text style={styles.muted}>
+                    {[r.changed_by_user?.full_name, new Date(r.created_at).toLocaleString()]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </Card>
+        </Section>
+      ) : null}
     </Screen>
   );
 }
@@ -393,6 +448,8 @@ const styles = StyleSheet.create({
   cancelLabel: { ...typography.label, color: colors.danger },
   timeline: { gap: spacing.md },
   timelineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  logRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  logInfo: { flex: 1, gap: 2 },
   dot: {
     width: 10,
     height: 10,

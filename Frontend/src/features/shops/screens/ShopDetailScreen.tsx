@@ -9,7 +9,8 @@ import { getApiErrorMessage } from '@/lib/apiError';
 import { confirmAction, notify } from '@/lib/dialog';
 import { resolveMediaUrl } from '@/lib/media';
 import { useShop, useDeleteShop } from '@/features/shops/hooks';
-import type { ShopsScreenProps } from '@/navigation/types';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { ShopsScreenProps, MainTabParamList } from '@/navigation/types';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -57,6 +58,14 @@ export function ShopDetailScreen({
         }),
     });
   };
+
+  const viewOrders = () =>
+    navigation
+      .getParent<BottomTabNavigationProp<MainTabParamList>>()
+      ?.navigate('Orders', {
+        screen: 'OrdersList',
+        params: { shopId: id, filterLabel: shop.name },
+      });
 
   const dash = '—';
   const fmt = (d: string | null) =>
@@ -108,6 +117,14 @@ export function ShopDetailScreen({
       </Card>
 
       <Button
+        label={t('shops.detail.viewOrders')}
+        variant="secondary"
+        icon="receipt-outline"
+        onPress={viewOrders}
+        style={styles.viewOrders}
+      />
+
+      <Button
         label={t('shops.detail.delete')}
         variant="danger"
         loading={deleteShop.isPending}
@@ -143,5 +160,6 @@ const styles = StyleSheet.create({
   },
   mapsLink: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   mapsLinkText: { ...typography.body, color: colors.primary },
-  delete: { marginTop: spacing.xl },
+  viewOrders: { marginTop: spacing.lg },
+  delete: { marginTop: spacing.md },
 });

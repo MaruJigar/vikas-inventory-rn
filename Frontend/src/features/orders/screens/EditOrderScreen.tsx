@@ -13,7 +13,11 @@ import {
   useStatusIndex,
 } from '@/features/orders/hooks';
 import { formatINR, isPreDispatch, toNum } from '@/features/orders/constants';
+import { discountAmount } from '@/features/products/pricing';
+import type { DiscountType } from '@/features/products/pricing';
 import type { OrdersScreenProps } from '@/navigation/types';
+
+const DISCOUNT_TYPES: DiscountType[] = ['NONE', 'PERCENTAGE', 'FLAT'];
 
 /** A line in the editor — seeded from an order item's snapshot fields. */
 interface EditLine {
@@ -21,6 +25,55 @@ interface EditLine {
   name: string;
   mrp: number;
   qty: number;
+}
+
+/** Whole-order (bill) discount toggle + value field for the edit screen. */
+function OrderDiscount({
+  type,
+  value,
+  onChange,
+}: {
+  type: DiscountType;
+  value: number;
+  onChange: (type: DiscountType, value: number) => void;
+}) {
+  const { t } = useTranslation();
+  const [text, setText] = React.useState(value ? String(value) : '');
+  const label = (dt: DiscountType) =>
+    dt === 'NONE' ? t('cart.discount.none') : dt === 'PERCENTAGE' ? '%' : '₹';
+
+  return (
+    <Card style={styles.discountCard}>
+      <Text style={styles.discountTitle}>{t('cart.orderDiscount')}</Text>
+      <View style={styles.discountToggle}>
+        {DISCOUNT_TYPES.map((dt) => (
+          <Pressable
+            key={dt}
+            onPress={() => {
+              if (dt === 'NONE') setText('');
+              onChange(dt, dt === 'NONE' ? 0 : Number(text) || 0);
+            }}
+            style={[styles.dPill, type === dt && styles.dPillActive]}
+          >
+            <Text style={[styles.dPillText, type === dt && styles.dPillTextActive]}>
+              {label(dt)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      {type !== 'NONE' ? (
+        <Input
+          value={text}
+          onChangeText={(v) => {
+            setText(v);
+            onChange(type, Number(v) || 0);
+          }}
+          keyboardType="decimal-pad"
+          placeholder={type === 'PERCENTAGE' ? '0' : '0.00'}
+        />
+      ) : null}
+    </Card>
+  );
 }
 
 export function EditOrderScreen({
@@ -36,6 +89,9 @@ export function EditOrderScreen({
   // Seed the editable lines from the order's items once it has loaded.
   const [lines, setLines] = useState<Record<string, EditLine> | null>(null);
   const [reason, setReason] = useState('');
+  // Whole-order discount, seeded from the order (if the API returns it).
+  const [billType, setBillType] = useState<DiscountType>('NONE');
+  const [billValue, setBillValue] = useState(0);
 
   useEffect(() => {
     if (order && lines === null) {
@@ -49,6 +105,11 @@ export function EditOrderScreen({
         };
       }
       setLines(seeded);
+      const bt = order.bill_discount_type;
+      if (bt === 'PERCENTAGE' || bt === 'FLAT') {
+        setBillType(bt);
+        setBillValue(toNum(order.bill_discount_value));
+      }
     }
   }, [order, lines]);
 
@@ -84,6 +145,7 @@ export function EditOrderScreen({
   const current = lines ?? {};
   const list = Object.values(current);
   const grossPreview = list.reduce((sum, l) => sum + l.mrp * l.qty, 0);
+  const billDiscountPreview = discountAmount(billType, billValue, grossPreview);
 
   const increment = (pid: string) =>
     setLines((s) => ({ ...s, [pid]: { ...s![pid], qty: s![pid].qty + 1 } }));
@@ -109,7 +171,12 @@ export function EditOrderScreen({
       return;
     }
     editOrder.mutate(
-      { products, reason: reason.trim() || undefined },
+      {
+        products,
+        billDiscountType: billType,
+        billDiscountValue: billType === 'NONE' ? 0 : billValue,
+        reason: reason.trim() || undefined,
+      },
       {
         onSuccess: () => navigation.goBack(),
         onError: (e) =>
@@ -165,11 +232,28 @@ export function EditOrderScreen({
         ))
       )}
 
+      <OrderDiscount
+        type={billType}
+        value={billValue}
+        onChange={(type, value) => {
+          setBillType(type);
+          setBillValue(value);
+        }}
+      />
+
       <Card style={styles.summary}>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>{t('orders.detail.gross')}</Text>
           <Text style={styles.summaryValue}>{formatINR(grossPreview)}</Text>
         </View>
+        {billDiscountPreview > 0 ? (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>{t('cart.orderDiscount')}</Text>
+            <Text style={[styles.summaryValue, styles.negative]}>
+              - {formatINR(billDiscountPreview)}
+            </Text>
+          </View>
+        ) : null}
       </Card>
       <Text style={styles.previewNote}>{t('orders.edit.previewNote')}</Text>
 
@@ -227,10 +311,26 @@ const styles = StyleSheet.create({
   },
   qty: { ...typography.title, minWidth: 20, textAlign: 'center' },
   lineTotal: { ...typography.title },
-  summary: { marginTop: spacing.sm },
+  discountCard: { marginTop: spacing.sm, gap: spacing.sm },
+  discountTitle: { ...typography.title },
+  discountToggle: { flexDirection: 'row', gap: spacing.xs },
+  dPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 44,
+    alignItems: 'center',
+  },
+  dPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  dPillText: { ...typography.label, color: colors.text },
+  dPillTextActive: { color: '#FFFFFF' },
+  summary: { marginTop: spacing.sm, gap: spacing.xs },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
   summaryLabel: { ...typography.body, color: colors.textMuted },
   summaryValue: { ...typography.title },
+  negative: { color: colors.success },
   previewNote: {
     ...typography.caption,
     marginTop: spacing.md,

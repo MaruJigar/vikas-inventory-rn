@@ -17,8 +17,12 @@ import {
   useUpdateSalesman,
   useUpdateSalesmanStatus,
 } from '@/features/salesman/hooks';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { Salesman } from '@/types/salesman';
-import type { AccountScreenProps } from '@/navigation/types';
+import type {
+  AccountScreenProps,
+  MainTabParamList,
+} from '@/navigation/types';
 
 /** Inner form — mounted only once the salesman has loaded (stable defaults). */
 function EditForm({
@@ -152,9 +156,24 @@ export function SalesmanDetailScreen({
     );
   }
 
+  const viewOrders = () =>
+    navigation
+      .getParent<BottomTabNavigationProp<MainTabParamList>>()
+      ?.navigate('Orders', {
+        screen: 'OrdersList',
+        params: { salesmanId: id, filterLabel: salesman.full_name },
+      });
+
   return (
     <Screen edges={[]}>
       <Text style={[typography.h1, styles.title]}>{salesman.full_name}</Text>
+      <Button
+        label={t('salesmen.viewOrders')}
+        variant="secondary"
+        icon="receipt-outline"
+        onPress={viewOrders}
+        style={styles.viewOrders}
+      />
       <EditForm salesman={salesman} onSaved={() => navigation.goBack()} />
     </Screen>
   );
@@ -162,6 +181,7 @@ export function SalesmanDetailScreen({
 
 const styles = StyleSheet.create({
   title: { marginTop: spacing.sm, marginBottom: spacing.lg },
+  viewOrders: { marginBottom: spacing.lg },
   statusCard: { gap: spacing.sm, marginBottom: spacing.lg },
   statusRow: {
     flexDirection: 'row',

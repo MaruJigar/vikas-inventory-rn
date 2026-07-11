@@ -8,26 +8,27 @@ import {
 import { backordersApi } from '@/features/backorders/api';
 import type {
   BackorderStatus,
-  ResolveBackorderPayload,
+  AllocateBackorderPayload,
 } from '@/features/backorders/types';
 
 const PAGE_SIZE = 20;
 
 export const backorderKeys = {
   all: ['backorders'] as const,
-  list: (search: string, status: BackorderStatus | null) =>
-    ['backorders', 'list', search, status ?? 'ALL'] as const,
+  list: (status: BackorderStatus | null) =>
+    ['backorders', 'list', status ?? 'ALL'] as const,
   detail: (id: string) => ['backorders', 'detail', id] as const,
 };
 
-export function useBackorders(search: string, status: BackorderStatus | null) {
+/** Distributor's backorders, newest first. The backend list applies no text
+ * search, so we filter by status only. */
+export function useBackorders(status: BackorderStatus | null) {
   return useInfiniteQuery({
-    queryKey: backorderKeys.list(search, status),
+    queryKey: backorderKeys.list(status),
     queryFn: ({ pageParam }) =>
       backordersApi.list({
         page: pageParam,
         limit: PAGE_SIZE,
-        search: search || undefined,
         status: status ?? undefined,
       }),
     initialPageParam: 1,
@@ -43,15 +44,18 @@ export function useBackorder(id: string) {
   });
 }
 
-/** Distributor allocates stock against a backorder. */
-export function useResolveBackorder(id: string) {
+/** Distributor allocates on-hand stock against a backorder. Allocation also
+ * moves inventory and can free the parent order for dispatch, so invalidate
+ * orders + dashboard alongside the backorder caches. */
+export function useAllocateBackorder(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: ResolveBackorderPayload) =>
-      backordersApi.resolve(id, payload),
+    mutationFn: (payload: AllocateBackorderPayload) =>
+      backordersApi.allocate(id, payload),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: backorderKeys.detail(id) });
       void qc.invalidateQueries({ queryKey: backorderKeys.all });
+      void qc.invalidateQueries({ queryKey: ['orders'] });
       void qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });

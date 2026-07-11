@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { Screen, Card, Input, EmptyState, Spinner } from '@/components';
@@ -37,12 +38,22 @@ export function OrdersListScreen({
   );
   const search = useDebouncedValue(query.trim(), 350);
 
+  // Scope the list to a salesman or shop (from their detail screens).
+  const { salesmanId, shopId, filterLabel } = route.params ?? {};
+  const [scopeCleared, setScopeCleared] = useState(false);
+  const scope =
+    !scopeCleared && (salesmanId || shopId) ? { salesmanId, shopId } : undefined;
+
   // The Orders screen is the tab's initial route, so a second tile tap merges
   // new params without remounting — keep the filter in sync when that happens.
   const paramStatus = route.params?.initialStatus;
   React.useEffect(() => {
     if (paramStatus) setStatus(paramStatus);
   }, [paramStatus]);
+  // A fresh scope param (new salesman/shop) re-activates the banner.
+  React.useEffect(() => {
+    if (salesmanId || shopId) setScopeCleared(false);
+  }, [salesmanId, shopId]);
 
   const {
     data,
@@ -52,7 +63,7 @@ export function OrdersListScreen({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useOrders(search, status);
+  } = useOrders(search, status, scope);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const orders = useMemo(
@@ -98,6 +109,22 @@ export function OrdersListScreen({
       <View style={styles.header}>
         <Text style={typography.h1}>{t('orders.title')}</Text>
       </View>
+
+      {scope ? (
+        <Pressable
+          style={styles.scopeBanner}
+          onPress={() => setScopeCleared(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('orders.clearFilter')}
+        >
+          <Text style={styles.scopeText} numberOfLines={1}>
+            {t('orders.filteredBy', {
+              label: filterLabel ?? t('orders.filterScope'),
+            })}
+          </Text>
+          <Ionicons name="close-circle" size={18} color={colors.primary} />
+        </Pressable>
+      ) : null}
 
       <Input
         value={query}
@@ -153,9 +180,13 @@ export function OrdersListScreen({
           ListEmptyComponent={
             <EmptyState
               title={
-                search || status ? t('orders.noResults') : t('orders.empty')
+                search || status || scope
+                  ? t('orders.noResults')
+                  : t('orders.empty')
               }
-              message={search || status ? undefined : t('orders.emptyHint')}
+              message={
+                search || status || scope ? undefined : t('orders.emptyHint')
+              }
             />
           }
           ListFooterComponent={
@@ -192,6 +223,20 @@ function Chip({
 
 const styles = StyleSheet.create({
   header: { marginTop: spacing.sm, marginBottom: spacing.md },
+  scopeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+  },
+  scopeText: { ...typography.label, color: colors.primary, flex: 1 },
   filterRow: { marginBottom: spacing.sm },
   chips: { gap: spacing.sm, paddingVertical: spacing.xs },
   chip: {

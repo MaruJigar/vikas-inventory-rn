@@ -144,6 +144,7 @@ export const en = {
       lastVisit: 'Last visit',
       lastOrder: 'Last order',
       never: 'Never',
+      viewOrders: 'View orders',
       delete: 'Delete shop',
       deleteConfirmTitle: 'Delete this shop?',
       deleteConfirmMessage: 'This cannot be undone.',
@@ -195,6 +196,9 @@ export const en = {
     noResults: 'No orders match your filter.',
     loadError: 'Could not load orders.',
     filterAll: 'All',
+    filteredBy: 'Filtered by {{label}}',
+    filterScope: 'selection',
+    clearFilter: 'Clear filter',
     // Status names are admin-defined (dynamic); these are best-effort labels —
     // any unmapped name falls back to the raw backend value.
     status: {
@@ -222,9 +226,21 @@ export const en = {
       billDiscount: 'Bill discount',
       total: 'Total',
       timeline: 'Status timeline',
+      fulfillment: 'Fulfillment log',
+      revisions: 'Edit history',
+      revisionN: 'Revision #{{n}}',
       cancellationReason: 'Cancellation reason',
       share: 'Share',
       shareError: 'Could not share the order.',
+    },
+    // Fulfillment-log action verbs (best-effort; unknown values shown raw).
+    fulfillmentAction: {
+      ORDER_RESERVED: 'Stock reserved',
+      ORDER_BACKORDERED: 'Backordered',
+      BACKORDER_ALLOCATED: 'Backorder allocated',
+      DISPATCHED: 'Dispatched',
+      DELIVERED: 'Delivered',
+      CANCELLED: 'Cancelled',
     },
     actions: {
       // Verbs for advancing to a known lifecycle status; unknown/custom
@@ -261,6 +277,44 @@ export const en = {
       notEditableHint: 'Orders can only be edited before they are dispatched.',
     },
   },
+  backorders: {
+    title: 'Backorders',
+    dashboardHint: 'Allocate stock to unfulfilled orders',
+    empty: 'No backorders',
+    emptyHint: 'Unfulfilled orders awaiting stock will appear here.',
+    noResults: 'No backorders match your filter.',
+    loadError: 'Could not load backorders.',
+    filterAll: 'All',
+    unknownProduct: 'Unknown product',
+    owed: '{{qty}} owed',
+    ofTotal: 'of {{total}}',
+    status: {
+      OPEN: 'Open',
+      PARTIALLY_ALLOCATED: 'Partially allocated',
+      RESOLVED: 'Resolved',
+      CANCELLED: 'Cancelled',
+    },
+    detail: {
+      ordered: 'Ordered quantity',
+      allocated: 'Allocated so far',
+      owed: 'Still owed',
+      order: 'Order',
+      orderNumber: 'Order number',
+      shop: 'Shop',
+      salesman: 'Salesman',
+      resolvedAt: 'Resolved on {{when}}',
+    },
+    allocate: {
+      action: 'Allocate stock',
+      qtyLabel: 'Quantity to allocate (up to {{max}})',
+      confirm: 'Allocate',
+      confirmTitle: 'Allocate stock?',
+      confirmMessage: 'Allocate {{qty}} unit(s) from your inventory to this backorder.',
+      invalidQty: 'Enter a quantity of at least 1.',
+      tooMany: 'You can allocate at most {{max}}.',
+      error: 'Could not allocate stock. Check your available inventory.',
+    },
+  },
   account: {
     title: 'Account',
     role: 'Role',
@@ -273,6 +327,7 @@ export const en = {
   salesmen: {
     title: 'Salesmen',
     add: 'Add Salesman',
+    viewOrders: 'View orders',
     searchPlaceholder: 'Search by name, phone or email',
     empty: 'No salesmen yet',
     emptyHint: 'Add a salesman to your team to get started.',
@@ -381,8 +436,12 @@ export const en = {
     subtotal: 'Subtotal (MRP)',
     distributorDiscount: 'Distributor discount',
     additionalDiscount: 'Additional discount',
+    orderDiscount: 'Discount',
     gst: 'GST',
     finalPayable: 'Final payable',
+    discount: {
+      none: 'None',
+    },
     previewNote:
       'This is an estimate. The final amount is confirmed by the backend when you place the order.',
     placeOrder: 'Place order',

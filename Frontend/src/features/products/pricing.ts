@@ -25,6 +25,29 @@ export function distributorUnitPrice(product: Product): number {
   return mrp * (1 - discountPct / 100);
 }
 
+/** Discount kinds — mirrors the backend (`NONE` | `PERCENTAGE` | `FLAT`).
+ * Used for the whole-order (bill) discount. */
+export type DiscountType = 'NONE' | 'PERCENTAGE' | 'FLAT';
+
+/** An order-level discount the salesman applies to the whole cart. */
+export interface BillDiscount {
+  type: DiscountType;
+  value: number;
+}
+
+/** Rupee value of a discount on a given basis, mirroring the backend
+ * (`calcBillDiscount`: %·basis or a FLAT rupee amount), capped at the basis so
+ * the preview can never go negative. */
+export function discountAmount(
+  type: DiscountType,
+  value: number,
+  basis: number,
+): number {
+  if (type === 'NONE' || !value || value <= 0) return 0;
+  const raw = type === 'PERCENTAGE' ? (value / 100) * basis : value;
+  return Math.min(basis, raw);
+}
+
 export interface CartLine {
   product: Product;
   qty: number;
@@ -34,6 +57,7 @@ export interface CartTotals {
   subtotal: number;
   distributorDiscount: number;
   additionalDiscount: number;
+  billDiscount: number;
   gst: number;
   finalPayable: number;
   itemCount: number;
@@ -44,7 +68,10 @@ export interface CartTotals {
  * worked example. This is a client-side PREVIEW — the authoritative total is
  * computed by the backend at order placement.
  */
-export function computeCartTotals(lines: CartLine[]): CartTotals {
+export function computeCartTotals(
+  lines: CartLine[],
+  bill?: BillDiscount,
+): CartTotals {
   let subtotal = 0;
   let distributorDiscount = 0;
   let additionalDiscount = 0;
@@ -60,12 +87,22 @@ export function computeCartTotals(lines: CartLine[]): CartTotals {
     itemCount += qty;
   }
 
-  const finalPayable = subtotal - distributorDiscount - additionalDiscount + gst;
+  // Whole-order discount applies on the MRP subtotal (mirrors the backend,
+  // which computes the bill discount on the order gross).
+  const billDiscount = discountAmount(
+    bill?.type ?? 'NONE',
+    bill?.value ?? 0,
+    subtotal,
+  );
+
+  const finalPayable =
+    subtotal - distributorDiscount - additionalDiscount - billDiscount + gst;
 
   return {
     subtotal,
     distributorDiscount,
     additionalDiscount,
+    billDiscount,
     gst,
     finalPayable,
     itemCount,

@@ -3,26 +3,26 @@ import type { ListQuery, Paginated } from '@/api/types';
 import type {
   Backorder,
   BackorderStatus,
-  ResolveBackorderPayload,
+  AllocateBackorderPayload,
 } from '@/features/backorders/types';
 
 export interface BackorderListQuery extends ListQuery {
   status?: BackorderStatus;
 }
 
+/** Backend controller is `@Controller('backorders')` → routes live at
+ * `/v1/backorders`, role-scoped to the caller's distributor. */
 export const backordersApi = {
   list: (query: BackorderListQuery) =>
     apiClient
-      .get<Paginated<Backorder>>('/orders/backorders', { params: query })
+      .get<Paginated<Backorder>>('/backorders', { params: query })
       .then((r) => r.data),
 
   getById: (id: string) =>
-    apiClient
-      .get<Backorder>(`/orders/backorders/${id}`)
-      .then((r) => r.data),
+    apiClient.get<Backorder>(`/backorders/${id}`).then((r) => r.data),
 
-  resolve: (id: string, payload: ResolveBackorderPayload) =>
+  allocate: (id: string, payload: AllocateBackorderPayload) =>
     apiClient
-      .patch<Backorder>(`/orders/backorders/${id}/resolve`, payload)
+      .post<Backorder>(`/backorders/${id}/allocate`, payload)
       .then((r) => r.data),
 };

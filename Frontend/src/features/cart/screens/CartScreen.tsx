@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { Screen, Card, Button, EmptyState } from '@/components';
+import { Screen, Card, Button, Input, EmptyState } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { confirmAction, notify } from '@/lib/dialog';
 import { getApiErrorMessage } from '@/lib/apiError';
@@ -16,8 +16,64 @@ import {
   distributorUnitPrice,
   formatINR,
 } from '@/features/products/pricing';
-import type { CartLine } from '@/features/products/pricing';
+import type { CartLine, DiscountType } from '@/features/products/pricing';
 import type { HomeScreenProps } from '@/navigation/types';
+
+const DISCOUNT_TYPES: DiscountType[] = ['NONE', 'PERCENTAGE', 'FLAT'];
+
+/** Whole-order (bill) discount control: a NONE/%/₹ toggle + a value field.
+ * Writes to the cart store; a local text buffer allows partial entry. */
+function OrderDiscount() {
+  const { t } = useTranslation();
+  const billDiscount = useCartStore((s) => s.billDiscount);
+  const setBillDiscount = useCartStore((s) => s.setBillDiscount);
+  const type = billDiscount.type;
+  const [text, setText] = useState(
+    billDiscount.value ? String(billDiscount.value) : '',
+  );
+
+  const symbol = (dt: DiscountType) =>
+    dt === 'NONE' ? t('cart.discount.none') : dt === 'PERCENTAGE' ? '%' : '₹';
+
+  const onPickType = (dt: DiscountType) => {
+    if (dt === 'NONE') {
+      setText('');
+      setBillDiscount('NONE', 0);
+    } else {
+      setBillDiscount(dt, Number(text) || 0);
+    }
+  };
+
+  return (
+    <Card style={styles.discountCard}>
+      <Text style={styles.discountTitle}>{t('cart.orderDiscount')}</Text>
+      <View style={styles.discountToggle}>
+        {DISCOUNT_TYPES.map((dt) => (
+          <Pressable
+            key={dt}
+            onPress={() => onPickType(dt)}
+            style={[styles.dPill, type === dt && styles.dPillActive]}
+          >
+            <Text style={[styles.dPillText, type === dt && styles.dPillTextActive]}>
+              {symbol(dt)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      {type !== 'NONE' ? (
+        <Input
+          value={text}
+          onChangeText={(v) => {
+            setText(v);
+            setBillDiscount(type, Number(v) || 0);
+          }}
+          keyboardType="decimal-pad"
+          placeholder={type === 'PERCENTAGE' ? '0' : '0.00'}
+        />
+      ) : null}
+    </Card>
+  );
+}
 
 function SummaryRow({
   label,
@@ -49,6 +105,7 @@ function SummaryRow({
 export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
   const { t } = useTranslation();
   const items = useCartStore((s) => s.items);
+  const billDiscount = useCartStore((s) => s.billDiscount);
   const increment = useCartStore((s) => s.increment);
   const decrement = useCartStore((s) => s.decrement);
   const remove = useCartStore((s) => s.remove);
@@ -60,7 +117,10 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
   const endVisit = useEndVisit();
 
   const lines = useMemo(() => Object.values(items), [items]);
-  const totals = useMemo(() => computeCartTotals(lines), [lines]);
+  const totals = useMemo(
+    () => computeCartTotals(lines, billDiscount),
+    [lines, billDiscount],
+  );
 
   const placeOrder = () => {
     if (!activeVisit) {
@@ -75,6 +135,12 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
           productId: l.product.id,
           quantity: l.qty,
         })),
+        ...(billDiscount.type !== 'NONE' && billDiscount.value > 0
+          ? {
+              billDiscountType: billDiscount.type,
+              billDiscountValue: billDiscount.value,
+            }
+          : {}),
       },
       {
         onSuccess: (order) => {
@@ -107,7 +173,8 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
     );
   }
 
-  const renderLine = ({ product, qty }: CartLine) => {
+  const renderLine = (line: CartLine) => {
+    const { product, qty } = line;
     const unit = distributorUnitPrice(product);
     return (
       <Card key={product.id} style={styles.line}>
@@ -151,6 +218,8 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
 
       {lines.map(renderLine)}
 
+      <OrderDiscount />
+
       <Card style={styles.summary}>
         <SummaryRow label={t('cart.subtotal')} value={formatINR(totals.subtotal)} />
         <SummaryRow
@@ -163,6 +232,13 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
           value={formatINR(totals.additionalDiscount)}
           negative
         />
+        {totals.billDiscount > 0 ? (
+          <SummaryRow
+            label={t('cart.orderDiscount')}
+            value={formatINR(totals.billDiscount)}
+            negative
+          />
+        ) : null}
         <SummaryRow label={t('cart.gst')} value={formatINR(totals.gst)} />
         <View style={styles.divider} />
         <SummaryRow
@@ -231,6 +307,21 @@ const styles = StyleSheet.create({
   },
   qty: { ...typography.title, minWidth: 20, textAlign: 'center' },
   lineTotal: { ...typography.title },
+  discountCard: { marginTop: spacing.sm, gap: spacing.sm },
+  discountTitle: { ...typography.title },
+  discountToggle: { flexDirection: 'row', gap: spacing.xs },
+  dPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 44,
+    alignItems: 'center',
+  },
+  dPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  dPillText: { ...typography.label, color: colors.text },
+  dPillTextActive: { color: '#FFFFFF' },
   summary: { marginTop: spacing.sm, gap: spacing.sm },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
   summaryLabel: { ...typography.body, color: colors.textMuted },

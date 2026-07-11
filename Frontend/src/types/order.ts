@@ -53,6 +53,8 @@ export interface Order {
   distributor: { id: string; business_name: string } | null;
   gross_order_amount: Num;
   total_product_discount_amount: Num;
+  bill_discount_type?: BillDiscountType | null;
+  bill_discount_value?: Num;
   bill_discount_amount: Num;
   final_order_amount: Num;
   total_quantity: Num;
@@ -68,16 +70,23 @@ export interface CreateOrderProduct {
   quantity: number;
 }
 
+/** A whole-order (bill) discount — backend `billDiscountType`/`billDiscountValue`. */
+export type BillDiscountType = 'NONE' | 'PERCENTAGE' | 'FLAT';
+
 export interface CreateOrderPayload {
   visitId: string;
   shopId: string;
   products: CreateOrderProduct[];
+  billDiscountType?: BillDiscountType;
+  billDiscountValue?: number;
 }
 
 /** PATCH /v1/orders/:id — salesman edits a pre-dispatch order. `products`
  * fully REPLACES the order's items; bill discount is preserved when omitted. */
 export interface UpdateOrderPayload {
   products: CreateOrderProduct[];
+  billDiscountType?: BillDiscountType;
+  billDiscountValue?: number;
   reason?: string;
 }
 
@@ -87,5 +96,30 @@ export interface OrderStatusHistoryEntry {
   old_status_id: string | null;
   new_status_id: string | null;
   reason: string | null;
+  created_at: string;
+}
+
+/** A row from GET /orders/:id/revisions (order_revisions). `changed_fields` is
+ * a jsonb map; we only surface who/when/why on the timeline. */
+export interface OrderRevision {
+  id: string;
+  revision_number: number;
+  changed_fields: Record<string, unknown> | null;
+  changed_by_role: string | null;
+  order_status_at_time: string | null;
+  reason: string | null;
+  changed_by_user: { id: string; full_name: string } | null;
+  created_at: string;
+}
+
+/** A row from GET /orders/:id/fulfillment-logs (fulfillment_logs). */
+export interface FulfillmentLog {
+  id: string;
+  action: string;
+  quantity: Num | null;
+  old_status: string | null;
+  new_status: string | null;
+  notes: string | null;
+  performed_by_user: { id: string; full_name: string } | null;
   created_at: string;
 }

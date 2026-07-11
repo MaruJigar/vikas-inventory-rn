@@ -2,7 +2,9 @@ import { apiClient } from '@/api/client';
 import type { ListQuery, Paginated } from '@/api/types';
 import type {
   CreateOrderPayload,
+  FulfillmentLog,
   Order,
+  OrderRevision,
   OrderStatusHistoryEntry,
   OrderStatusRecord,
   UpdateOrderPayload,
@@ -11,6 +13,9 @@ import type {
 export interface OrderListQuery extends ListQuery {
   /** Now a status_id (uuid), matching the dynamic order_statuses table. */
   status?: string;
+  /** Optional scoping filters (backend OrderListQueryDto). */
+  salesman_id?: string;
+  shop_id?: string;
 }
 
 export const ordersApi = {
@@ -33,6 +38,22 @@ export const ordersApi = {
     apiClient
       .get<Paginated<OrderStatusHistoryEntry>>(`/orders/${id}/status-history`, {
         params: { limit: 50, sortOrder: 'ASC' },
+      })
+      .then((r) => r.data),
+
+  /** GET /v1/orders/:id/revisions — edit history (ascending by revision #). */
+  revisions: (id: string) =>
+    apiClient
+      .get<Paginated<OrderRevision>>(`/orders/${id}/revisions`, {
+        params: { limit: 50 },
+      })
+      .then((r) => r.data),
+
+  /** GET /v1/orders/:id/fulfillment-logs — reserve/allocate/dispatch trail. */
+  fulfillmentLogs: (id: string) =>
+    apiClient
+      .get<Paginated<FulfillmentLog>>(`/orders/${id}/fulfillment-logs`, {
+        params: { limit: 50 },
       })
       .then((r) => r.data),
 
