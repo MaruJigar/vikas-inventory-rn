@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../../app.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../../user/user.entity';
+import { OrderStatus } from '../../order-status/order-status.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
@@ -9,6 +10,9 @@ async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
 
   const userRepository = app.get<Repository<User>>(getRepositoryToken(User));
+  const orderStatusRepository = app.get<Repository<OrderStatus>>(
+    getRepositoryToken(OrderStatus),
+  );
 
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL;
   const superAdminPhone = process.env.SUPER_ADMIN_PHONE;
@@ -51,6 +55,40 @@ async function bootstrap() {
     console.log(
       `[SEED] Successfully created SUPER_ADMIN (Email: ${superAdminEmail}).`,
     );
+  }
+
+  console.log('[SEED] Seeding Order Statuses...');
+  const statusNames = [
+    'PENDING',
+    'ORDERED',
+    'SHIPPED',
+    'DELIVERED',
+    'CANCELLED',
+  ];
+  for (let i = 0; i < statusNames.length; i++) {
+    const isCancel = statusNames[i] === 'CANCELLED';
+    const isDispatch = statusNames[i] === 'SHIPPED';
+    const statusName = statusNames[i];
+
+    const existingStatus = await orderStatusRepository.findOne({
+      where: { name: statusName },
+    });
+
+    if (!existingStatus) {
+      await orderStatusRepository.save(
+        orderStatusRepository.create({
+          name: statusName,
+          sequence: i + 1,
+          can_cancel_order: i < 3,
+          isactive: true,
+          is_cancel_status: isCancel,
+          is_dispatch_status: isDispatch,
+        }),
+      );
+      console.log(`[SEED] Created Order Status: ${statusName}`);
+    } else {
+      console.log(`[SEED] Order Status already exists: ${statusName}`);
+    }
   }
 
   await app.close();
