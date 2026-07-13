@@ -16,8 +16,11 @@ import { CancelOrderDialog } from '@/features/orders/components/cancel-order-dia
 import { UpdateOrderStatusDialog } from '@/features/orders/components/update-order-status-dialog';
 import { OrderHistoryDrawer } from '@/features/orders/components/order-history-drawer';
 import { OrderFulfillmentLogsDrawer } from '@/features/orders/components/order-fulfillment-logs-drawer';
+import { useGeneratePurchaseRequestMutation } from '@/hooks/orders/useGeneratePurchaseRequestMutation';
 import { useState } from 'react';
 import { OrderDto } from '@/types/api/order.types';
+import { Button } from '@/components/ui/button';
+import { PlusCircle, Loader2 } from 'lucide-react';
 
 function OrdersPageContent() {
   const user = useAuthStore(state => state.user);
@@ -41,6 +44,16 @@ function OrdersPageContent() {
   // ── API query ──────────────────────────────────────────────────────
   const { data, isLoading, isError, error } = useOrdersQuery(queryState);
 
+  const generatePRMutation = useGeneratePurchaseRequestMutation();
+
+  const handleGeneratePR = () => {
+    generatePRMutation.mutate(undefined, {
+      onSuccess: (newDraft) => {
+        setEditingOrder(newDraft as OrderDto); // Open editor immediately
+      }
+    });
+  };
+
   const columns = getOrdersColumns({
     userRole: user?.role,
     onViewDetails: (order) => setSelectedOrder(order),
@@ -62,6 +75,20 @@ function OrdersPageContent() {
               Manage and view your B2B orders.
             </p>
           </div>
+          
+          {user?.role === 'DISTRIBUTOR_ADMIN' && (
+            <Button 
+              onClick={handleGeneratePR}
+              disabled={generatePRMutation.isPending}
+            >
+              {generatePRMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <PlusCircle className="mr-2 h-4 w-4" />
+              )}
+              Generate Purchase Request
+            </Button>
+          )}
         </div>
 
         {/* Toolbar: Search Filter */}

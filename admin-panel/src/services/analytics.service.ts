@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { api } from '@/lib/api/axios';
 import { ApiResponse } from '@/types/api/common.types';
 import {
@@ -13,8 +14,8 @@ import {
 
 export const analyticsService = {
   getDashboard: () =>
-    api.get<any>('/analytics/dashboard').then((res) => {
-      const raw = res.data;
+    api.get<unknown>('/analytics/dashboard').then((res) => {
+      const raw = res.data as Record<string, any>;
       const mapped: DashboardResponse = {
         workingDay: {
           activeCount: raw.workingDay?.checkedInToday ?? 0,
@@ -32,13 +33,13 @@ export const analyticsService = {
           totalOrders: raw.orders?.totals?.totalOrders ?? 0,
           totalValue: raw.orders?.totals?.totalRevenue ?? 0,
           pendingCount:
-            raw.orders?.statusDistribution?.find((s: any) => s.status === 'PENDING')
+            raw.orders?.statusDistribution?.find((s: Record<string, unknown>) => s.status === 'PENDING')
               ?.count ?? 0,
           approvedCount:
-            raw.orders?.statusDistribution?.find((s: any) => s.status === 'APPROVED')
+            raw.orders?.statusDistribution?.find((s: Record<string, unknown>) => s.status === 'APPROVED')
               ?.count ?? 0,
           rejectedCount:
-            raw.orders?.statusDistribution?.find((s: any) => s.status === 'REJECTED')
+            raw.orders?.statusDistribution?.find((s: Record<string, unknown>) => s.status === 'REJECTED')
               ?.count ?? 0,
         },
         fulfillment: {
@@ -76,7 +77,7 @@ export const analyticsService = {
   getOrders: () => api.get<ApiResponse<OrdersResponse>>('/analytics/orders').then(res => res.data),
 
   getOrdersAnalytics: (params?: AnalyticsQueryParams) =>
-    api.get<any>('/analytics/orders', { params }).then((res) => ({
+    api.get<unknown>('/analytics/orders', { params }).then((res) => ({
       success: true,
       data: res.data,
     }) as ApiResponse<OrdersAnalyticsDto>),

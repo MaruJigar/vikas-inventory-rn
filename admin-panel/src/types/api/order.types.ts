@@ -21,6 +21,10 @@ export interface UpdateOrderDto {
   products: OrderProductDto[];
   billDiscountType?: 'NONE' | 'PERCENTAGE' | 'FLAT';
   billDiscountValue?: number;
+  distributorDiscountPercent?: number;
+  specialDiscountPercent?: number;
+  transportMode?: string;
+  manufacturerId?: string;
   reason?: string;
 }
 
@@ -44,6 +48,13 @@ export interface OrderDto {
   gross_order_amount: number;
   total_product_discount_amount: number;
   bill_discount_amount: number;
+  total_gst_amount?: number;
+  distributor_discount_percent?: number;
+  special_discount_percent?: number;
+  distributor_discount_amount?: number;
+  special_discount_amount?: number;
+  transport_mode?: string;
+  manufacturer_id?: string;
   final_order_amount: number;
   total_quantity: number;
   created_at: string;

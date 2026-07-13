@@ -25,7 +25,7 @@ import { AuditLogService } from '../audit-log/audit-log.service';
 import { AppSocketGateway } from '../socket-gateway/socket.gateway';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateOrderDto, CreateDistributorManufacturerOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto, CancelOrderDto } from './dto/update-order.dto';
 import { OrderListQueryDto } from './dto/order-list-query.dto';
 import { BackorderListQueryDto } from './dto/backorder-list-query.dto';
@@ -148,6 +148,241 @@ export class OrderService {
     throw new ForbiddenException('Unauthorized role');
   }
 
+  // ─── generatePurchaseRequest ──────────────────────────────────────────────
+  async generatePurchaseRequest(userId: string) {
+    const distributor = await this.getDistributorOrFail(userId);
+    const draftStatus = await this.orderStatusService.getStatusByName('DRAFT');
+    if (!draftStatus) {
+      throw new Error('DRAFT status not found in database');
+    }
+
+    const finalStatus = await this.orderStatusService.getFinalDeliveredStatus();
+
+    // 1. Inspect all pending salesman orders for this distributor
+    // Pending means orders not yet delivered (and not cancelled)
+    // In our model, this means we exclude the final delivery status and cancellation statuses.
+    // We also only care about orders created by a salesman (salesman_id IS NOT NULL)
+    
+    // We will aggregate demand by product_id
+    const demandQuery = await this.orderRepo
+      .createQueryBuilder('order')
+      .innerJoin('order.status', 'status')
+      .innerJoin('order.items', 'item')
+      .select('item.product_id', 'product_id')
+      .addSelect('SUM(item.quantity)', 'outstanding_demand') // Dispatched items shouldn't be subtracted since they haven't been deducted from inventory yet
+      .where('order.distributor_id = :distributorId', { distributorId: distributor.id })
+      .andWhere('order.salesman_id IS NOT NULL')
+      .andWhere('order.status_id != :finalStatusId', { finalStatusId: finalStatus.id })
+      .andWhere('status.is_cancel_status = false')
+      .groupBy('item.product_id')
+      .getRawMany();
+
+    const requiredQuantities: { productId: string; requiredQuantity: number }[] = [];
+
+    for (const row of demandQuery) {
+      const productId = row.product_id;
+      const outstandingDemand = Number(row.outstanding_demand) || 0;
+
+      // 2. Fetch current distributor inventory
+      const inv = await this.dataSource.getRepository('DistributorInventory').findOne({
+        where: { distributor_id: distributor.id, product_id: productId },
+      });
+      const availableQty = inv ? Number((inv as any).available_quantity) : 0;
+
+      // 3. Calculate Required = Demand - Inventory (Never negative)
+      const required = Math.max(0, outstandingDemand - availableQty);
+      if (required > 0) {
+        requiredQuantities.push({ productId, requiredQuantity: required });
+      }
+    }
+
+    // 4. Create Draft Distributor -> Manufacturer Order
+    return await this.dataSource.transaction(async (manager) => {
+      let grossOrderAmount = 0;
+      let totalQuantity = 0;
+      const itemsData: Partial<OrderItem>[] = [];
+
+      for (const req of requiredQuantities) {
+        const product = await this.productRepo.findOne({ where: { id: req.productId } });
+        if (!product) continue;
+
+        // Note: mrp is used here for calculation, but often distributor orders use a different price. 
+        // Following existing logic, we'll use mrp or a specific distributor price if available.
+        const lineAmount = Number(product.mrp) * req.requiredQuantity;
+        grossOrderAmount += lineAmount;
+        totalQuantity += req.requiredQuantity;
+
+        itemsData.push({
+          product_id: product.id,
+          product_name_snapshot: product.name,
+          sku_snapshot: (product as any).sku || null,
+          manufacturer_name_snapshot: (product as any).manufacturer_name || null,
+          quantity: req.requiredQuantity,
+          mrp: Number(product.mrp),
+          gross_line_amount: lineAmount,
+          item_discount_type: 'NONE',
+          item_discount_value: 0,
+          item_discount_amount: 0,
+          net_line_amount: lineAmount,
+          reserved_quantity: 0,
+          backordered_quantity: 0,
+          dispatched_quantity: 0,
+          delivered_quantity: 0,
+          status_id: draftStatus.id,
+        });
+      }
+
+      // If no replenishment required, still create empty draft
+      const draftOrder = manager.getRepository(Order).create({
+        order_number: this.generateOrderNumber(),
+        distributor_id: distributor.id,
+        status_id: draftStatus.id,
+        gross_order_amount: grossOrderAmount,
+        total_product_discount_amount: 0,
+        bill_discount_type: 'NONE',
+        bill_discount_value: 0,
+        bill_discount_amount: 0,
+        final_order_amount: grossOrderAmount,
+        total_quantity: totalQuantity,
+        total_backordered_quantity: 0,
+        is_offline_created: false,
+        visit_id: null as any,
+        shop_id: null as any,
+        salesman_id: null as any,
+        manufacturer_id: null as any, // to be populated later by distributor
+      });
+
+      const savedDraft = await manager.getRepository(Order).save(draftOrder);
+
+      for (const itemData of itemsData) {
+        itemData.order_id = savedDraft.id;
+        await manager.getRepository(OrderItem).save(itemData);
+      }
+
+      return manager.getRepository(Order).findOne({
+        where: { id: savedDraft.id },
+        relations: { items: true },
+      });
+    });
+  }
+
+  // ─── createDistributorManufacturerOrder ──────────────────────────────────
+  async createDistributorManufacturerOrder(userId: string, dto: CreateDistributorManufacturerOrderDto) {
+    const distributor = await this.getDistributorOrFail(userId);
+    
+    if (!dto.products || dto.products.length === 0) {
+      throw new BadRequestException('At least one product is required');
+    }
+
+    // Validate Manufacturer
+    const manufacturer = await this.dataSource.getRepository('Manufacturer').findOne({
+      where: { id: dto.manufacturerId, isactive: true },
+    });
+    if (!manufacturer) {
+      throw new BadRequestException('Invalid or inactive manufacturer');
+    }
+
+    // Idempotency check
+    if (dto.idempotencyKey) {
+      const existing = await this.orderRepo.findOne({
+        where: { idempotency_key: dto.idempotencyKey },
+      });
+      if (existing) return existing;
+    }
+
+    const draftStatus = await this.orderStatusService.getStatusByName('DRAFT');
+    if (!draftStatus) throw new Error('DRAFT status not found in database');
+
+    const savedOrder = await this.dataSource.transaction(
+      async (manager) => {
+        let grossOrderAmount = 0;
+        let totalProductDiscountAmount = 0;
+        let totalQuantity = 0;
+        const itemsData: Partial<OrderItem>[] = [];
+
+        for (let i = 0; i < dto.products.length; i++) {
+          const p = dto.products[i];
+          const product = await this.productRepo.findOne({
+            where: { id: p.productId },
+          });
+          if (!product)
+            throw new NotFoundException(`Product ${p.productId} not found`);
+
+          const grossLineAmount = Number(product.mrp) * Number(p.quantity);
+          const discountType = p.itemDiscountType || 'NONE';
+          const discountValue = p.itemDiscountValue || 0;
+          const itemDiscountAmount = this.calcItemDiscount(
+            discountType,
+            discountValue,
+            grossLineAmount,
+          );
+          const netLineAmount = grossLineAmount - itemDiscountAmount;
+
+          grossOrderAmount += netLineAmount;
+          totalProductDiscountAmount += itemDiscountAmount;
+          totalQuantity += Number(p.quantity);
+
+          itemsData.push({
+            product_id: p.productId,
+            product_name_snapshot: product.name,
+            sku_snapshot: (product as any).sku || null,
+            manufacturer_name_snapshot:
+              (product as any).manufacturer_name || null,
+            quantity: Number(p.quantity),
+            mrp: Number(product.mrp),
+            gross_line_amount: grossLineAmount,
+            item_discount_type: discountType,
+            item_discount_value: discountValue,
+            item_discount_amount: itemDiscountAmount,
+            net_line_amount: netLineAmount,
+            reserved_quantity: 0,
+            backordered_quantity: 0,
+            dispatched_quantity: 0,
+            delivered_quantity: 0,
+            status_id: draftStatus.id,
+          });
+        }
+
+        const finalOrderAmount = grossOrderAmount; // assuming no bill discount initially for draft
+
+        const order = manager.getRepository(Order).create({
+          order_number: this.generateOrderNumber(),
+          visit_id: null as any,
+          shop_id: null as any,
+          salesman_id: null as any,
+          distributor_id: distributor.id,
+          manufacturer_id: manufacturer.id,
+          status_id: draftStatus.id,
+          gross_order_amount: grossOrderAmount,
+          total_product_discount_amount: totalProductDiscountAmount,
+          bill_discount_type: 'NONE',
+          bill_discount_value: 0,
+          bill_discount_amount: 0,
+          final_order_amount: finalOrderAmount,
+          total_quantity: totalQuantity,
+          total_backordered_quantity: 0,
+          is_offline_created: false,
+          idempotency_key: dto.idempotencyKey || undefined,
+        });
+
+        const saved = await manager.getRepository(Order).save(order);
+
+        for (const itemData of itemsData) {
+          itemData.order_id = saved.id;
+          await manager.getRepository(OrderItem).save(itemData);
+        }
+
+        return manager.getRepository(Order).findOne({
+          where: { id: saved.id },
+          relations: { items: true },
+        });
+      },
+    );
+
+    return savedOrder;
+  }
+
+
   // ─── createOrder ─────────────────────────────────────────────────────────
   // Architecture Decision: Only SALESMAN role can create orders.
   // Orders require a salesman profile context (distributor_id, salesman_id).
@@ -185,21 +420,12 @@ export class OrderService {
 
     const initialStatus = await this.orderStatusService.getInitialStatus();
 
-    const { savedOrder, createdBackorders } = await this.dataSource.transaction(
+    const savedOrder = await this.dataSource.transaction(
       async (manager) => {
         let grossOrderAmount = 0;
         let totalProductDiscountAmount = 0;
         let totalQuantity = 0;
-        let totalBackorderedQty = 0;
         const itemsData: Partial<OrderItem>[] = [];
-        const inventoryActions: {
-          inventoryId: string | undefined;
-          reservable: number;
-          backorder: number;
-          product: Product;
-          itemIndex: number;
-        }[] = [];
-        const createdBackordersArray: any[] = [];
 
         for (let i = 0; i < dto.products.length; i++) {
           const p = dto.products[i];
@@ -223,22 +449,6 @@ export class OrderService {
           totalProductDiscountAmount += itemDiscountAmount;
           totalQuantity += Number(p.quantity);
 
-          // Check inventory
-          const inv = await manager
-            .getRepository(DistributorInventory)
-            .findOne({
-              where: {
-                distributor_id: salesman.distributor_id,
-                product_id: p.productId,
-              },
-              lock: { mode: 'pessimistic_write' },
-            });
-
-          const availableQty = inv ? Number(inv.available_quantity) : 0;
-          const reservable = Math.min(availableQty, Number(p.quantity));
-          const backorderQty = Number(p.quantity) - reservable;
-          totalBackorderedQty += backorderQty;
-
           itemsData.push({
             product_id: p.productId,
             product_name_snapshot: product.name,
@@ -252,19 +462,11 @@ export class OrderService {
             item_discount_value: discountValue,
             item_discount_amount: itemDiscountAmount,
             net_line_amount: netLineAmount,
-            reserved_quantity: reservable,
-            backordered_quantity: backorderQty,
+            reserved_quantity: 0,
+            backordered_quantity: 0,
             dispatched_quantity: 0,
             delivered_quantity: 0,
             status_id: initialStatus.id,
-          });
-
-          inventoryActions.push({
-            inventoryId: inv?.id,
-            reservable,
-            backorder: backorderQty,
-            product,
-            itemIndex: i,
           });
         }
 
@@ -292,80 +494,16 @@ export class OrderService {
           bill_discount_amount: billDiscountAmount,
           final_order_amount: finalOrderAmount,
           total_quantity: totalQuantity,
-          total_backordered_quantity: totalBackorderedQty,
+          total_backordered_quantity: 0,
           is_offline_created: dto.isOfflineCreated || false,
           idempotency_key: dto.idempotencyKey || undefined,
         });
         const savedOrderRec = await manager.getRepository(Order).save(order);
 
-        // Save items and update inventory
+        // Save items
         for (let i = 0; i < itemsData.length; i++) {
           itemsData[i].order_id = savedOrderRec.id;
-          const savedItem = await manager
-            .getRepository(OrderItem)
-            .save(itemsData[i]);
-
-          const inv = inventoryActions[i];
-          if (inv.reservable > 0 || inv.backorder > 0) {
-            if (inv.inventoryId) {
-              await manager
-                .getRepository(DistributorInventory)
-                .increment(
-                  { id: inv.inventoryId },
-                  'reserved_quantity',
-                  inv.reservable,
-                );
-              if (inv.backorder > 0) {
-                await manager
-                  .getRepository(DistributorInventory)
-                  .increment(
-                    { id: inv.inventoryId },
-                    'backordered_quantity',
-                    inv.backorder,
-                  );
-              }
-            }
-
-            if (inv.reservable > 0) {
-              await manager.getRepository(InventoryMovement).save({
-                distributor_id: salesman.distributor_id,
-                product_id: inv.product.id,
-                order_id: savedOrderRec.id,
-                movement_type: 'ORDER_RESERVED',
-                quantity_change: inv.reservable,
-                changed_by_user_id: userId,
-                reason: `Order ${savedOrderRec.order_number}`,
-              });
-            }
-
-            if (inv.backorder > 0) {
-              await manager.getRepository(InventoryMovement).save({
-                distributor_id: salesman.distributor_id,
-                product_id: inv.product.id,
-                order_id: savedOrderRec.id,
-                movement_type: 'ORDER_BACKORDERED',
-                quantity_change: inv.backorder,
-                changed_by_user_id: userId,
-                reason: `Backorder for Order ${savedOrderRec.order_number}`,
-              });
-              const savedBackorder = await manager
-                .getRepository(Backorder)
-                .save({
-                  order_id: savedOrderRec.id,
-                  order_item_id: savedItem.id,
-                  product_id: inv.product.id,
-                  distributor_id: salesman.distributor_id,
-                  quantity: inv.backorder,
-                  status: 'OPEN',
-                });
-              createdBackordersArray.push({
-                id: savedBackorder.id,
-                order_item_id: savedItem.id,
-                product_id: inv.product.id,
-                quantity: inv.backorder,
-              });
-            }
-          }
+          await manager.getRepository(OrderItem).save(itemsData[i]);
         }
 
         // Status history
@@ -376,10 +514,7 @@ export class OrderService {
           changed_by_user_id: userId,
         });
 
-        return {
-          savedOrder: savedOrderRec,
-          createdBackorders: createdBackordersArray,
-        };
+        return savedOrderRec;
       },
     );
 
@@ -403,34 +538,6 @@ export class OrderService {
       },
     );
 
-    if (savedOrder.total_backordered_quantity > 0) {
-      this.socketGateway.broadcastToRoom(
-        `distributor:${savedOrder.distributor_id}`,
-        'BACKORDER_CREATED',
-        {
-          orderId: savedOrder.id,
-          backordered_quantity: savedOrder.total_backordered_quantity,
-        },
-      );
-
-      for (const bo of createdBackorders) {
-        await this.auditLogService.logAction(
-          'BACKORDER_CREATED',
-          'BACKORDER',
-          bo.id,
-          userId,
-          {
-            orderId: savedOrder.id,
-            orderItemId: bo.order_item_id,
-            productId: bo.product_id,
-            distributorId: savedOrder.distributor_id,
-            quantity: bo.quantity,
-            orderNumber: savedOrder.order_number,
-          },
-        );
-      }
-    }
-
     return savedOrder;
   }
 
@@ -439,15 +546,26 @@ export class OrderService {
   // Editing requires the original salesman's context for inventory re-allocation.
   // SUPER_ADMIN is removed from @Roles() in the controller.
 
-  async updateOrder(userId: string, orderId: string, dto: UpdateOrderDto) {
-    const salesman = await this.getSalesmanOrFail(userId);
+  async updateOrder(userId: string, role: string, orderId: string, dto: UpdateOrderDto) {
     const order = await this.orderRepo.findOne({
       where: { id: orderId },
       relations: { status: true },
     });
     if (!order) throw new NotFoundException('Order not found');
-    if (order.salesman_id !== salesman.id)
-      throw new ForbiddenException('Not your order');
+
+    if (role === 'SALESMAN') {
+      const salesman = await this.getSalesmanOrFail(userId);
+      if (order.salesman_id !== salesman.id)
+        throw new ForbiddenException('Not your order');
+    } else if (role === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.getDistributorOrFail(userId);
+      if (order.distributor_id !== dist.id)
+        throw new ForbiddenException('Not your order');
+      if (order.status.name !== 'DRAFT')
+        throw new BadRequestException('Distributors can only edit DRAFT orders.');
+    } else {
+      throw new ForbiddenException('Unauthorized role for editing orders');
+    }
     const finalStatus = await this.orderStatusService.getFinalDeliveredStatus();
     const preDispatchStatuses = await this.orderStatusService.getPreDispatchStatuses();
 
@@ -529,48 +647,48 @@ export class OrderService {
         grossOrderAmount += netLineAmount;
         totalProductDiscountAmount += itemDiscountAmount;
         totalQuantity += Number(p.quantity);
+      }
 
-        let reservable = Number(p.quantity);
-        let backorderQty = 0;
+      const billDiscountType = dto.billDiscountType || order.bill_discount_type;
+      const billDiscountValue = dto.billDiscountValue ?? order.bill_discount_value;
+      const billDiscountAmount = this.calcBillDiscount(
+        billDiscountType,
+        billDiscountValue,
+        grossOrderAmount,
+      );
 
-        if (!isPostDispatch) {
-          const inv = await manager
-            .getRepository(DistributorInventory)
-            .findOne({
-              where: {
-                distributor_id: order.distributor_id,
-                product_id: p.productId,
-              },
-              lock: { mode: 'pessimistic_write' },
-            });
-          const availableQty = inv ? Number(inv.available_quantity) : 0;
-          reservable = Math.min(availableQty, Number(p.quantity));
-          backorderQty = Number(p.quantity) - reservable;
-          totalBackorderedQty += backorderQty;
+      const distributorDiscountPercent = dto.distributorDiscountPercent ?? order.distributor_discount_percent;
+      const specialDiscountPercent = dto.specialDiscountPercent ?? order.special_discount_percent;
 
-          if (inv) {
-            await manager
-              .getRepository(DistributorInventory)
-              .increment({ id: inv.id }, 'reserved_quantity', reservable);
-            if (backorderQty > 0) {
-              await manager
-                .getRepository(DistributorInventory)
-                .increment(
-                  { id: inv.id },
-                  'backordered_quantity',
-                  backorderQty,
-                );
-              await manager.getRepository(Backorder).save({
-                order_id: order.id,
-                order_item_id: null,
-                product_id: p.productId,
-                distributor_id: order.distributor_id,
-                quantity: backorderQty,
-                status: 'OPEN',
-              } as any);
-            }
-          }
-        }
+      const distributorDiscountAmount = grossOrderAmount * (distributorDiscountPercent / 100);
+      const afterDistDiscount = grossOrderAmount - distributorDiscountAmount;
+      const specialDiscountAmount = afterDistDiscount * (specialDiscountPercent / 100);
+      const totalOrderDiscount = billDiscountAmount + distributorDiscountAmount + specialDiscountAmount;
+
+      let totalGstAmount = 0;
+
+      // Save items and calculate GST per item prorated
+      for (const p of dto.products) {
+        const product = await this.productRepo.findOne({
+          where: { id: p.productId },
+        });
+        if (!product)
+          throw new NotFoundException(`Product ${p.productId} not found`);
+
+        const grossLineAmount = Number(product.mrp) * Number(p.quantity);
+        const discountType = p.itemDiscountType || 'NONE';
+        const discountValue = p.itemDiscountValue || 0;
+        const itemDiscountAmount = this.calcItemDiscount(discountType, discountValue, grossLineAmount);
+        const netLineAmount = grossLineAmount - itemDiscountAmount;
+
+        // Prorate order-level discount to this item for GST calculation
+        const itemProportion = grossOrderAmount > 0 ? netLineAmount / grossOrderAmount : 0;
+        const itemOrderDiscount = itemProportion * (distributorDiscountAmount + specialDiscountAmount + billDiscountAmount);
+        const itemTaxableAmount = netLineAmount - itemOrderDiscount;
+        
+        const gstPercent = Number(product.gst_percent) || 0;
+        const gstAmount = itemTaxableAmount * (gstPercent / 100);
+        totalGstAmount += gstAmount;
 
         await manager.getRepository(OrderItem).save({
           order_id: order.id,
@@ -583,51 +701,58 @@ export class OrderService {
           item_discount_value: discountValue,
           item_discount_amount: itemDiscountAmount,
           net_line_amount: netLineAmount,
-          reserved_quantity: reservable,
-          backordered_quantity: backorderQty,
+          gst_percent_snapshot: gstPercent,
+          gst_amount: gstAmount,
+          reserved_quantity: 0,
+          backordered_quantity: 0,
           dispatched_quantity: 0,
           delivered_quantity: 0,
           status_id: initialStatus.id,
         });
       }
 
-      const billDiscountType = dto.billDiscountType || order.bill_discount_type;
-      const billDiscountValue =
-        dto.billDiscountValue ?? order.bill_discount_value;
-      const billDiscountAmount = this.calcBillDiscount(
-        billDiscountType,
-        billDiscountValue,
-        grossOrderAmount,
-      );
-      const finalOrderAmount = grossOrderAmount - billDiscountAmount;
+      const finalOrderAmount = grossOrderAmount - totalOrderDiscount + totalGstAmount;
 
       const revisionCount = await manager
         .getRepository(OrderRevision)
         .count({ where: { order_id: order.id } });
 
-      const newData = {
+      const newData: any = {
         gross_order_amount: grossOrderAmount,
         total_product_discount_amount: totalProductDiscountAmount,
         bill_discount_type: billDiscountType,
         bill_discount_value: billDiscountValue,
         bill_discount_amount: billDiscountAmount,
+        distributor_discount_percent: distributorDiscountPercent,
+        distributor_discount_amount: distributorDiscountAmount,
+        special_discount_percent: specialDiscountPercent,
+        special_discount_amount: specialDiscountAmount,
+        total_gst_amount: totalGstAmount,
         final_order_amount: finalOrderAmount,
         total_quantity: totalQuantity,
         total_backordered_quantity: isPostDispatch
           ? order.total_backordered_quantity
-          : totalBackorderedQty,
+          : 0,
         post_dispatch_edited: isPostDispatch
           ? true
           : order.post_dispatch_edited,
       };
 
+      if (dto.transportMode !== undefined) {
+        newData.transport_mode = dto.transportMode;
+      }
+
+      if (dto.manufacturerId !== undefined) {
+        newData.manufacturer_id = dto.manufacturerId;
+      }
+
       await manager.getRepository(OrderRevision).save({
         order_id: order.id,
         revision_number: revisionCount + 1,
         old_data: oldData as any,
-        new_data: newData as any,
+        new_data: newData,
         changed_by_user_id: userId,
-        changed_by_role: 'SALESMAN',
+        changed_by_role: role,
         order_status_at_time: order.status_id,
         reason: dto.reason || null,
         distributor_notified: false,
@@ -733,7 +858,7 @@ export class OrderService {
             movement_type: 'ORDER_CANCELLED',
             quantity_change: item.reserved_quantity,
             changed_by_user_id: userId,
-            reason: `Order cancelled: ${dto.cancellationReason}`,
+            reason: `Legacy reservation released on cancellation: ${dto.cancellationReason}`,
           });
         }
         if (item.backordered_quantity > 0) {
@@ -754,6 +879,10 @@ export class OrderService {
             { status: 'CANCELLED' },
           );
         }
+
+        // No inventory to return, because inventory is only deducted at the final status now.
+        // We do not need to increment or return stock here.
+
         await manager
           .getRepository(OrderItem)
           .update(item.id, { status_id: cancelStatus.id });
@@ -835,69 +964,145 @@ export class OrderService {
       );
     }
 
+    if (order.salesman_id === null && !order.manufacturer_id) {
+      throw new BadRequestException('Manufacturer ID is required before placing a Distributor to Manufacturer order');
+    }
+
     const newStatus = await this.orderStatusService.findOne(dto.status_id);
     const oldStatusId = order.status_id;
 
     await this.dataSource.transaction(async (manager) => {
-      // Inventory: on DISPATCHED, release reserved → deduct from available
-      if (newStatus.is_dispatch_status) {
-        const items = await manager
-          .getRepository(OrderItem)
-          .find({ where: { order_id: order.id } });
+      const items = await manager
+        .getRepository(OrderItem)
+        .find({ where: { order_id: order.id } });
 
+      const finalStatus = await this.orderStatusService.getFinalDeliveredStatus();
+      const isAlreadyDispatched = order.status.is_dispatch_status || order.status_id === finalStatus.id;
+
+      // 1. Pre-Final Status Item Updates (No inventory control)
+      if (!newStatus.is_cancel_status && newStatus.id !== finalStatus.id) {
         for (const item of items) {
-          if (item.reserved_quantity > 0) {
-            // Release reserved hold
-            await manager.getRepository(DistributorInventory).decrement(
-              {
-                distributor_id: order.distributor_id,
-                product_id: item.product_id,
-              },
-              'reserved_quantity',
-              item.reserved_quantity,
-            );
-            // Deduct from available (stock leaves the warehouse)
-            await manager.getRepository(DistributorInventory).decrement(
-              {
-                distributor_id: order.distributor_id,
-                product_id: item.product_id,
-              },
+          if (newStatus.is_dispatch_status) {
+            await manager.getRepository(OrderItem).update(item.id, {
+              dispatched_quantity: item.quantity,
+              status_id: newStatus.id,
+            });
+          } else {
+             await manager.getRepository(OrderItem).update(item.id, {
+               status_id: newStatus.id,
+             });
+          }
+        }
+      }
+
+      // 2. Inventory Validation & Update at Final Status (DELIVERED)
+      if (newStatus.id === finalStatus.id) {
+        const isDistributorToManufacturer = order.salesman_id === null;
+        for (const item of items) {
+          const qty = item.dispatched_quantity > 0 ? item.dispatched_quantity : item.quantity;
+          await manager
+            .getRepository(OrderItem)
+            .update(item.id, {
+              delivered_quantity: qty,
+              status_id: newStatus.id,
+            });
+            
+          if (isDistributorToManufacturer) {
+            // Decrement ManufacturerInventory
+            const mfrInv = await manager.getRepository('ManufacturerInventory').findOne({
+              where: { manufacturer_id: order.manufacturer_id, product_id: item.product_id },
+              lock: { mode: 'pessimistic_write' },
+            });
+            const mfrAvailableQty = mfrInv ? Number((mfrInv as any).available_quantity) : 0;
+            if (mfrAvailableQty < qty) {
+              throw new BadRequestException(
+                `Insufficient manufacturer inventory for product ${item.product_name_snapshot}. Required: ${qty}, Available: ${mfrAvailableQty}. Order remains in current status.`
+              );
+            }
+            await manager.getRepository('ManufacturerInventory').decrement(
+              { id: (mfrInv as any).id },
               'available_quantity',
-              item.reserved_quantity,
+              qty,
             );
+            await manager.getRepository('ManufacturerInventoryMovement').save({
+              manufacturer_id: order.manufacturer_id,
+              product_id: item.product_id,
+              order_id: order.id,
+              movement_type: 'ORDER_DELIVERED',
+              quantity_change: qty,
+              changed_by_user_id: userId,
+              reason: `Order delivered: ${order.order_number}`,
+            });
+
+            // Increase DistributorInventory
+            let distInv = await manager.getRepository(DistributorInventory).findOne({
+              where: { distributor_id: order.distributor_id, product_id: item.product_id },
+              lock: { mode: 'pessimistic_write' },
+            });
+            if (!distInv) {
+               distInv = manager.getRepository(DistributorInventory).create({
+                 distributor_id: order.distributor_id,
+                 product_id: item.product_id,
+                 available_quantity: qty,
+                 reserved_quantity: 0,
+                 backordered_quantity: 0,
+                 low_stock_threshold: 0,
+               });
+               await manager.getRepository(DistributorInventory).save(distInv);
+            } else {
+               await manager.getRepository(DistributorInventory).increment(
+                 { id: distInv.id },
+                 'available_quantity',
+                 qty
+               );
+            }
             await manager.getRepository(InventoryMovement).save({
               distributor_id: order.distributor_id,
               product_id: item.product_id,
               order_id: order.id,
-              movement_type: 'ORDER_DISPATCHED',
-              quantity_change: item.reserved_quantity,
+              movement_type: 'PURCHASE_RECEIVED',
+              quantity_change: qty,
               changed_by_user_id: userId,
-              reason: `Order dispatched: ${order.order_number}`,
+              reason: `Purchase delivered: ${order.order_number}`,
+            });
+
+          } else {
+            // Decrement DistributorInventory (Salesman Order)
+            const distInv = await manager.getRepository(DistributorInventory).findOne({
+              where: { distributor_id: order.distributor_id, product_id: item.product_id },
+              lock: { mode: 'pessimistic_write' },
+            });
+            const distAvailableQty = distInv ? Number(distInv.available_quantity) : 0;
+            if (distAvailableQty < qty) {
+              throw new BadRequestException(
+                `Insufficient inventory for product ${item.product_name_snapshot}. Required: ${qty}, Available: ${distAvailableQty}. Order remains in current status.`
+              );
+            }
+            await manager.getRepository(DistributorInventory).decrement(
+              { id: distInv!.id },
+              'available_quantity',
+              qty,
+            );
+            
+            // Clean up legacy reservations if any safely
+            if (item.reserved_quantity > 0) {
+                await manager.getRepository(DistributorInventory).decrement({ id: distInv!.id }, 'reserved_quantity', item.reserved_quantity);
+            }
+            if (item.backordered_quantity > 0) {
+                await manager.getRepository(DistributorInventory).decrement({ id: distInv!.id }, 'backordered_quantity', item.backordered_quantity);
+                await manager.getRepository(Backorder).update({ order_id: order.id, product_id: item.product_id, status: 'OPEN' }, { status: 'CANCELLED' });
+            }
+
+            await manager.getRepository(InventoryMovement).save({
+              distributor_id: order.distributor_id,
+              product_id: item.product_id,
+              order_id: order.id,
+              movement_type: 'ORDER_DELIVERED',
+              quantity_change: qty,
+              changed_by_user_id: userId,
+              reason: `Order delivered: ${order.order_number}`,
             });
           }
-          // Update dispatched_quantity on item
-          await manager
-            .getRepository(OrderItem)
-            .update(item.id, {
-              dispatched_quantity: item.reserved_quantity,
-              status_id: newStatus.id,
-            });
-        }
-      }
-
-      // Inventory: on DELIVERED, update delivered_quantity on items
-      const finalStatus = await this.orderStatusService.getFinalDeliveredStatus();
-      if (newStatus.id === finalStatus.id) {
-        const items = await manager
-          .getRepository(OrderItem)
-          .find({ where: { order_id: order.id } });
-        for (const item of items) {
-          await manager
-            .getRepository(OrderItem)
-            .update(item.id, {
-              delivered_quantity: item.dispatched_quantity,
-              status_id: newStatus.id,
-            });
         }
       }
 

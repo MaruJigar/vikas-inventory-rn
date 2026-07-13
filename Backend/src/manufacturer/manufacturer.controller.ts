@@ -65,7 +65,7 @@ export class ManufacturerController {
     return this.manufacturerService.updateProfile(req.user.userId, dto);
   }
 
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Get()
   @ApiOperation({ summary: 'Get Manufacturers' })
   @ApiBearerAuth('bearer')

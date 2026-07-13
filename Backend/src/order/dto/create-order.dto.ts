@@ -70,3 +70,21 @@ export class CreateOrderDto {
   @ApiPropertyOptional({ description: 'IdempotencyKey' })
   idempotencyKey?: string;
 }
+
+export class CreateDistributorManufacturerOrderDto {
+  @IsUUID()
+  @ApiProperty({ description: 'ManufacturerId' })
+  manufacturerId: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => OrderProductDto)
+  @ApiProperty({ description: 'Products' })
+  products: OrderProductDto[];
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'IdempotencyKey' })
+  idempotencyKey?: string;
+}
+

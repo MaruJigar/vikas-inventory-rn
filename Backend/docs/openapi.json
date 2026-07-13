@@ -2954,6 +2954,56 @@
         ]
       }
     },
+    "/v1/orders/distributor-to-manufacturer": {
+      "post": {
+        "operationId": "OrdersController_createDistributorManufacturerOrder_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDistributorManufacturerOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create Distributor to Manufacturer Order (DISTRIBUTOR_ADMIN only)",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/v1/orders/purchase-request/generate": {
+      "post": {
+        "operationId": "OrdersController_generatePurchaseRequest_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generate Purchase Request (DISTRIBUTOR_ADMIN only)",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
     "/v1/orders/export/csv": {
       "get": {
         "operationId": "OrdersController_exportCsv_v1",
@@ -3415,7 +3465,7 @@
             "bearer": []
           }
         ],
-        "summary": "Edit Order (SALESMAN only, pre-CANCELLED/DELIVERED)",
+        "summary": "Edit Order (SALESMAN/DISTRIBUTOR_ADMIN/MANUFACTURER_ADMIN)",
         "tags": [
           "Orders"
         ]
@@ -6853,6 +6903,30 @@
           "products"
         ]
       },
+      "CreateDistributorManufacturerOrderDto": {
+        "type": "object",
+        "properties": {
+          "manufacturerId": {
+            "type": "string",
+            "description": "ManufacturerId"
+          },
+          "products": {
+            "description": "Products",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "IdempotencyKey"
+          }
+        },
+        "required": [
+          "manufacturerId",
+          "products"
+        ]
+      },
       "Order": {
         "type": "object",
         "properties": {
@@ -6908,9 +6982,33 @@
             "type": "number",
             "description": "Bill discount amount"
           },
+          "total_gst_amount": {
+            "type": "number",
+            "description": "Total gst amount"
+          },
+          "distributor_discount_percent": {
+            "type": "number",
+            "description": "Distributor discount percent"
+          },
+          "distributor_discount_amount": {
+            "type": "number",
+            "description": "Distributor discount amount"
+          },
+          "special_discount_percent": {
+            "type": "number",
+            "description": "Special discount percent"
+          },
+          "special_discount_amount": {
+            "type": "number",
+            "description": "Special discount amount"
+          },
           "final_order_amount": {
             "type": "number",
             "description": "Final order amount"
+          },
+          "transport_mode": {
+            "type": "string",
+            "description": "Transport mode"
           },
           "total_quantity": {
             "type": "number",
@@ -6968,9 +7066,6 @@
         "required": [
           "id",
           "order_number",
-          "visit_id",
-          "shop_id",
-          "salesman_id",
           "distributor_id",
           "status_id",
           "gross_order_amount",
@@ -6978,6 +7073,11 @@
           "bill_discount_type",
           "bill_discount_value",
           "bill_discount_amount",
+          "total_gst_amount",
+          "distributor_discount_percent",
+          "distributor_discount_amount",
+          "special_discount_percent",
+          "special_discount_amount",
           "final_order_amount",
           "total_quantity",
           "total_backordered_quantity",
@@ -7026,6 +7126,22 @@
           "reason": {
             "type": "string",
             "description": "Reason"
+          },
+          "manufacturerId": {
+            "type": "string",
+            "description": "Manufacturer ID (for Draft Distributor->Manufacturer orders)"
+          },
+          "transportMode": {
+            "type": "string",
+            "description": "Transport Mode"
+          },
+          "distributorDiscountPercent": {
+            "type": "number",
+            "description": "Distributor Discount Percent"
+          },
+          "specialDiscountPercent": {
+            "type": "number",
+            "description": "Special Discount Percent"
           }
         },
         "required": [

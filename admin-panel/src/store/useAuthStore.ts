@@ -35,8 +35,10 @@ function getInitialState() {
         return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
     const payload = JSON.parse(jsonPayload);
+    const hasRefreshToken = document.cookie.includes('refreshToken=');
     
-    if (payload.exp && payload.exp * 1000 < Date.now()) {
+    // Only invalidate immediately if we don't have a refresh token
+    if (!hasRefreshToken && payload.exp && payload.exp * 1000 < Date.now()) {
       return null;
     }
 

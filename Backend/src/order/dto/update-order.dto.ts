@@ -33,6 +33,28 @@ export class UpdateOrderDto {
   @IsString()
   @ApiPropertyOptional({ description: 'Reason' })
   reason?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'Manufacturer ID (for Draft Distributor->Manufacturer orders)' })
+  manufacturerId?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'Transport Mode' })
+  transportMode?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiPropertyOptional({ description: 'Distributor Discount Percent' })
+  distributorDiscountPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiPropertyOptional({ description: 'Special Discount Percent' })
+  specialDiscountPercent?: number;
 }
 
 export class CancelOrderDto {

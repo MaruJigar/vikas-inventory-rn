@@ -8,8 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useOrderQuery } from '@/hooks/orders/useOrderQuery';
 import { useUpdateOrderMutation } from '@/hooks/orders/useUpdateOrderMutation';
+import { useManufacturersQuery } from '@/hooks/manufacturers/useManufacturersQuery';
+import { useProductsQuery } from '@/hooks/products/useProductsQuery';
 import { UpdateOrderDto } from '@/types/api/order.types';
 import { useForm, useFieldArray } from 'react-hook-form';
+import { Trash2, PlusCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface EditOrderDrawerProps {
   orderId: string | null;
@@ -29,7 +33,11 @@ type FormValues = {
   }[];
   billDiscountType: 'NONE' | 'PERCENTAGE' | 'FLAT';
   billDiscountValue: number;
+  distributorDiscountPercent: number;
+  specialDiscountPercent: number;
+  transportMode: string;
   reason: string;
+  manufacturerId?: string;
 };
 
 export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerProps) {
@@ -38,16 +46,25 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
 
   const { mutate: updateOrder, isPending } = useUpdateOrderMutation(orderId);
 
-  const { register, control, handleSubmit, reset, watch } = useForm<FormValues>({
+  const { data: mfrResponse, isLoading: mfrLoading } = useManufacturersQuery({ limit: 100 });
+  const { data: prodResponse, isLoading: prodLoading } = useProductsQuery({ limit: 100 });
+  const manufacturers = mfrResponse?.data || [];
+  const allProducts = prodResponse?.data || [];
+
+  const { register, control, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
     defaultValues: {
       products: [],
       billDiscountType: 'NONE',
       billDiscountValue: 0,
-      reason: ''
+      distributorDiscountPercent: 0,
+      specialDiscountPercent: 0,
+      transportMode: '',
+      reason: '',
+      manufacturerId: ''
     }
   });
 
-  const { fields } = useFieldArray({
+  const { fields, remove, append } = useFieldArray({
     control,
     name: "products"
   });
@@ -67,7 +84,11 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
         })),
         billDiscountType: 'FLAT',
         billDiscountValue: Number(order.bill_discount_amount || 0),
-        reason: ''
+        distributorDiscountPercent: Number(order.distributor_discount_percent || 0),
+        specialDiscountPercent: Number(order.special_discount_percent || 0),
+        transportMode: order.transport_mode || '',
+        reason: '',
+        manufacturerId: order.manufacturer_id || ''
       });
     }
   }, [order, isOpen, reset]);
@@ -75,6 +96,8 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
   const watchedProducts = watch('products') || [];
   const watchedBillDiscountType = watch('billDiscountType');
   const watchedBillDiscountValue = watch('billDiscountValue') || 0;
+  const watchedDistDisc = watch('distributorDiscountPercent') || 0;
+  const watchedSpecDisc = watch('specialDiscountPercent') || 0;
 
   // Real-time calculations
   const grossAmount = watchedProducts.reduce((sum, p) => sum + (p.mrp_snapshot * (p.quantity || 0)), 0);
@@ -85,7 +108,28 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
     ? (netAfterProductDiscount * (watchedBillDiscountValue / 100))
     : Number(watchedBillDiscountValue || 0);
 
-  const finalAmount = netAfterProductDiscount - billDiscountAmount;
+  const distributorDiscountAmount = netAfterProductDiscount * (watchedDistDisc / 100);
+  const afterDistDisc = netAfterProductDiscount - distributorDiscountAmount;
+  const specialDiscountAmount = afterDistDisc * (watchedSpecDisc / 100);
+
+  const totalDiscount = billDiscountAmount + distributorDiscountAmount + specialDiscountAmount;
+
+  let totalGstAmount = 0;
+  watchedProducts.forEach(p => {
+    const product = allProducts.find(ap => ap.id === p.productId);
+    const gstPercent = product ? Number(product.gst_percent) : 0;
+    const itemGross = p.mrp_snapshot * (p.quantity || 0);
+    const itemDisc = Number(p.itemDiscountValue || 0);
+    const itemNet = itemGross - itemDisc;
+    
+    const itemProportion = netAfterProductDiscount > 0 ? itemNet / netAfterProductDiscount : 0;
+    const proratedDisc = itemProportion * totalDiscount;
+    const taxableAmount = itemNet - proratedDisc;
+    
+    totalGstAmount += taxableAmount * (gstPercent / 100);
+  });
+
+  const finalAmount = netAfterProductDiscount - totalDiscount + totalGstAmount;
 
   const onSubmit = (data: FormValues) => {
     if (!orderId) return;
@@ -99,7 +143,11 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
       })),
       billDiscountType: data.billDiscountType,
       billDiscountValue: Number(data.billDiscountValue),
-      reason: data.reason || 'Edited by Salesman'
+      distributorDiscountPercent: Number(data.distributorDiscountPercent),
+      specialDiscountPercent: Number(data.specialDiscountPercent),
+      transportMode: data.transportMode || undefined,
+      reason: data.reason || 'Edited by Admin',
+      manufacturerId: data.manufacturerId || undefined
     };
 
     updateOrder(payload, {
@@ -125,19 +173,81 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 pb-10">
             
             {/* Shop Context (Read Only) */}
-            <section className="bg-slate-50 p-4 rounded-md border">
-              <h3 className="text-sm font-semibold text-slate-900 mb-2">Shop Context</h3>
-              <div className="text-sm text-slate-600">
-                <span className="font-medium text-slate-900">{order.shop?.name || 'N/A'}</span>
-                {order.shop?.city && ` • ${order.shop.city}`}
-              </div>
-            </section>
+            {order.shop ? (
+              <section className="bg-slate-50 p-4 rounded-md border">
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">Shop Context</h3>
+                <div className="text-sm text-slate-600">
+                  <span className="font-medium text-slate-900">{order.shop.name}</span>
+                  {order.shop.city && ` • ${order.shop.city}`}
+                </div>
+              </section>
+            ) : order.salesman_id === null && order.status?.name === 'DRAFT' ? (
+              <section className="bg-slate-50 p-4 rounded-md border">
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">Manufacturer Target</h3>
+                <div className="text-sm text-slate-600">
+                  <Select
+                    value={watch('manufacturerId') || ""}
+                    onValueChange={(val) => setValue('manufacturerId', val)}
+                  >
+                    <SelectTrigger className="w-full bg-white">
+                      <SelectValue placeholder="Select a Manufacturer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {manufacturers.map((mfr) => (
+                        <SelectItem key={mfr.id} value={mfr.id}>
+                          {mfr.business_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </section>
+            ) : order.manufacturer_id && (
+              <section className="bg-slate-50 p-4 rounded-md border">
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">Manufacturer</h3>
+                <div className="text-sm text-slate-600">
+                  <span className="font-medium text-slate-900">ID: {order.manufacturer_id}</span>
+                </div>
+              </section>
+            )}
 
             {/* Order Items Editor */}
             <section>
-              <h3 className="text-sm font-semibold text-slate-900 mb-3 border-b pb-2">Order Items</h3>
+              <div className="flex justify-between items-center border-b pb-2 mb-3">
+                <h3 className="text-sm font-semibold text-slate-900">Order Items</h3>
+                {(order.status?.name === 'DRAFT' || order.status?.name === 'CREATED') && (
+                  <div className="flex items-center gap-2">
+                    <Select onValueChange={(productId) => {
+                      const product = allProducts.find(p => p.id === productId);
+                      if (product && !watchedProducts.some(wp => wp.productId === product.id)) {
+                        append({
+                          productId: product.id,
+                          product_name_snapshot: product.name,
+                          sku_snapshot: product.sku,
+                          mrp_snapshot: Number(product.mrp),
+                          quantity: 1,
+                          itemDiscountType: 'FLAT',
+                          itemDiscountValue: 0
+                        });
+                      }
+                    }}>
+                      <SelectTrigger className="w-[200px] h-8 text-xs">
+                        <SelectValue placeholder="Add new product..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allProducts.map((p) => (
+                          <SelectItem key={p.id} value={p.id} disabled={watchedProducts.some(wp => wp.productId === p.id)}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              
               {fields.length === 0 ? (
-                <div className="text-red-500 text-sm italic py-4">Error: No items found to edit.</div>
+                <div className="text-red-500 text-sm italic py-4">No items in order.</div>
               ) : (
                 <div className="border rounded-md overflow-hidden">
                   <Table>
@@ -149,6 +259,7 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                         <TableHead className="w-24 text-right">Qty</TableHead>
                         <TableHead className="w-24 text-right">Discount (FLAT)</TableHead>
                         <TableHead className="text-right">Line Total</TableHead>
+                        <TableHead className="w-12 text-center"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -182,6 +293,17 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                               />
                             </TableCell>
                             <TableCell className="text-right font-medium">₹{Number(lineTotal).toFixed(2)}</TableCell>
+                            <TableCell className="text-center">
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => remove(index)}
+                                className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         );
                       })}
@@ -189,6 +311,22 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                   </Table>
                 </div>
               )}
+            </section>
+
+            {/* Logistics & Extra Discounts */}
+            <section className="grid grid-cols-1 md:grid-cols-3 gap-4 border rounded-md p-4 bg-white">
+              <div>
+                <Label htmlFor="transportMode">Transport Mode</Label>
+                <Input id="transportMode" placeholder="e.g. Courier, Roadways" {...register('transportMode')} className="mt-1" />
+              </div>
+              <div>
+                <Label htmlFor="distDisc">Distributor Discount (%)</Label>
+                <Input id="distDisc" type="number" min="0" max="100" step="0.01" {...register('distributorDiscountPercent')} className="mt-1" />
+              </div>
+              <div>
+                <Label htmlFor="specDisc">Special Discount (%)</Label>
+                <Input id="specDisc" type="number" min="0" max="100" step="0.01" {...register('specialDiscountPercent')} className="mt-1" />
+              </div>
             </section>
 
             {/* Financial Summary (Real-time Recalculated) */}
@@ -199,13 +337,21 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                   <span>Gross Amount</span>
                   <span>₹{Number(grossAmount).toFixed(2)}</span>
                 </div>
+                {productDiscountAmount > 0 && (
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Product Discount</span>
+                    <span className="text-red-500">- ₹{Number(productDiscountAmount).toFixed(2)}</span>
+                  </div>
+                )}
+                {totalDiscount > 0 && (
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Order Level Discounts</span>
+                    <span className="text-red-500">- ₹{Number(totalDiscount).toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-slate-600">
-                  <span>Product Discount</span>
-                  <span className="text-red-500">- ₹{Number(productDiscountAmount).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center text-slate-600">
-                  <span>Bill Discount</span>
-                  <span className="text-red-500">- ₹{Number(billDiscountAmount).toFixed(2)}</span>
+                  <span>Total GST Amount</span>
+                  <span className="text-emerald-600">+ ₹{Number(totalGstAmount).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center font-bold text-slate-900 pt-2 border-t border-slate-200 mt-2">
                   <span>Final Amount</span>
