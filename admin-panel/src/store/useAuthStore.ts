@@ -36,7 +36,11 @@ function getInitialState() {
     }).join(''));
     const payload = JSON.parse(jsonPayload);
     
-    if (payload.exp && payload.exp * 1000 < Date.now()) {
+    const hasRefreshToken = !!document.cookie
+      .split('; ')
+      .find(row => row.startsWith('refreshToken='));
+
+    if (!hasRefreshToken && payload.exp && payload.exp * 1000 < Date.now()) {
       return null;
     }
 
