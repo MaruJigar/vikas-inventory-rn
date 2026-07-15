@@ -4,7 +4,7 @@ import { ShopDto, CreateShopDto, UpdateShopDto, CheckDuplicateDto } from '@/type
 
 export const shopService = {
   checkDuplicate: (data: CheckDuplicateDto) => api.post<ApiResponse<boolean>>('/shops/check-duplicate', data).then(res => res.data),
-  createShop: (data: CreateShopDto) => api.post<ApiResponse<ShopDto>>('/shops', data).then(res => res.data),
+  createShop: (data: CreateShopDto) => api.post<ShopDto>('/shops', data).then(res => res.data),
   getShops: (params?: QueryParams) => api.get<PaginatedResponse<ShopDto>>('/shops', { params }).then(res => res.data),
   getShopById: (id: string) => api.get<ApiResponse<ShopDto>>(`/shops/${id}`).then(res => res.data),
   updateShop: (id: string, data: UpdateShopDto) => api.patch<ApiResponse<ShopDto>>(`/shops/${id}`, data).then(res => res.data),

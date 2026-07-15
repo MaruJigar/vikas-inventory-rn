@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { EntityFormDrawer } from '@/components/shared/EntityFormDrawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,14 @@ export function UploadShopImageDialog({ shop, isOpen, onClose }: UploadShopImage
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const uploadMutation = useUploadShopImageMutation();
+
+  useEffect(() => {
+    if (isOpen) {
+      setFile(null);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+    }
+  }, [isOpen]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMsg(null);
