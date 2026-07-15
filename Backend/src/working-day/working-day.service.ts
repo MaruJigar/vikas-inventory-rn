@@ -71,6 +71,17 @@ export class WorkingDayService {
     try {
       const now = new Date();
 
+      // Auto-close any previous active working day as MISSED
+      const previousActiveWd = await queryRunner.manager.findOne(WorkingDay, {
+        where: { salesman_id: salesman.id, status: 'ACTIVE' },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (previousActiveWd) {
+        previousActiveWd.status = 'MISSED';
+        await queryRunner.manager.save(previousActiveWd);
+      }
+
       const wd = queryRunner.manager.create(WorkingDay, {
         salesman_id: salesman.id,
         distributor_id: salesman.distributor_id,

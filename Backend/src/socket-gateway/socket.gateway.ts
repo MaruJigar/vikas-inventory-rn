@@ -7,7 +7,31 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 
-@WebSocketGateway({ cors: true })
+import { appConfig } from '../config/app.config';
+import { ConfigService } from '@nestjs/config';
+
+@WebSocketGateway({
+  cors: {
+    origin: (requestOrigin: string, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Dynamic origin resolution matching REST API
+      const allowedOrigins = [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:8081',
+        process.env.ADMIN_PANEL_URL,
+        process.env.REACT_NATIVE_WEB_URL,
+        process.env.FRONTEND_URL,
+      ].filter(Boolean);
+      
+      if (!requestOrigin || allowedOrigins.includes(requestOrigin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  },
+})
 export class AppSocketGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {

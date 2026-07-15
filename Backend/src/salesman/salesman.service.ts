@@ -106,7 +106,9 @@ export class SalesmanService {
       where: [{ email: dto.email }, { phone: dto.phone }],
     });
     if (existingUser) {
-      throw new BadRequestException('User with this email or phone already exists');
+      throw new BadRequestException(
+        'User with this email or phone already exists',
+      );
     }
 
     const targetDistributorId = dto.distributor_id;
@@ -117,7 +119,9 @@ export class SalesmanService {
       });
       if (!dist) throw new ForbiddenException('Distributor profile not found');
       if (targetDistributorId !== dist.id) {
-        throw new ForbiddenException('Cannot create salesman for another distributor');
+        throw new ForbiddenException(
+          'Cannot create salesman for another distributor',
+        );
       }
     } else if (userRole === 'MANUFACTURER_ADMIN') {
       const mfrResult = await this.dataSource.query(
@@ -126,13 +130,15 @@ export class SalesmanService {
       );
       if (!mfrResult.length)
         throw new ForbiddenException('Manufacturer profile not found');
-      
+
       const link = await this.dataSource.query(
         `SELECT id FROM manufacturer_distributors WHERE manufacturer_id = $1 AND distributor_id = $2`,
         [mfrResult[0].id, targetDistributorId],
       );
       if (!link.length) {
-        throw new ForbiddenException('Distributor not linked to your manufacturer network');
+        throw new ForbiddenException(
+          'Distributor not linked to your manufacturer network',
+        );
       }
     } else if (userRole !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Unauthorized role');
@@ -171,6 +177,10 @@ export class SalesmanService {
         email: dto.email,
         approval_status: 'APPROVED',
         is_active: true,
+        state_id: dto.state_id,
+        state_name: dto.state,
+        city_id: dto.city_id,
+        city_name: dto.city,
       });
       const savedSalesman = await queryRunner.manager.save(salesman);
 
@@ -210,7 +220,8 @@ export class SalesmanService {
     } = queryDto;
     const skip = (page - 1) * limit;
 
-    const qb = this.salesmanRepo.createQueryBuilder('salesman')
+    const qb = this.salesmanRepo
+      .createQueryBuilder('salesman')
       .leftJoinAndSelect('salesman.distributor', 'distributor');
 
     if (userRole === 'SUPER_ADMIN') {
@@ -332,6 +343,21 @@ export class SalesmanService {
     const salesman = await this.getSalesmanById(id, userRole, userId);
 
     Object.assign(salesman, dto);
+
+    // Explicitly map DTO state/city properties to the entity's state_name/city_name
+    if (dto.state !== undefined) {
+      salesman.state_name = dto.state; // Cast in case dto.state is passed but entity expects state_name
+      delete (salesman as any).state;
+    }
+    if (dto.city !== undefined) {
+      salesman.city_name = dto.city;
+      delete (salesman as any).city;
+    }
+
+    // Remove relation objects so TypeORM doesn't overwrite our updated foreign keys
+    delete salesman.city;
+    delete salesman.state;
+
     await this.salesmanRepo.save(salesman);
 
     if (dto.full_name || dto.phone || dto.email) {
@@ -346,7 +372,7 @@ export class SalesmanService {
       }
     }
 
-    return salesman;
+    return this.getSalesmanById(id, userRole, userId);
   }
 
   async updateSalesmanStatus(

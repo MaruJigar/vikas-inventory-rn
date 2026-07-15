@@ -66,22 +66,38 @@ api.interceptors.response.use(
 
       try {
         // Attempt to refresh token
+        let refreshToken = null;
+        if (typeof document !== 'undefined') {
+          const match = document.cookie.match(/(?:^|; )refreshToken=([^;]+)/);
+          if (match) {
+            refreshToken = match[1];
+          }
+        }
+
+        if (!refreshToken) {
+          throw new Error('No refresh token available in cookies');
+        }
+
         const refreshResponse = await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/auth/refresh`,
-          {},
+          { refresh_token: refreshToken },
           { withCredentials: true }
         );
 
-        const { accessToken } = refreshResponse.data;
+        const { access_token, refresh_token } = refreshResponse.data;
         if (typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', accessToken);
+          localStorage.setItem('accessToken', access_token);
+          document.cookie = `accessToken=${access_token}; path=/; max-age=604800; SameSite=Lax`;
+          if (refresh_token) {
+            document.cookie = `refreshToken=${refresh_token}; path=/; max-age=604800; SameSite=Lax`;
+          }
         }
 
         if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
         }
 
-        processQueue(null, accessToken);
+        processQueue(null, access_token);
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError as AxiosError, null);
@@ -89,6 +105,8 @@ api.interceptors.response.use(
         // Handle critical auth failure - e.g. clear storage and redirect
         if (typeof window !== 'undefined') {
           localStorage.removeItem('accessToken');
+          document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
           window.location.href = '/login';
         }
         return Promise.reject(refreshError);

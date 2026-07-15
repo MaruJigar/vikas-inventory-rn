@@ -14,6 +14,7 @@ import { ProductCategory } from '../../product/product-category.entity';
 import { Product } from '../../product/product.entity';
 import { Shop } from '../../shop/shop.entity';
 import { DistributorInventory } from '../../inventory/distributor-inventory.entity';
+import { ManufacturerInventory } from '../../inventory/manufacturer-inventory.entity';
 import { Order } from '../../order/order.entity';
 import { OrderItem } from '../../order/order-item.entity';
 import { ShopVisit } from '../../visit/shop-visit.entity';
@@ -45,6 +46,7 @@ async function bootstrap() {
   const prodRepo = getRepo(Product);
   const shopRepo = getRepo(Shop);
   const invRepo = getRepo(DistributorInventory);
+  const mfrInvRepo = getRepo(ManufacturerInventory);
   const orderRepo = getRepo(Order);
   const itemRepo = getRepo(OrderItem);
   const visitRepo = getRepo(ShopVisit);
@@ -59,11 +61,25 @@ async function bootstrap() {
   // --- WIPE ALL DATA ---
   console.log('[SEED] Wiping existing data (CASCADE)...');
   const entities = [
-    'order_items', 'orders',    'shop_visits', 'distributor_inventory',
-    'shops', 'products', 'product_categories', 'salesmen',
-    'manufacturer_distributors', 'distributors', 'manufacturers',
-    'approval_requests', 'uploaded_files', 'location_logs', 'latest_locations',
-    'working_days', 'users', 'order_statuses'
+    'order_items',
+    'orders',
+    'shop_visits',
+    'distributor_inventory',
+    'manufacturer_inventory',
+    'shops',
+    'products',
+    'product_categories',
+    'salesmen',
+    'manufacturer_distributors',
+    'distributors',
+    'manufacturers',
+    'approval_requests',
+    'uploaded_files',
+    'location_logs',
+    'latest_locations',
+    'working_days',
+    'users',
+    'order_statuses',
   ];
   for (const table of entities) {
     try {
@@ -95,7 +111,7 @@ async function bootstrap() {
       role: 'SUPER_ADMIN',
       approval_status: 'APPROVED',
       is_active: true,
-    })
+    }),
   );
 
   // --- PHASE 1 & 2: MASTER DATA & APPROVALS ---
@@ -114,13 +130,17 @@ async function bootstrap() {
         role: 'MANUFACTURER_ADMIN',
         approval_status: status,
         is_active: true,
-      })
+      }),
     );
     const mfr = await mfrRepo.save(
       mfrRepo.create({
         user_id: u.id,
         company_name: faker.company.name() + ' Mfg',
-        gst_number: '27AABCU' + faker.string.numeric(4) + 'R1Z' + faker.string.alpha(1).toUpperCase(),
+        gst_number:
+          '27AABCU' +
+          faker.string.numeric(4) +
+          'R1Z' +
+          faker.string.alpha(1).toUpperCase(),
         address: faker.location.streetAddress(),
         contact_person: u.full_name,
         phone: u.phone,
@@ -129,17 +149,19 @@ async function bootstrap() {
         state: faker.location.state(),
         country: 'India',
         is_active: status === 'APPROVED',
-      })
+      }),
     );
     mfrs.push(mfr);
 
     if (status === 'PENDING_APPROVAL') {
-      await apprRepo.save(apprRepo.create({
-        request_type: 'MANUFACTURER_APPROVAL',
-        manufacturer_id: mfr.id,
-        requester_user_id: u.id,
-        status: 'PENDING',
-      }));
+      await apprRepo.save(
+        apprRepo.create({
+          request_type: 'MANUFACTURER_APPROVAL',
+          manufacturer_id: mfr.id,
+          requester_user_id: u.id,
+          status: 'PENDING',
+        }),
+      );
     }
   }
 
@@ -157,7 +179,7 @@ async function bootstrap() {
         role: 'DISTRIBUTOR_ADMIN',
         approval_status: status,
         is_active: true,
-      })
+      }),
     );
     const dist = await distRepo.save(
       distRepo.create({
@@ -166,7 +188,11 @@ async function bootstrap() {
         owner_name: u.full_name,
         phone: u.phone,
         email: u.email,
-        gst_number: '27DABCU' + faker.string.numeric(4) + 'R1Z' + faker.string.alpha(1).toUpperCase(),
+        gst_number:
+          '27DABCU' +
+          faker.string.numeric(4) +
+          'R1Z' +
+          faker.string.alpha(1).toUpperCase(),
         city: faker.location.city(),
         state: faker.location.state(),
         address: faker.location.streetAddress(),
@@ -175,17 +201,19 @@ async function bootstrap() {
         approved_by_user_id: status === 'APPROVED' ? superAdmin.id : undefined,
         approved_at: status === 'APPROVED' ? new Date() : undefined,
         is_active: status === 'APPROVED',
-      })
+      }),
     );
     dists.push(dist);
 
     if (status === 'PENDING_APPROVAL') {
-      await apprRepo.save(apprRepo.create({
-        request_type: 'DISTRIBUTOR_APPROVAL',
-        distributor_id: dist.id,
-        requester_user_id: u.id,
-        status: 'PENDING',
-      }));
+      await apprRepo.save(
+        apprRepo.create({
+          request_type: 'DISTRIBUTOR_APPROVAL',
+          distributor_id: dist.id,
+          requester_user_id: u.id,
+          status: 'PENDING',
+        }),
+      );
     }
   }
 
@@ -197,20 +225,28 @@ async function bootstrap() {
     const selectedDists = shuffledDists.slice(0, linkCount);
 
     for (const dist of selectedDists) {
-      await mdRepo.save(mdRepo.create({
-        manufacturer_id: mfr.id,
-        distributor_id: dist.id,
-        status: 'ACTIVE',
-        approved_by_user_id: superAdmin.id,
-        approved_at: new Date(),
-      }));
+      await mdRepo.save(
+        mdRepo.create({
+          manufacturer_id: mfr.id,
+          distributor_id: dist.id,
+          status: 'ACTIVE',
+          approved_by_user_id: superAdmin.id,
+          approved_at: new Date(),
+        }),
+      );
     }
   }
+
+  const cityRepo = getRepo(City);
+  const citiesList = await cityRepo.find({ relations: { state: true } });
 
   // 200 Salesmen
   console.log('[SEED] Creating 200 Salesmen...');
   const salesmen: Salesman[] = [];
-  const salesmanWorkingDays: Record<string, { active?: string, completed?: string }> = {};
+  const salesmanWorkingDays: Record<
+    string,
+    { active?: string; completed?: string }
+  > = {};
   for (let i = 0; i < 200; i++) {
     const status = randomApproval();
     const dist = faker.helpers.arrayElement(dists); // Assign to random dist
@@ -223,8 +259,9 @@ async function bootstrap() {
         role: 'SALESMAN',
         approval_status: status,
         is_active: true,
-      })
+      }),
     );
+    const randomCity = faker.helpers.arrayElement(citiesList);
     const sm = await salesRepo.save(
       salesRepo.create({
         user_id: u.id,
@@ -232,43 +269,53 @@ async function bootstrap() {
         phone: u.phone,
         email: u.email,
         distributor_id: dist.id,
+        city_id: randomCity.id,
+        state_id: randomCity.state_id,
+        city_name: randomCity.name,
+        state_name: randomCity.state?.name || 'Maharashtra',
         approval_status: status,
         approved_by_user_id: status === 'APPROVED' ? superAdmin.id : undefined,
         approved_at: status === 'APPROVED' ? new Date() : undefined,
         is_active: status === 'APPROVED',
-      })
+      }),
     );
     salesmen.push(sm);
 
     if (status === 'APPROVED') {
       salesmanWorkingDays[sm.id] = {};
-      const cwd = await wdRepo.save(wdRepo.create({
-        salesman_id: sm.id,
-        distributor_id: sm.distributor_id,
-        check_in_at: new Date(Date.now() - 86400000 * 2),
-        check_out_at: new Date(Date.now() - 86400000 * 2 + 36000000),
-        status: 'COMPLETED',
-      }));
+      const cwd = await wdRepo.save(
+        wdRepo.create({
+          salesman_id: sm.id,
+          distributor_id: sm.distributor_id,
+          check_in_at: new Date(Date.now() - 86400000 * 2),
+          check_out_at: new Date(Date.now() - 86400000 * 2 + 36000000),
+          status: 'COMPLETED',
+        }),
+      );
       salesmanWorkingDays[sm.id].completed = cwd.id;
 
       if (Math.random() > 0.5) {
-        const awd = await wdRepo.save(wdRepo.create({
-          salesman_id: sm.id,
-          distributor_id: sm.distributor_id,
-          check_in_at: new Date(),
-          status: 'ACTIVE',
-        }));
+        const awd = await wdRepo.save(
+          wdRepo.create({
+            salesman_id: sm.id,
+            distributor_id: sm.distributor_id,
+            check_in_at: new Date(),
+            status: 'ACTIVE',
+          }),
+        );
         salesmanWorkingDays[sm.id].active = awd.id;
       }
     }
 
     if (status === 'PENDING_APPROVAL') {
-      await apprRepo.save(apprRepo.create({
-        request_type: 'SALESMAN_APPROVAL',
-        salesman_id: sm.id,
-        requester_user_id: u.id,
-        status: 'PENDING',
-      }));
+      await apprRepo.save(
+        apprRepo.create({
+          request_type: 'SALESMAN_APPROVAL',
+          salesman_id: sm.id,
+          requester_user_id: u.id,
+          status: 'PENDING',
+        }),
+      );
     }
   }
 
@@ -277,7 +324,8 @@ async function bootstrap() {
   const cats: ProductCategory[] = [];
   for (let i = 0; i < 20; i++) {
     const catName = faker.commerce.department() + ' ' + faker.string.nanoid(4);
-    const insertResult = await catRepo.createQueryBuilder()
+    const insertResult = await catRepo
+      .createQueryBuilder()
       .insert()
       .into(ProductCategory)
       .values({ name: catName })
@@ -303,12 +351,13 @@ async function bootstrap() {
         distributor_discount_percent: faker.number.int({ min: 0, max: 20 }),
         special_discount_percent: faker.number.int({ min: 0, max: 10 }),
         is_active: faker.datatype.boolean({ probability: 0.9 }),
-      })
+      }),
     );
     products.push(p);
 
     // Mock Product Image
-    await fileRepo.createQueryBuilder()
+    await fileRepo
+      .createQueryBuilder()
       .insert()
       .into(UploadedFile)
       .values({
@@ -325,13 +374,15 @@ async function bootstrap() {
 
   // --- PHASE 4: SHOP DATA ---
   console.log('[SEED] Creating 400 Shops...');
-  const cityRepo = getRepo(City);
-  const citiesList = await cityRepo.find({ relations: { state: true } });
 
   const shops: Shop[] = [];
   for (let i = 0; i < 400; i++) {
     const sm = faker.helpers.arrayElement(salesmen);
-    const status = faker.helpers.arrayElement(['VERIFIED', 'PENDING', 'REJECTED']);
+    const status = faker.helpers.arrayElement([
+      'VERIFIED',
+      'PENDING',
+      'REJECTED',
+    ]);
     const randomCity = faker.helpers.arrayElement(citiesList);
 
     // Generate valid Indian lat/lng roughly
@@ -350,26 +401,31 @@ async function bootstrap() {
         state_name: randomCity.state?.name || 'Maharashtra',
         city_id: randomCity.id,
         state_id: randomCity.state_id,
-        verification_photo_url: faker.image.urlLoremFlickr({ category: 'shop' }),
+        verification_photo_url: faker.image.urlLoremFlickr({
+          category: 'shop',
+        }),
         verification_status: status as any,
         is_active: status === 'VERIFIED',
-      })
+      }),
     );
     shops.push(s);
 
     // Location Log entry for shop
     const wd = salesmanWorkingDays[sm.id];
-    await locRepo.save(locRepo.create({
-      salesman_id: sm.id,
-      distributor_id: sm.distributor_id,
-      working_day_id: wd?.active || wd?.completed,
-      event_type: 'SHOP_CREATION',
-      location: { type: 'Point', coordinates: [lng, lat] },
-      captured_at: new Date(),
-    }));
+    await locRepo.save(
+      locRepo.create({
+        salesman_id: sm.id,
+        distributor_id: sm.distributor_id,
+        working_day_id: wd?.active || wd?.completed,
+        event_type: 'SHOP_CREATION',
+        location: { type: 'Point', coordinates: [lng, lat] },
+        captured_at: new Date(),
+      }),
+    );
 
     // Mock Shop Verification Image
-    await fileRepo.createQueryBuilder()
+    await fileRepo
+      .createQueryBuilder()
       .insert()
       .into(UploadedFile)
       .values({
@@ -391,25 +447,55 @@ async function bootstrap() {
     const prod = faker.helpers.arrayElement(products);
 
     // Scenarios: low stock, high stock, out of stock
-    const qty = faker.helpers.arrayElement([0, faker.number.int({ min: 1, max: 20 }), faker.number.int({ min: 100, max: 1000 })]);
+    const qty = faker.helpers.arrayElement([
+      0,
+      faker.number.int({ min: 1, max: 20 }),
+      faker.number.int({ min: 100, max: 1000 }),
+    ]);
 
     // Ensure no duplicates per dist/prod combo
-    const exists = await invRepo.findOne({ where: { distributor_id: dist.id, product_id: prod.id } });
+    const exists = await invRepo.findOne({
+      where: { distributor_id: dist.id, product_id: prod.id },
+    });
     if (!exists) {
-      await invRepo.save(invRepo.create({
-        distributor_id: dist.id,
-        product_id: prod.id,
-        available_quantity: qty,
-        low_stock_threshold: 50,
-        reserved_quantity: faker.number.int({ min: 0, max: 10 }),
-      }));
+      await invRepo.save(
+        invRepo.create({
+          distributor_id: dist.id,
+          product_id: prod.id,
+          available_quantity: qty,
+          low_stock_threshold: 50,
+          reserved_quantity: faker.number.int({ min: 0, max: 10 }),
+        }),
+      );
+    }
+
+    // Seed manufacturer inventory
+    const mfrExists = await mfrInvRepo.findOne({
+      where: { manufacturer_id: prod.manufacturer_id, product_id: prod.id },
+    });
+    if (!mfrExists) {
+      await mfrInvRepo.save(
+        mfrInvRepo.create({
+          manufacturer_id: prod.manufacturer_id,
+          product_id: prod.id,
+          available_quantity: faker.number.int({ min: 100, max: 5000 }),
+          low_stock_threshold: 100,
+          reserved_quantity: faker.number.int({ min: 0, max: 50 }),
+        }),
+      );
     }
   }
 
   // --- PHASE 5 & 6: VISITS & ORDERS ---
   console.log('[SEED] Seeding Order Statuses...');
-  const orderStatuses: any[] = [];
-  const statusNames = ['PENDING', 'ORDERED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+  const orderStatuses: OrderStatus[] = [];
+  const statusNames = [
+    'PENDING',
+    'ORDERED',
+    'SHIPPED',
+    'DELIVERED',
+    'CANCELLED',
+  ];
   for (let i = 0; i < statusNames.length; i++) {
     const isCancel = statusNames[i] === 'CANCELLED';
     const isDispatch = statusNames[i] === 'SHIPPED';
@@ -421,15 +507,19 @@ async function bootstrap() {
         isactive: true,
         is_cancel_status: isCancel,
         is_dispatch_status: isDispatch,
-      })
+      }),
     );
     orderStatuses.push(os);
   }
 
-  const pendingStatusId = orderStatuses.find((s) => s.name === 'PENDING').id;
-  const orderedStatusId = orderStatuses.find((s) => s.name === 'ORDERED').id;
-  const deliveredStatusId = orderStatuses.find((s) => s.name === 'DELIVERED').id;
-  const cancelledStatusId = orderStatuses.find((s) => s.name === 'CANCELLED').id;
+  const pendingStatusId = orderStatuses.find((s) => s.name === 'PENDING')!.id;
+  const orderedStatusId = orderStatuses.find((s) => s.name === 'ORDERED')!.id;
+  const deliveredStatusId = orderStatuses.find(
+    (s) => s.name === 'DELIVERED',
+  )!.id;
+  const cancelledStatusId = orderStatuses.find(
+    (s) => s.name === 'CANCELLED',
+  )!.id;
 
   console.log('[SEED] Creating 500 Visits and 500 Orders...');
   for (let i = 0; i < 500; i++) {
@@ -438,39 +528,56 @@ async function bootstrap() {
     if (!smId) continue;
 
     const wd = salesmanWorkingDays[smId];
-    const visitStatus = faker.helpers.arrayElement(['COMPLETED', 'MISSED', 'ACTIVE']);
-    const assignedWdId = visitStatus === 'ACTIVE' ? (wd?.active || wd?.completed) : (wd?.completed || wd?.active);
+    const visitStatus = faker.helpers.arrayElement([
+      'COMPLETED',
+      'MISSED',
+      'ACTIVE',
+    ]);
+    const assignedWdId =
+      visitStatus === 'ACTIVE'
+        ? wd?.active || wd?.completed
+        : wd?.completed || wd?.active;
 
-    const v = await visitRepo.save(visitRepo.create({
-      shop_id: shop.id,
-      salesman_id: smId,
-      distributor_id: shop.distributor_id,
-      working_day_id: assignedWdId,
-      status: visitStatus as any,
-      started_at: new Date(Date.now() - faker.number.int({ min: 1000000, max: 100000000 })),
-      ended_at: visitStatus === 'COMPLETED' ? new Date() : undefined,
-      is_offline_created: false,
-    }));
+    const v = await visitRepo.save(
+      visitRepo.create({
+        shop_id: shop.id,
+        salesman_id: smId,
+        distributor_id: shop.distributor_id,
+        working_day_id: assignedWdId,
+        status: visitStatus as any,
+        started_at: new Date(
+          Date.now() - faker.number.int({ min: 1000000, max: 100000000 }),
+        ),
+        ended_at: visitStatus === 'COMPLETED' ? new Date() : undefined,
+        is_offline_created: false,
+      }),
+    );
 
     if (visitStatus === 'COMPLETED') {
       // Create an order for completed visits
-      const randomStatusStr = faker.helpers.arrayElement(['PENDING', 'DELIVERED', 'CANCELLED']);
+      const randomStatusStr = faker.helpers.arrayElement([
+        'PENDING',
+        'DELIVERED',
+        'CANCELLED',
+      ]);
       let orderStatusId = pendingStatusId;
       if (randomStatusStr === 'DELIVERED') orderStatusId = deliveredStatusId;
       if (randomStatusStr === 'CANCELLED') orderStatusId = cancelledStatusId;
 
-      const o = await orderRepo.save(orderRepo.create({
-        order_number: 'ORD-' + faker.string.alphanumeric(8).toUpperCase(),
-        shop_id: shop.id,
-        visit_id: v.id,
-        salesman_id: smId,
-        distributor_id: shop.distributor_id,
-        // Optional manufacturer_id link
-        manufacturer_id: products[0].manufacturer_id,
-        gross_order_amount: 0, // Calculated below
-        final_order_amount: 0,
-        status_id: orderStatusId,
-      }));
+      const o = await orderRepo.save(
+        orderRepo.create({
+          order_number: 'ORD-' + faker.string.alphanumeric(8).toUpperCase(),
+          shop_id: shop.id,
+          visit_id: v.id,
+          salesman_id: smId,
+          distributor_id: shop.distributor_id,
+          // Optional manufacturer_id link
+          manufacturer_id: products[0].manufacturer_id,
+          gross_order_amount: 0, // Calculated below
+          final_order_amount: 0,
+          status_id: orderStatusId,
+        }),
+      );
 
       // Add 1 to 5 random items
       let totalAmount = 0;
@@ -483,18 +590,20 @@ async function bootstrap() {
         totalAmount += lineAmount;
         totalQty += qty;
 
-        await itemRepo.save(itemRepo.create({
-          order_id: o.id,
-          product_id: prod.id,
-          product_name_snapshot: prod.name,
-          sku_snapshot: prod.sku || '',
-          manufacturer_name_snapshot: 'Vikas Industries',
-          quantity: qty,
-          mrp: prod.mrp,
-          gross_line_amount: lineAmount,
-          net_line_amount: lineAmount,
-          status_id: orderStatusId, // inherit order status
-        }));
+        await itemRepo.save(
+          itemRepo.create({
+            order_id: o.id,
+            product_id: prod.id,
+            product_name_snapshot: prod.name,
+            sku_snapshot: prod.sku || '',
+            manufacturer_name_snapshot: 'Vikas Industries',
+            quantity: qty,
+            mrp: prod.mrp,
+            gross_line_amount: lineAmount,
+            net_line_amount: lineAmount,
+            status_id: orderStatusId, // inherit order status
+          }),
+        );
       }
 
       // Update order totals
@@ -505,7 +614,9 @@ async function bootstrap() {
     }
   }
 
-  console.log('[SEED] Comprehensive Development Seeding Finished Successfully!');
+  console.log(
+    '[SEED] Comprehensive Development Seeding Finished Successfully!',
+  );
 
   await app.close();
   process.exit(0);

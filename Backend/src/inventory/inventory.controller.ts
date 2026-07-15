@@ -48,7 +48,7 @@ export class InventoryController {
     );
   }
 
-  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Post('adjust')
   @ApiOperation({ summary: 'Adjust Manual Stock' })
   @ApiBearerAuth('bearer')
@@ -68,12 +68,15 @@ export class InventoryController {
     @Param('id') id: string,
     @Request() req,
     @Query() query: ListQueryDto,
+    @Query('type') type?: string,
   ) {
+    const isManufacturer = type === 'manufacturer';
     return this.inventoryService.getMovements(
       id,
       req.user.role,
       req.user.userId,
       query,
+      isManufacturer,
     );
   }
 }

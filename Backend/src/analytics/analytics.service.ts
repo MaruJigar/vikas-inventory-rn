@@ -218,9 +218,10 @@ export class AnalyticsService {
     // 2. Status Distribution
     const statusQb = qb.clone();
     statusQb
-      .select('order.status', 'status')
+      .leftJoin('order.status', 'status')
+      .select('status.name', 'status')
       .addSelect('COUNT(order.id)', 'count')
-      .groupBy('order.status');
+      .groupBy('status.name');
     const statusDistribution = await statusQb.getRawMany();
 
     // 3. Revenue Trends (Daily)
@@ -290,20 +291,21 @@ export class AnalyticsService {
   async getFulfillmentAnalytics(userRole: string, userId: string) {
     const qb = this.orderRepo
       .createQueryBuilder('order')
+      .leftJoin('order.status', 'status')
       .select(
-        "SUM(CASE WHEN order.status IN ('CONFIRMED', 'PARTIALLY_DISPATCHED') THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN status.name IN ('CONFIRMED', 'PARTIALLY_DISPATCHED') THEN 1 ELSE 0 END)",
         'pending_dispatch',
       )
       .addSelect(
-        "SUM(CASE WHEN order.status = 'DISPATCHED' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN status.name = 'DISPATCHED' THEN 1 ELSE 0 END)",
         'dispatched',
       )
       .addSelect(
-        "SUM(CASE WHEN order.status = 'DELIVERED' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN status.name = 'DELIVERED' THEN 1 ELSE 0 END)",
         'delivered',
       )
       .addSelect(
-        "SUM(CASE WHEN order.status = 'PARTIALLY_DELIVERED' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN status.name = 'PARTIALLY_DELIVERED' THEN 1 ELSE 0 END)",
         'partial',
       );
 

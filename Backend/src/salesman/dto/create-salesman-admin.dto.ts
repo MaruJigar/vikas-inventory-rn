@@ -4,8 +4,9 @@ import {
   IsString,
   MinLength,
   IsUUID,
+  IsOptional,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateSalesmanAdminDto {
   @ApiProperty({ description: 'Full name', example: 'John Doe' })
@@ -38,4 +39,24 @@ export class CreateSalesmanAdminDto {
   @IsNotEmpty()
   @IsUUID()
   distributor_id: string;
+
+  @ApiProperty({ description: 'State id' })
+  @IsNotEmpty()
+  @IsUUID()
+  state_id: string;
+
+  @ApiProperty({ description: 'State name' })
+  @IsNotEmpty()
+  @IsString()
+  state: string;
+
+  @ApiPropertyOptional({ description: 'City id' })
+  @IsOptional()
+  @IsUUID()
+  city_id?: string;
+
+  @ApiPropertyOptional({ description: 'City name' })
+  @IsOptional()
+  @IsString()
+  city?: string;
 }

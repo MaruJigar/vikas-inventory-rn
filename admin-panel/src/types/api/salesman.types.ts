@@ -22,4 +22,8 @@ export interface SalesmanDto {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  state_id: string | null;
+  state_name: string | null;
+  city_id: string | null;
+  city_name: string | null;
 }
