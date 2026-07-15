@@ -118,7 +118,8 @@ jobs:
             cd "$REPO"
             git fetch origin
             git checkout devlopment
-            git pull --ff-only origin devlopment
+            git fetch origin
+            git reset --hard origin/devlopment
 
             # ── 2. Build Backend ─────────────────────────────────────────
             cd "$REPO/Backend"
@@ -146,7 +147,7 @@ jobs:
             pm2 list
 
             # Backend health check
-            curl -sf https://api.vikas-marketing.work.gd/v1/api/docs > /dev/null \
+            curl -sf https://api.vikas-marketing.work.gd/api/docs > /dev/null \
               && echo "✅ Backend API: healthy" \
               || (echo "❌ Backend API: unhealthy" && exit 1)
 

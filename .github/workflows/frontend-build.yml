@@ -98,7 +98,8 @@ jobs:
             cd "$REPO"
             git fetch origin
             git checkout devlopment
-            git pull --ff-only origin devlopment
+            git fetch origin
+            git reset --hard origin/devlopment
 
             # ── 2. Install deps ─────────────────────────────────────────
             cd "$REPO/Frontend"
