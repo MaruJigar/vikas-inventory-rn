@@ -1112,7 +1112,7 @@ export class OrderService {
     userId: string,
     role: string,
     orderId: string,
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
   ): Promise<PaginatedResponse<OrderRevision>> {
     const { page = 1, limit = 20 } = queryDto;
     const skip = (page - 1) * limit;
@@ -1150,7 +1150,7 @@ export class OrderService {
     userId: string,
     role: string,
     orderId: string,
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
   ): Promise<PaginatedResponse<OrderStatusHistory>> {
     const { page = 1, limit = 20 } = queryDto;
     const skip = (page - 1) * limit;
@@ -1452,7 +1452,7 @@ export class OrderService {
     userId: string,
     role: string,
     orderId: string,
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
   ): Promise<PaginatedResponse<FulfillmentLog>> {
     // Basic access check
     await this.getOrderById(userId, role, orderId);

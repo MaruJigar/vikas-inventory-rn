@@ -31,7 +31,7 @@ export class BackordersService {
   async listBackorders(
     userRole: string,
     userId: string,
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
   ): Promise<PaginatedResponse<any>> {
     const {
       page = 1,

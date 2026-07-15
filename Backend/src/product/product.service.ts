@@ -77,7 +77,7 @@ export class ProductService {
   async getProducts(
     userId: string,
     role: string,
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
   ): Promise<PaginatedResponse<Product>> {
     const {
       page = 1,

@@ -68,7 +68,7 @@ export class ManufacturerService {
   }
 
   async getManufacturers(
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
   ): Promise<PaginatedResponse<Manufacturer>> {
     const {
       page = 1,

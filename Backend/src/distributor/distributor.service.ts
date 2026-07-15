@@ -45,7 +45,7 @@ export class DistributorService {
   async getDistributors(
     actorUserId: string,
     role: string,
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
   ): Promise<PaginatedResponse<Distributor>> {
     const {
       page = 1,

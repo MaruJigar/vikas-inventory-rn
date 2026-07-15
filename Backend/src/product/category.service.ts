@@ -28,7 +28,7 @@ export class CategoryService {
     return this.categoryRepo.save(category);
   }
 
-  async getAllCategories(queryDto: ListQueryDto): Promise<PaginatedResponse<ProductCategory>> {
+  async getAllCategories(queryDto: ListQueryDto = {} as any): Promise<PaginatedResponse<ProductCategory>> {
     const { page = 1, limit = 20, search, sortBy, sortOrder = 'DESC' } = queryDto;
     const skip = (page - 1) * limit;
 

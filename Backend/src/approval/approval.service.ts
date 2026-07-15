@@ -248,7 +248,7 @@ export class ApprovalService {
 
   async getPendingRequests(
     currentUser: { userId: string; role: string },
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
   ): Promise<PaginatedResponse<any>> {
     const {
       page = 1,

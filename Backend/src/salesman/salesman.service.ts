@@ -206,7 +206,7 @@ export class SalesmanService {
   async getSalesmen(
     userRole: string,
     userId: string,
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
   ): Promise<PaginatedResponse<Salesman>> {
     const {
       page = 1,

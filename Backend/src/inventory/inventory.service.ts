@@ -37,7 +37,7 @@ export class InventoryService {
   async getInventory(
     userRole: string,
     userId: string,
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
   ): Promise<PaginatedResponse<any>> {
     const {
       page = 1,
@@ -250,7 +250,7 @@ export class InventoryService {
     inventoryId: string,
     userRole: string,
     userId: string,
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
     isManufacturer: boolean = false,
   ): Promise<PaginatedResponse<any>> {
     let inv: any;

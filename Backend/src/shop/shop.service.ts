@@ -116,7 +116,7 @@ export class ShopService {
   async getShops(
     userId: string,
     userRole: string,
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
   ): Promise<PaginatedResponse<Shop>> {
     const {
       page = 1,

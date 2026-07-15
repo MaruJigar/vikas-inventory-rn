@@ -268,7 +268,7 @@ export class VisitService {
   async getVisits(
     userId: string,
     role: string,
-    queryDto: ListQueryDto,
+    queryDto: ListQueryDto = {} as any,
   ): Promise<PaginatedResponse<any>> {
     const {
       page = 1,
