@@ -91,32 +91,16 @@ export class Order {
   gross_order_amount: number;
 
   @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
-  @ApiProperty({ description: 'Total product discount amount' })
-  total_product_discount_amount: number;
-
-  @Column({ type: 'varchar', length: 50, default: 'NONE' })
-  @ApiProperty({ description: 'Bill discount type' })
-  bill_discount_type: string;
-
-  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
-  @ApiProperty({ description: 'Bill discount value' })
-  bill_discount_value: number;
-
-  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
-  @ApiProperty({ description: 'Bill discount amount' })
-  bill_discount_amount: number;
-
-  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
   @ApiProperty({ description: 'Total gst amount' })
   total_gst_amount: number;
 
   @Column({ type: 'numeric', precision: 5, scale: 2, default: 0 })
-  @ApiProperty({ description: 'Distributor discount percent' })
-  distributor_discount_percent: number;
+  @ApiProperty({ description: 'Standard discount percent' })
+  standard_discount_percent: number;
 
   @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
-  @ApiProperty({ description: 'Distributor discount amount' })
-  distributor_discount_amount: number;
+  @ApiProperty({ description: 'Standard discount amount' })
+  standard_discount_amount: number;
 
   @Column({ type: 'numeric', precision: 5, scale: 2, default: 0 })
   @ApiProperty({ description: 'Special discount percent' })

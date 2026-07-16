@@ -2956,6 +2956,7 @@
     },
     "/v1/orders/distributor-to-manufacturer": {
       "post": {
+        "description": "Accepts a single payload of products and splits them into separate orders based on the manufacturer. Distributor self-products (manufacturer=null) are grouped into their own order. The provided bill discount is applied independently to each created order. Returns an array of created orders.",
         "operationId": "OrdersController_createDistributorManufacturerOrder_v1",
         "parameters": [],
         "requestBody": {
@@ -2978,7 +2979,7 @@
             "bearer": []
           }
         ],
-        "summary": "Create Distributor to Manufacturer Order (DISTRIBUTOR_ADMIN only)",
+        "summary": "Create Distributor Order (DISTRIBUTOR_ADMIN only)",
         "tags": [
           "Orders"
         ]
@@ -5088,6 +5089,14 @@
             "description": "GST Number",
             "example": "22AAAAA0000A1Z5"
           },
+          "city": {
+            "type": "string",
+            "description": "City"
+          },
+          "is_internal_distributor": {
+            "type": "boolean",
+            "description": "Is internal distributor"
+          },
           "manufacturer_id": {
             "type": "string",
             "description": "Manufacturer ID",
@@ -5757,6 +5766,10 @@
             "type": "boolean",
             "description": "Is active"
           },
+          "is_internal_distributor": {
+            "type": "boolean",
+            "description": "Is internal distributor"
+          },
           "created_at": {
             "format": "date-time",
             "type": "string",
@@ -5779,6 +5792,7 @@
           "country",
           "approval_status",
           "is_active",
+          "is_internal_distributor",
           "created_at",
           "updated_at",
           "deleted_at"
@@ -5821,6 +5835,10 @@
           "is_active": {
             "type": "boolean",
             "description": "Is active"
+          },
+          "is_internal_distributor": {
+            "type": "boolean",
+            "description": "Is internal distributor"
           },
           "address": {
             "type": "string",
@@ -6980,14 +6998,6 @@
               "type": "string"
             }
           },
-          "billDiscountType": {
-            "type": "string",
-            "description": "BillDiscountType"
-          },
-          "billDiscountValue": {
-            "type": "number",
-            "description": "BillDiscountValue"
-          },
           "isOfflineCreated": {
             "type": "boolean",
             "description": "IsOfflineCreated"
@@ -6995,6 +7005,18 @@
           "idempotencyKey": {
             "type": "string",
             "description": "IdempotencyKey"
+          },
+          "transportMode": {
+            "type": "string",
+            "description": "Transport Mode"
+          },
+          "standardDiscountPercent": {
+            "type": "number",
+            "description": "Standard Discount Percent"
+          },
+          "specialDiscountPercent": {
+            "type": "number",
+            "description": "Special Discount Percent"
           }
         },
         "required": [
@@ -7006,10 +7028,6 @@
       "CreateDistributorManufacturerOrderDto": {
         "type": "object",
         "properties": {
-          "manufacturerId": {
-            "type": "string",
-            "description": "ManufacturerId"
-          },
           "products": {
             "description": "Products",
             "type": "array",
@@ -7020,10 +7038,21 @@
           "idempotencyKey": {
             "type": "string",
             "description": "IdempotencyKey"
+          },
+          "transportMode": {
+            "type": "string",
+            "description": "Transport Mode"
+          },
+          "standardDiscountPercent": {
+            "type": "number",
+            "description": "Standard Discount Percent"
+          },
+          "specialDiscountPercent": {
+            "type": "number",
+            "description": "Special Discount Percent"
           }
         },
         "required": [
-          "manufacturerId",
           "products"
         ]
       },
@@ -7066,33 +7095,17 @@
             "type": "number",
             "description": "Gross order amount"
           },
-          "total_product_discount_amount": {
-            "type": "number",
-            "description": "Total product discount amount"
-          },
-          "bill_discount_type": {
-            "type": "string",
-            "description": "Bill discount type"
-          },
-          "bill_discount_value": {
-            "type": "number",
-            "description": "Bill discount value"
-          },
-          "bill_discount_amount": {
-            "type": "number",
-            "description": "Bill discount amount"
-          },
           "total_gst_amount": {
             "type": "number",
             "description": "Total gst amount"
           },
-          "distributor_discount_percent": {
+          "standard_discount_percent": {
             "type": "number",
-            "description": "Distributor discount percent"
+            "description": "Standard discount percent"
           },
-          "distributor_discount_amount": {
+          "standard_discount_amount": {
             "type": "number",
-            "description": "Distributor discount amount"
+            "description": "Standard discount amount"
           },
           "special_discount_percent": {
             "type": "number",
@@ -7169,13 +7182,9 @@
           "distributor_id",
           "status_id",
           "gross_order_amount",
-          "total_product_discount_amount",
-          "bill_discount_type",
-          "bill_discount_value",
-          "bill_discount_amount",
           "total_gst_amount",
-          "distributor_discount_percent",
-          "distributor_discount_amount",
+          "standard_discount_percent",
+          "standard_discount_amount",
           "special_discount_percent",
           "special_discount_amount",
           "final_order_amount",
@@ -7215,14 +7224,6 @@
               "type": "string"
             }
           },
-          "billDiscountType": {
-            "type": "string",
-            "description": "BillDiscountType"
-          },
-          "billDiscountValue": {
-            "type": "number",
-            "description": "BillDiscountValue"
-          },
           "reason": {
             "type": "string",
             "description": "Reason"
@@ -7235,9 +7236,9 @@
             "type": "string",
             "description": "Transport Mode"
           },
-          "distributorDiscountPercent": {
+          "standardDiscountPercent": {
             "type": "number",
-            "description": "Distributor Discount Percent"
+            "description": "Standard Discount Percent"
           },
           "specialDiscountPercent": {
             "type": "number",

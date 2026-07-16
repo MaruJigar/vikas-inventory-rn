@@ -15,20 +15,17 @@ export class CreateProductDto {
   @ApiProperty({ description: 'Product source' })
   product_source: string;
 
-  @ValidateIf((o) => o.product_source === 'MANUFACTURER_CREATED')
-  @IsNotEmpty()
+  @IsOptional()
   @IsUUID()
   @ApiPropertyOptional({ description: 'Manufacturer id' })
   manufacturer_id?: string;
 
-  @ValidateIf((o) => o.product_source === 'DISTRIBUTOR_CREATED')
-  @IsNotEmpty()
+  @IsOptional()
   @IsUUID()
   @ApiPropertyOptional({ description: 'Distributor id' })
   distributor_id?: string;
 
-  @ValidateIf((o) => o.product_source === 'DISTRIBUTOR_CREATED')
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   @ApiPropertyOptional({ description: 'External manufacturer name' })
   external_manufacturer_name?: string;

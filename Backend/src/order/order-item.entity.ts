@@ -66,18 +66,6 @@ export class OrderItem {
   @ApiProperty({ description: 'GST amount' })
   gst_amount: number;
 
-  @Column({ type: 'varchar', length: 50, default: 'NONE' })
-  @ApiProperty({ description: 'Item discount type' })
-  item_discount_type: string;
-
-  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
-  @ApiProperty({ description: 'Item discount value' })
-  item_discount_value: number;
-
-  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
-  @ApiProperty({ description: 'Item discount amount' })
-  item_discount_amount: number;
-
   @Column({ type: 'numeric', precision: 12, scale: 2 })
   @ApiProperty({ description: 'Net line amount' })
   net_line_amount: number;

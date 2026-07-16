@@ -13,6 +13,7 @@ import { useGetCategories } from '@/hooks/categories/useCategories';
 import { useUploadProductImageMutation } from '@/hooks/products/useUploadProductImageMutation';
 import { useManufacturersQuery } from '@/hooks/manufacturers/useManufacturersQuery';
 import { useDistributorsQuery } from '@/hooks/distributors/useDistributorsQuery';
+import { useDistributorProfileQuery } from '@/hooks/distributors/useDistributorProfileQuery';
 import { useAuthStore } from '@/store/useAuthStore';
 import { z } from 'zod';
 import { useState } from 'react';
@@ -31,10 +32,15 @@ export function CreateProductDrawer({ open, onOpenChange }: CreateProductDrawerP
   const categories = categoriesResponse?.data ?? [];
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isDistributorAdmin = user?.role === 'DISTRIBUTOR_ADMIN';
+  
   const { data: mfrResponse } = useManufacturersQuery({ limit: 100 });
   const { data: distResponse } = useDistributorsQuery({ limit: 100 });
+  const { data: distProfile } = useDistributorProfileQuery(isDistributorAdmin);
+  
   const manufacturers = mfrResponse?.data ?? [];
   const distributors = distResponse?.data ?? [];
+  const isInternalDistributor = isDistributorAdmin && distProfile?.is_internal_distributor;
 
   const uploadMutation = useUploadProductImageMutation();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -161,22 +167,27 @@ export function CreateProductDrawer({ open, onOpenChange }: CreateProductDrawerP
         </div>
 
         {/* Product Source */}
-        <div className="space-y-1">
-          <Label htmlFor="product_source">Product Source *</Label>
-          <select
-            id="product_source"
-            {...register('product_source')}
-            className="w-full h-8 rounded-md border border-input bg-transparent px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="MANUFACTURER_CREATED">Manufacturer Created</option>
-            <option value="DISTRIBUTOR_CREATED">Distributor Created</option>
-          </select>
-          {errors.product_source && (
-            <p className="text-xs text-destructive">{errors.product_source.message}</p>
-          )}
-        </div>
+        {!isSuperAdmin && (
+          <input type="hidden" {...register('product_source')} />
+        )}
+        {isSuperAdmin && (
+          <div className="space-y-1">
+            <Label htmlFor="product_source">Product Source *</Label>
+            <select
+              id="product_source"
+              {...register('product_source')}
+              className="w-full h-8 rounded-md border border-input bg-transparent px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="MANUFACTURER_CREATED">Manufacturer Created</option>
+              <option value="DISTRIBUTOR_CREATED">Distributor Created</option>
+            </select>
+            {errors.product_source && (
+              <p className="text-xs text-destructive">{errors.product_source.message}</p>
+            )}
+          </div>
+        )}
 
-        {isSuperAdmin && productSource === 'MANUFACTURER_CREATED' && (
+        {(isSuperAdmin && productSource === 'MANUFACTURER_CREATED') || (isInternalDistributor && productSource === 'DISTRIBUTOR_CREATED') ? (
           <div className="space-y-1">
             <Label htmlFor="manufacturer_id">Manufacturer *</Label>
             <select
@@ -193,7 +204,7 @@ export function CreateProductDrawer({ open, onOpenChange }: CreateProductDrawerP
             </select>
             {errors.manufacturer_id && <p className="text-xs text-destructive">{errors.manufacturer_id.message}</p>}
           </div>
-        )}
+        ) : null}
 
         {isSuperAdmin && productSource === 'DISTRIBUTOR_CREATED' && (
           <div className="space-y-1">
@@ -214,8 +225,8 @@ export function CreateProductDrawer({ open, onOpenChange }: CreateProductDrawerP
           </div>
         )}
 
-        {/* External Manufacturer Name (only for DISTRIBUTOR_CREATED) */}
-        {productSource === 'DISTRIBUTOR_CREATED' && (
+        {/* External Manufacturer Name (only for DISTRIBUTOR_CREATED and non-internal) */}
+        {productSource === 'DISTRIBUTOR_CREATED' && !isInternalDistributor && (
           <div className="space-y-1">
             <Label htmlFor="external_manufacturer_name">External Manufacturer Name *</Label>
             <Input

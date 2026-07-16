@@ -19,17 +19,6 @@ export class UpdateOrderDto {
   products: OrderProductDto[];
 
   @IsOptional()
-  @IsEnum(['NONE', 'PERCENTAGE', 'FLAT'])
-  @ApiPropertyOptional({ description: 'BillDiscountType' })
-  billDiscountType?: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiPropertyOptional({ description: 'BillDiscountValue' })
-  billDiscountValue?: number;
-
-  @IsOptional()
   @IsString()
   @ApiPropertyOptional({ description: 'Reason' })
   reason?: string;
@@ -47,8 +36,8 @@ export class UpdateOrderDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  @ApiPropertyOptional({ description: 'Distributor Discount Percent' })
-  distributorDiscountPercent?: number;
+  @ApiPropertyOptional({ description: 'Standard Discount Percent' })
+  standardDiscountPercent?: number;
 
   @IsOptional()
   @IsNumber()

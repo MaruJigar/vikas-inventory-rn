@@ -21,17 +21,6 @@ export class OrderProductDto {
   @Min(0.01)
   @ApiProperty({ description: 'Quantity' })
   quantity: number;
-
-  @IsOptional()
-  @IsEnum(['NONE', 'PERCENTAGE', 'FLAT'])
-  @ApiPropertyOptional({ description: 'ItemDiscountType' })
-  itemDiscountType?: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiPropertyOptional({ description: 'ItemDiscountValue' })
-  itemDiscountValue?: number;
 }
 
 export class CreateOrderDto {
@@ -50,17 +39,6 @@ export class CreateOrderDto {
   products: OrderProductDto[];
 
   @IsOptional()
-  @IsEnum(['NONE', 'PERCENTAGE', 'FLAT'])
-  @ApiPropertyOptional({ description: 'BillDiscountType' })
-  billDiscountType?: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiPropertyOptional({ description: 'BillDiscountValue' })
-  billDiscountValue?: number;
-
-  @IsOptional()
   @IsBoolean()
   @ApiPropertyOptional({ description: 'IsOfflineCreated' })
   isOfflineCreated?: boolean;
@@ -69,13 +47,26 @@ export class CreateOrderDto {
   @IsString()
   @ApiPropertyOptional({ description: 'IdempotencyKey' })
   idempotencyKey?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'Transport Mode' })
+  transportMode?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiPropertyOptional({ description: 'Standard Discount Percent' })
+  standardDiscountPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiPropertyOptional({ description: 'Special Discount Percent' })
+  specialDiscountPercent?: number;
 }
 
 export class CreateDistributorManufacturerOrderDto {
-  @IsUUID()
-  @ApiProperty({ description: 'ManufacturerId' })
-  manufacturerId: string;
-
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderProductDto)
@@ -86,5 +77,22 @@ export class CreateDistributorManufacturerOrderDto {
   @IsString()
   @ApiPropertyOptional({ description: 'IdempotencyKey' })
   idempotencyKey?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'Transport Mode' })
+  transportMode?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiPropertyOptional({ description: 'Standard Discount Percent' })
+  standardDiscountPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiPropertyOptional({ description: 'Special Discount Percent' })
+  specialDiscountPercent?: number;
 }
 

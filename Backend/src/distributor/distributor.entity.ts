@@ -74,6 +74,10 @@ export class Distributor {
   @ApiProperty({ description: 'Is active' })
   is_active: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  @ApiProperty({ description: 'Is internal distributor' })
+  is_internal_distributor: boolean;
+
   @CreateDateColumn()
   @ApiProperty({ description: 'Created at' })
   created_at: Date;

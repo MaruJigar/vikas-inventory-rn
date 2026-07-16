@@ -220,9 +220,6 @@ export class OrderService {
           quantity: req.requiredQuantity,
           mrp: Number(product.mrp),
           gross_line_amount: lineAmount,
-          item_discount_type: 'NONE',
-          item_discount_value: 0,
-          item_discount_amount: 0,
           net_line_amount: lineAmount,
           reserved_quantity: 0,
           backordered_quantity: 0,
@@ -238,10 +235,6 @@ export class OrderService {
         distributor_id: distributor.id,
         status_id: draftStatus.id,
         gross_order_amount: grossOrderAmount,
-        total_product_discount_amount: 0,
-        bill_discount_type: 'NONE',
-        bill_discount_value: 0,
-        bill_discount_amount: 0,
         final_order_amount: grossOrderAmount,
         total_quantity: totalQuantity,
         total_backordered_quantity: 0,
@@ -274,32 +267,13 @@ export class OrderService {
       throw new BadRequestException('At least one product is required');
     }
 
-    // Validate Manufacturer
-    const manufacturer = await this.dataSource.getRepository('Manufacturer').findOne({
-      where: { id: dto.manufacturerId, isactive: true },
-    });
-    if (!manufacturer) {
-      throw new BadRequestException('Invalid or inactive manufacturer');
-    }
-
-    // Idempotency check
-    if (dto.idempotencyKey) {
-      const existing = await this.orderRepo.findOne({
-        where: { idempotency_key: dto.idempotencyKey },
-      });
-      if (existing) return existing;
-    }
-
     const draftStatus = await this.orderStatusService.getStatusByName('DRAFT');
     if (!draftStatus) throw new Error('DRAFT status not found in database');
 
-    const savedOrder = await this.dataSource.transaction(
+    const savedOrders = await this.dataSource.transaction(
       async (manager) => {
-        let grossOrderAmount = 0;
-        let totalProductDiscountAmount = 0;
-        let totalQuantity = 0;
-        const itemsData: Partial<OrderItem>[] = [];
-
+        const groupedProducts = new Map<string | null, any[]>();
+        
         for (let i = 0; i < dto.products.length; i++) {
           const p = dto.products[i];
           const product = await this.productRepo.findOne({
@@ -308,78 +282,129 @@ export class OrderService {
           if (!product)
             throw new NotFoundException(`Product ${p.productId} not found`);
 
-          const grossLineAmount = Number(product.mrp) * Number(p.quantity);
-          const discountType = p.itemDiscountType || 'NONE';
-          const discountValue = p.itemDiscountValue || 0;
-          const itemDiscountAmount = this.calcItemDiscount(
-            discountType,
-            discountValue,
-            grossLineAmount,
-          );
-          const netLineAmount = grossLineAmount - itemDiscountAmount;
+          const mfrId = product.manufacturer_id || null;
+          if (!groupedProducts.has(mfrId)) {
+            groupedProducts.set(mfrId, []);
+          }
+          groupedProducts.get(mfrId)!.push({ p, product });
+        }
 
-          grossOrderAmount += netLineAmount;
-          totalProductDiscountAmount += itemDiscountAmount;
-          totalQuantity += Number(p.quantity);
+        const createdOrders: Order[] = [];
 
-          itemsData.push({
-            product_id: p.productId,
-            product_name_snapshot: product.name,
-            sku_snapshot: (product as any).sku || null,
-            manufacturer_name_snapshot:
-              (product as any).manufacturer_name || null,
-            quantity: Number(p.quantity),
-            mrp: Number(product.mrp),
-            gross_line_amount: grossLineAmount,
-            item_discount_type: discountType,
-            item_discount_value: discountValue,
-            item_discount_amount: itemDiscountAmount,
-            net_line_amount: netLineAmount,
-            reserved_quantity: 0,
-            backordered_quantity: 0,
-            dispatched_quantity: 0,
-            delivered_quantity: 0,
+        for (const [mfrId, items] of groupedProducts.entries()) {
+          if (mfrId) {
+             const manufacturer = await manager.getRepository('Manufacturer').findOne({
+                where: { id: mfrId, isactive: true },
+             });
+             if (!manufacturer) {
+                throw new BadRequestException(`Invalid or inactive manufacturer ${mfrId}`);
+             }
+          }
+
+          let grossOrderAmount = 0;
+          let totalProductDiscountAmount = 0;
+          let totalQuantity = 0;
+          const itemsData: Partial<OrderItem>[] = [];
+
+          for (const item of items) {
+            const { p, product } = item;
+            const grossLineAmount = Number(product.mrp) * Number(p.quantity);
+            const discountType = p.itemDiscountType || 'NONE';
+            const discountValue = p.itemDiscountValue || 0;
+            const itemDiscountAmount = this.calcItemDiscount(
+              discountType,
+              discountValue,
+              grossLineAmount,
+            );
+            const netLineAmount = grossLineAmount - itemDiscountAmount;
+
+            grossOrderAmount += netLineAmount;
+            totalProductDiscountAmount += itemDiscountAmount;
+            totalQuantity += Number(p.quantity);
+
+            itemsData.push({
+              product_id: p.productId,
+              product_name_snapshot: product.name,
+              sku_snapshot: (product as any).sku || null,
+              manufacturer_name_snapshot:
+                (product as any).manufacturer_name || null,
+              quantity: Number(p.quantity),
+              mrp: Number(product.mrp),
+              gross_line_amount: grossLineAmount,
+              net_line_amount: netLineAmount,
+              reserved_quantity: 0,
+              backordered_quantity: 0,
+              dispatched_quantity: 0,
+              delivered_quantity: 0,
+              status_id: draftStatus.id,
+            });
+          }
+
+          const standardDiscountPercent = dto.standardDiscountPercent || 0;
+          const specDiscountPercent = dto.specialDiscountPercent || 0;
+
+          const standardDiscountAmount = (standardDiscountPercent / 100) * grossOrderAmount;
+          const afterDistDiscount = grossOrderAmount - standardDiscountAmount;
+          const specialDiscountAmount = (specDiscountPercent / 100) * afterDistDiscount;
+
+          const finalOrderAmount = grossOrderAmount - standardDiscountAmount - specialDiscountAmount;
+
+          const idempotencyKey = dto.idempotencyKey ? `${dto.idempotencyKey}-${mfrId || 'self'}` : undefined;
+          
+          if (idempotencyKey) {
+            const existing = await manager.getRepository(Order).findOne({
+              where: { idempotency_key: idempotencyKey },
+              relations: { items: true },
+            });
+            if (existing) {
+              createdOrders.push(existing);
+              continue;
+            }
+          }
+
+          const order = manager.getRepository(Order).create({
+            order_number: this.generateOrderNumber(),
+            visit_id: null as any,
+            shop_id: null as any,
+            salesman_id: null as any,
+            distributor_id: distributor.id,
+            manufacturer_id: mfrId as any,
             status_id: draftStatus.id,
+            gross_order_amount: grossOrderAmount,
+            standard_discount_percent: standardDiscountPercent,
+            standard_discount_amount: standardDiscountAmount,
+            special_discount_percent: specDiscountPercent,
+            special_discount_amount: specialDiscountAmount,
+            transport_mode: dto.transportMode,
+            final_order_amount: finalOrderAmount,
+            total_quantity: totalQuantity,
+            total_backordered_quantity: 0,
+            is_offline_created: false,
+            idempotency_key: idempotencyKey,
           });
+
+          const saved = await manager.getRepository(Order).save(order);
+
+          for (const itemData of itemsData) {
+            itemData.order_id = saved.id;
+            await manager.getRepository(OrderItem).save(itemData);
+          }
+
+          const fullOrder = await manager.getRepository(Order).findOne({
+            where: { id: saved.id },
+            relations: { items: true },
+          });
+
+          if (fullOrder) {
+            createdOrders.push(fullOrder);
+          }
         }
 
-        const finalOrderAmount = grossOrderAmount; // assuming no bill discount initially for draft
-
-        const order = manager.getRepository(Order).create({
-          order_number: this.generateOrderNumber(),
-          visit_id: null as any,
-          shop_id: null as any,
-          salesman_id: null as any,
-          distributor_id: distributor.id,
-          manufacturer_id: manufacturer.id,
-          status_id: draftStatus.id,
-          gross_order_amount: grossOrderAmount,
-          total_product_discount_amount: totalProductDiscountAmount,
-          bill_discount_type: 'NONE',
-          bill_discount_value: 0,
-          bill_discount_amount: 0,
-          final_order_amount: finalOrderAmount,
-          total_quantity: totalQuantity,
-          total_backordered_quantity: 0,
-          is_offline_created: false,
-          idempotency_key: dto.idempotencyKey || undefined,
-        });
-
-        const saved = await manager.getRepository(Order).save(order);
-
-        for (const itemData of itemsData) {
-          itemData.order_id = saved.id;
-          await manager.getRepository(OrderItem).save(itemData);
-        }
-
-        return manager.getRepository(Order).findOne({
-          where: { id: saved.id },
-          relations: { items: true },
-        });
+        return createdOrders;
       },
     );
 
-    return savedOrder;
+    return savedOrders;
   }
 
 
@@ -436,17 +461,10 @@ export class OrderService {
             throw new NotFoundException(`Product ${p.productId} not found`);
 
           const grossLineAmount = Number(product.mrp) * Number(p.quantity);
-          const discountType = p.itemDiscountType || 'NONE';
-          const discountValue = p.itemDiscountValue || 0;
-          const itemDiscountAmount = this.calcItemDiscount(
-            discountType,
-            discountValue,
-            grossLineAmount,
-          );
-          const netLineAmount = grossLineAmount - itemDiscountAmount;
+          const netLineAmount = grossLineAmount;
 
           grossOrderAmount += netLineAmount;
-          totalProductDiscountAmount += itemDiscountAmount;
+          totalProductDiscountAmount += 0;
           totalQuantity += Number(p.quantity);
 
           itemsData.push({
@@ -458,9 +476,6 @@ export class OrderService {
             quantity: Number(p.quantity),
             mrp: Number(product.mrp),
             gross_line_amount: grossLineAmount,
-            item_discount_type: discountType,
-            item_discount_value: discountValue,
-            item_discount_amount: itemDiscountAmount,
             net_line_amount: netLineAmount,
             reserved_quantity: 0,
             backordered_quantity: 0,
@@ -470,14 +485,14 @@ export class OrderService {
           });
         }
 
-        const billDiscountType = dto.billDiscountType || 'NONE';
-        const billDiscountValue = dto.billDiscountValue || 0;
-        const billDiscountAmount = this.calcBillDiscount(
-          billDiscountType,
-          billDiscountValue,
-          grossOrderAmount,
-        );
-        const finalOrderAmount = grossOrderAmount - billDiscountAmount;
+        const standardDiscountPercent = dto.standardDiscountPercent || 0;
+        const specDiscountPercent = dto.specialDiscountPercent || 0;
+
+        const standardDiscountAmount = (standardDiscountPercent / 100) * grossOrderAmount;
+        const afterDistDiscount = grossOrderAmount - standardDiscountAmount;
+        const specialDiscountAmount = (specDiscountPercent / 100) * afterDistDiscount;
+
+        const finalOrderAmount = grossOrderAmount - standardDiscountAmount - specialDiscountAmount;
 
         // Create order
         const order = manager.getRepository(Order).create({
@@ -488,10 +503,11 @@ export class OrderService {
           distributor_id: salesman.distributor_id,
           status_id: initialStatus.id,
           gross_order_amount: grossOrderAmount,
-          total_product_discount_amount: totalProductDiscountAmount,
-          bill_discount_type: billDiscountType,
-          bill_discount_value: billDiscountValue,
-          bill_discount_amount: billDiscountAmount,
+          standard_discount_percent: standardDiscountPercent,
+          standard_discount_amount: standardDiscountAmount,
+          special_discount_percent: specDiscountPercent,
+          special_discount_amount: specialDiscountAmount,
+          transport_mode: dto.transportMode,
           final_order_amount: finalOrderAmount,
           total_quantity: totalQuantity,
           total_backordered_quantity: 0,
@@ -635,35 +651,23 @@ export class OrderService {
           throw new NotFoundException(`Product ${p.productId} not found`);
 
         const grossLineAmount = Number(product.mrp) * Number(p.quantity);
-        const discountType = p.itemDiscountType || 'NONE';
-        const discountValue = p.itemDiscountValue || 0;
-        const itemDiscountAmount = this.calcItemDiscount(
-          discountType,
-          discountValue,
-          grossLineAmount,
-        );
-        const netLineAmount = grossLineAmount - itemDiscountAmount;
+        const discountType = 'NONE';
+        const discountValue = 0;
+        const itemDiscountAmount = 0;
+        const netLineAmount = grossLineAmount;
 
         grossOrderAmount += netLineAmount;
         totalProductDiscountAmount += itemDiscountAmount;
         totalQuantity += Number(p.quantity);
       }
 
-      const billDiscountType = dto.billDiscountType || order.bill_discount_type;
-      const billDiscountValue = dto.billDiscountValue ?? order.bill_discount_value;
-      const billDiscountAmount = this.calcBillDiscount(
-        billDiscountType,
-        billDiscountValue,
-        grossOrderAmount,
-      );
-
-      const distributorDiscountPercent = dto.distributorDiscountPercent ?? order.distributor_discount_percent;
+      const standardDiscountPercent = dto.standardDiscountPercent ?? order.standard_discount_percent;
       const specialDiscountPercent = dto.specialDiscountPercent ?? order.special_discount_percent;
 
-      const distributorDiscountAmount = grossOrderAmount * (distributorDiscountPercent / 100);
-      const afterDistDiscount = grossOrderAmount - distributorDiscountAmount;
+      const standardDiscountAmount = grossOrderAmount * (standardDiscountPercent / 100);
+      const afterDistDiscount = grossOrderAmount - standardDiscountAmount;
       const specialDiscountAmount = afterDistDiscount * (specialDiscountPercent / 100);
-      const totalOrderDiscount = billDiscountAmount + distributorDiscountAmount + specialDiscountAmount;
+      const totalOrderDiscount = standardDiscountAmount + specialDiscountAmount;
 
       let totalGstAmount = 0;
 
@@ -676,14 +680,14 @@ export class OrderService {
           throw new NotFoundException(`Product ${p.productId} not found`);
 
         const grossLineAmount = Number(product.mrp) * Number(p.quantity);
-        const discountType = p.itemDiscountType || 'NONE';
-        const discountValue = p.itemDiscountValue || 0;
-        const itemDiscountAmount = this.calcItemDiscount(discountType, discountValue, grossLineAmount);
-        const netLineAmount = grossLineAmount - itemDiscountAmount;
+        const discountType = 'NONE';
+        const discountValue = 0;
+        const itemDiscountAmount = 0;
+        const netLineAmount = grossLineAmount;
 
         // Prorate order-level discount to this item for GST calculation
         const itemProportion = grossOrderAmount > 0 ? netLineAmount / grossOrderAmount : 0;
-        const itemOrderDiscount = itemProportion * (distributorDiscountAmount + specialDiscountAmount + billDiscountAmount);
+        const itemOrderDiscount = itemProportion * (standardDiscountAmount + specialDiscountAmount);
         const itemTaxableAmount = netLineAmount - itemOrderDiscount;
         
         const gstPercent = Number(product.gst_percent) || 0;
@@ -697,9 +701,6 @@ export class OrderService {
           quantity: Number(p.quantity),
           mrp: Number(product.mrp),
           gross_line_amount: grossLineAmount,
-          item_discount_type: discountType,
-          item_discount_value: discountValue,
-          item_discount_amount: itemDiscountAmount,
           net_line_amount: netLineAmount,
           gst_percent_snapshot: gstPercent,
           gst_amount: gstAmount,
@@ -719,12 +720,8 @@ export class OrderService {
 
       const newData: any = {
         gross_order_amount: grossOrderAmount,
-        total_product_discount_amount: totalProductDiscountAmount,
-        bill_discount_type: billDiscountType,
-        bill_discount_value: billDiscountValue,
-        bill_discount_amount: billDiscountAmount,
-        distributor_discount_percent: distributorDiscountPercent,
-        distributor_discount_amount: distributorDiscountAmount,
+        standard_discount_percent: standardDiscountPercent,
+        standard_discount_amount: standardDiscountAmount,
         special_discount_percent: specialDiscountPercent,
         special_discount_amount: specialDiscountAmount,
         total_gst_amount: totalGstAmount,

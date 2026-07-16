@@ -51,7 +51,10 @@ export class OrdersController {
 
   @Post('distributor-to-manufacturer')
   @Roles('DISTRIBUTOR_ADMIN')
-  @ApiOperation({ summary: 'Create Distributor to Manufacturer Order (DISTRIBUTOR_ADMIN only)' })
+  @ApiOperation({
+    summary: 'Create Distributor Order (DISTRIBUTOR_ADMIN only)',
+    description: 'Accepts a single payload of products and splits them into separate orders based on the manufacturer. Distributor self-products (manufacturer=null) are grouped into their own order. The provided bill discount is applied independently to each created order. Returns an array of created orders.',
+  })
   @ApiBearerAuth('bearer')
   createDistributorManufacturerOrder(
     @Request() req,

@@ -49,7 +49,7 @@ function OrdersPageContent() {
   const handleGeneratePR = () => {
     generatePRMutation.mutate(undefined, {
       onSuccess: (newDraft) => {
-        setEditingOrder(newDraft as OrderDto); // Open editor immediately
+        setEditingOrder((newDraft as any).data as OrderDto); // Open editor immediately
       }
     });
   };
