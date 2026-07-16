@@ -1700,6 +1700,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "own_products_only",
+            "required": false,
+            "in": "query",
+            "description": "Filter only own products",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {

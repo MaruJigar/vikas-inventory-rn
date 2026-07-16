@@ -34,5 +34,6 @@ export interface QueryParams {
   search?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  own_products_only?: boolean;
   [key: string]: string | number | boolean | undefined;
 }
