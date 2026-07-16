@@ -16,7 +16,7 @@ import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { ListQueryDto } from '../common/dto/list-query.dto';
+import { ProductListQueryDto } from './dto/product-list-query.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -50,7 +50,7 @@ export class ProductController {
   @ApiOperation({ summary: 'Get Products' })
   @ApiBearerAuth('bearer')
   @ApiPaginatedResponse(Product)
-  getProducts(@Request() req, @Query() query: ListQueryDto) {
+  getProducts(@Request() req, @Query() query: ProductListQueryDto) {
     return this.productService.getProducts(
       req.user.userId,
       req.user.role,

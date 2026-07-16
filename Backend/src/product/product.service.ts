@@ -9,12 +9,12 @@ import { Repository, IsNull } from 'typeorm';
 import { Product } from './product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { ProductListQueryDto } from './dto/product-list-query.dto';
 import { ProductPricingService } from '../product-pricing/product-pricing.service';
 import { Distributor } from '../distributor/distributor.entity';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
 import { Salesman } from '../salesman/salesman.entity';
 import { ManufacturerDistributor } from '../distributor/manufacturer-distributor.entity';
-import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { UploadedFile } from '../shop-image/uploaded-file.entity';
 
@@ -94,7 +94,7 @@ export class ProductService {
   async getProducts(
     userId: string,
     role: string,
-    queryDto: ListQueryDto,
+    queryDto: ProductListQueryDto,
   ): Promise<PaginatedResponse<Product>> {
     const {
       page = 1,
@@ -133,7 +133,7 @@ export class ProductService {
       );
       const mfrIds = manufacturerDistributors.map(md => md.manufacturer_id);
 
-      if (mfrIds.length > 0) {
+      if (mfrIds.length > 0 && !queryDto.own_products_only) {
         qb.andWhere(
           '(product.distributor_id = :distId OR product.manufacturer_id IN (:...mfrIds))',
           { distId: profile.id, mfrIds }
