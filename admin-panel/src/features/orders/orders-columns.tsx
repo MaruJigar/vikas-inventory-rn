@@ -74,7 +74,10 @@ export const getOrdersColumns = ({
   {
     accessorKey: 'status',
     header: 'Status',
-    cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
+    cell: ({ row }) => {
+      const statusStr = typeof row.original.status === 'object' ? (row.original.status as any)?.name : row.original.status;
+      return <OrderStatusBadge status={statusStr} />;
+    },
   },
   {
     accessorKey: 'final_order_amount',
@@ -103,19 +106,20 @@ export const getOrdersColumns = ({
   {
     id: 'actions',
     cell: ({ row }) => {
+      const statusStr = typeof row.original.status === 'object' ? (row.original.status as any)?.name : row.original.status;
       const showEdit = (() => {
         if (userRole === 'SALESMAN') {
-          return !['DISPATCHED', 'DELIVERED', 'CANCELLED'].includes(row.original.status);
+          return !['DISPATCHED', 'DELIVERED', 'CANCELLED'].includes(statusStr);
         }
         if (userRole === 'DISTRIBUTOR_ADMIN' || userRole === 'MANUFACTURER_ADMIN') {
-          return row.original.status === 'DRAFT';
+          return statusStr === 'DRAFT';
         }
         return false;
       })();
       const showCancel = (() => {
-        if (row.original.status === 'CANCELLED') return false;
+        if (statusStr === 'CANCELLED') return false;
         if (userRole === 'SALESMAN') {
-          return !['DISPATCHED', 'DELIVERED'].includes(row.original.status);
+          return !['DISPATCHED', 'DELIVERED'].includes(statusStr);
         }
         if (userRole === 'DISTRIBUTOR_ADMIN' || userRole === 'SUPER_ADMIN') {
           return true;
@@ -123,7 +127,7 @@ export const getOrdersColumns = ({
         return false;
       })();
       const showUpdateStatus = ['SUPER_ADMIN', 'DISTRIBUTOR_ADMIN', 'MANUFACTURER_ADMIN'].includes(userRole || '') && 
-                               !['DELIVERED', 'CANCELLED'].includes(row.original.status);
+                               !['DELIVERED', 'CANCELLED'].includes(statusStr);
 
       return (
         <div className="flex justify-end">

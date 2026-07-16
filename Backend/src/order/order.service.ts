@@ -1196,7 +1196,8 @@ export class OrderService {
     const qb = this.orderRepo.createQueryBuilder('order')
       .leftJoinAndSelect('order.shop', 'shop')
       .leftJoinAndSelect('order.salesman', 'salesman')
-      .leftJoinAndSelect('order.distributor', 'distributor');
+      .leftJoinAndSelect('order.distributor', 'distributor')
+      .leftJoinAndSelect('order.status', 'status');
 
     if (role === 'SUPER_ADMIN') {
       // No restriction — sees all orders globally
@@ -1300,6 +1301,7 @@ export class OrderService {
       .leftJoinAndSelect('order.salesman', 'salesman')
       .leftJoinAndSelect('order.distributor', 'distributor')
       .leftJoinAndSelect('order.items', 'items')
+      .leftJoinAndSelect('order.status', 'status')
       .where('order.id = :orderId', { orderId })
       .getOne();
     if (!order) throw new NotFoundException('Order not found');

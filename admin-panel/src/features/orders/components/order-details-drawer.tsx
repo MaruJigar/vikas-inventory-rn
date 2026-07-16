@@ -50,7 +50,7 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
                 </div>
                 <div>
                   <div className="text-slate-500">Status</div>
-                  <div className="mt-1"><OrderStatusBadge status={order.status} /></div>
+                  <div className="mt-1"><OrderStatusBadge status={typeof order.status === 'object' ? (order.status as any)?.name : order.status} /></div>
                 </div>
                 <div>
                   <div className="text-slate-500">Created Date</div>
