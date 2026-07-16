@@ -11,7 +11,6 @@ export const useStates = (options?: { enabled?: boolean }) => {
     queryKey: ['states'],
     queryFn: () => api.get('/states').then((res) => {
       const data = res.data;
-      console.log("response of states =", res.data)
       if (data && Array.isArray((data as Record<string, unknown>).data)) {
         return (data as Record<string, unknown>).data as State[];
       }

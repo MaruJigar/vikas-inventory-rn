@@ -20,24 +20,26 @@ interface AuthState {
 
 function getInitialState() {
   if (typeof window === 'undefined') return null;
-  
+
   const token = document.cookie
     .split('; ')
     .find(row => row.startsWith('accessToken='))
     ?.split('=')[1] || localStorage.getItem('accessToken');
-    
+
   if (!token) return null;
-  
+
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
     const payload = JSON.parse(jsonPayload);
-    const hasRefreshToken = document.cookie.includes('refreshToken=');
-    
-    // Only invalidate immediately if we don't have a refresh token
+
+    const hasRefreshToken = !!document.cookie
+      .split('; ')
+      .find(row => row.startsWith('refreshToken='));
+
     if (!hasRefreshToken && payload.exp && payload.exp * 1000 < Date.now()) {
       return null;
     }

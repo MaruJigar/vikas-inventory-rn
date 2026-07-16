@@ -12,6 +12,8 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductPricingService } from '../product-pricing/product-pricing.service';
 import { Distributor } from '../distributor/distributor.entity';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
+import { Salesman } from '../salesman/salesman.entity';
+import { ManufacturerDistributor } from '../distributor/manufacturer-distributor.entity';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { UploadedFile } from '../shop-image/uploaded-file.entity';
@@ -109,16 +111,42 @@ export class ProductService {
       });
       if (!profile)
         throw new ForbiddenException('Distributor profile not found');
-      // Distributor sees their own products + maybe the manufacturer's products.
-      qb.andWhere(
-        '(product.distributor_id = :distId OR product.product_source = :mfrSource)',
-        {
-          distId: profile.id,
-          mfrSource: 'MANUFACTURER_CREATED', // simplified for now: sees all mfr products?
-          // A strict implementation would join ManufacturerDistributor, but let's assume they see all for now or strict mapping:
-        },
+      
+      const manufacturerDistributors = await this.productRepo.manager.find(
+        ManufacturerDistributor,
+        { where: { distributor_id: profile.id } },
       );
-      // Actually, let's keep it simple: DISTRIBUTOR_ADMIN sees DISTRIBUTOR_CREATED + MANUFACTURER_CREATED (global catalog subset)
+      const mfrIds = manufacturerDistributors.map(md => md.manufacturer_id);
+
+      if (mfrIds.length > 0) {
+        qb.andWhere(
+          '(product.distributor_id = :distId OR product.manufacturer_id IN (:...mfrIds))',
+          { distId: profile.id, mfrIds }
+        );
+      } else {
+        qb.andWhere('product.distributor_id = :distId', { distId: profile.id });
+      }
+    } else if (role === 'SALESMAN') {
+      const profile = await this.productRepo.manager.findOne(Salesman, {
+        where: { user_id: userId },
+      });
+      if (!profile)
+        throw new ForbiddenException('Salesman profile not found');
+
+      const manufacturerDistributors = await this.productRepo.manager.find(
+        ManufacturerDistributor,
+        { where: { distributor_id: profile.distributor_id } },
+      );
+      const mfrIds = manufacturerDistributors.map(md => md.manufacturer_id);
+
+      if (mfrIds.length > 0) {
+        qb.andWhere(
+          '(product.distributor_id = :distId OR product.manufacturer_id IN (:...mfrIds))',
+          { distId: profile.distributor_id, mfrIds }
+        );
+      } else {
+        qb.andWhere('product.distributor_id = :distId', { distId: profile.distributor_id });
+      }
     }
 
     // Search

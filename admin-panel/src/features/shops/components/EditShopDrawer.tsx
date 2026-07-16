@@ -47,6 +47,7 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
     let schema: any = updateShopBaseSchema;
 
     if (user?.role === 'SUPER_ADMIN') {
+      // @ts-ignore
       schema = schema.extend({
         distributor_id: z.string().min(1, 'Distributor is required'),
       });
@@ -135,7 +136,7 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
       };
 
       await updateShopMutation.mutateAsync({ id: shop.id, data: shopPayload });
-      
+
       setSuccessMsg('Shop updated successfully.');
       queryClient.invalidateQueries({ queryKey: shopsKeys.all });
       setTimeout(() => {
@@ -149,7 +150,7 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
     }
   };
 
-    const formSubmit = handleSubmit(onSubmit);
+  const formSubmit = handleSubmit(onSubmit);
 
   return (
     <EntityFormDrawer
@@ -168,9 +169,9 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
         </div>
       }
     >
-      <form 
+      <form
         id="edit-shop-form"
-        onSubmit={formSubmit} 
+        onSubmit={formSubmit}
         className="space-y-6 mt-4"
       >
         {errorMsg && (
@@ -228,8 +229,8 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue>
-                        {isLoadingStates 
-                          ? "Loading states..." 
+                        {isLoadingStates
+                          ? "Loading states..."
                           : (states?.find((s) => s.id === field.value)?.name || "Select State")
                         }
                       </SelectValue>

@@ -14,6 +14,7 @@ import { Distributor } from '../distributor/distributor.entity';
 import { Salesman } from '../salesman/salesman.entity';
 import { City } from '../region/entities/city.entity';
 import { State } from '../region/entities/state.entity';
+import { User } from '../user/user.entity';
 
 @Entity('shops')
 @Index('idx_shops_dist_status', ['distributor_id', 'verification_status'])
@@ -35,6 +36,11 @@ export class Shop {
   @Column({ type: 'uuid', nullable: true })
   @ApiPropertyOptional({ description: 'Created by user id' })
   created_by_user_id: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'created_by_user_id' })
+  @ApiPropertyOptional({ description: 'Created by User relation' })
+  created_by_user?: User;
 
   @Column({ type: 'uuid', nullable: true })
   @ApiPropertyOptional({ description: 'Created by salesman id' })

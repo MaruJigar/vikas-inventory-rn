@@ -8,6 +8,7 @@ import { EntityFormDrawer } from '@/components/shared/EntityFormDrawer';
 type ShopWithRelations = ShopDto & {
   distributor?: { business_name: string };
   created_by_salesman?: { full_name: string };
+  created_by_user?: { full_name: string };
 };
 
 interface ShopDetailsDrawerProps {
@@ -18,6 +19,9 @@ interface ShopDetailsDrawerProps {
 
 export function ShopDetailsDrawer({ shop, isOpen, onClose }: ShopDetailsDrawerProps) {
   if (!shop) return null;
+
+  const cityName = typeof shop.city === 'object' && shop.city ? (shop.city as any).name : shop.city;
+  const stateName = typeof shop.state === 'object' && shop.state ? (shop.state as any).name : shop.state;
 
   return (
     <EntityFormDrawer
@@ -75,26 +79,13 @@ export function ShopDetailsDrawer({ shop, isOpen, onClose }: ShopDetailsDrawerPr
             <div className="col-span-2">
               <div className="text-sm font-medium text-slate-500 mb-1">Address</div>
               <div className="text-sm text-slate-900">
-                {[shop.address, shop.city, shop.state].filter(Boolean).join(', ') || '-'}
+                {[shop.address, cityName, stateName].filter(Boolean).join(', ') || '-'}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Location */}
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-4 border-b pb-2">Location</h3>
-          <div className="grid grid-cols-2 gap-y-4 gap-x-6">
-            <div>
-              <div className="text-sm font-medium text-slate-500 mb-1">Latitude</div>
-              <div className="text-sm text-slate-900">{shop.location?.coordinates?.[1] ?? '-'}</div>
-            </div>
-            <div>
-              <div className="text-sm font-medium text-slate-500 mb-1">Longitude</div>
-              <div className="text-sm text-slate-900">{shop.location?.coordinates?.[0] ?? '-'}</div>
-            </div>
-          </div>
-        </div>
+
 
         {/* Ownership */}
         <div>
@@ -105,8 +96,12 @@ export function ShopDetailsDrawer({ shop, isOpen, onClose }: ShopDetailsDrawerPr
               <div className="text-sm text-slate-900 break-all">{(shop as ShopWithRelations).distributor?.business_name || shop.distributor_id || '-'}</div>
             </div>
             <div>
-              <div className="text-sm font-medium text-slate-500 mb-1">Created By Salesman</div>
-              <div className="text-sm text-slate-900 break-all">{(shop as ShopWithRelations).created_by_salesman?.full_name || shop.created_by_user_id || '-'}</div>
+              <div className="text-sm font-medium text-slate-500 mb-1">
+                {(shop as ShopWithRelations).created_by_salesman?.full_name ? 'Created By Salesman' : 'Created By Admin'}
+              </div>
+              <div className="text-sm text-slate-900 break-all">
+                {(shop as ShopWithRelations).created_by_salesman?.full_name || (shop as ShopWithRelations).created_by_user?.full_name || 'Admin'}
+              </div>
             </div>
           </div>
         </div>

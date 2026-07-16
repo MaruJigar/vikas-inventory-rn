@@ -5791,9 +5791,12 @@
             "type": "string",
             "description": "Password"
           },
-          "manufacturer_id": {
-            "type": "string",
-            "description": "Manufacturer id"
+          "manufacturer_ids": {
+            "description": "Manufacturer ids",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "business_name": {
             "type": "string",
@@ -5838,6 +5841,7 @@
         },
         "required": [
           "password",
+          "manufacturer_ids",
           "business_name",
           "phone",
           "email"
@@ -5881,6 +5885,13 @@
           "is_active": {
             "type": "boolean",
             "description": "Is active"
+          },
+          "manufacturer_ids": {
+            "description": "Manufacturer ids",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -6671,6 +6682,87 @@
           "state_id"
         ]
       },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Full name"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Phone"
+          },
+          "password_hash": {
+            "type": "string",
+            "description": "Password hash"
+          },
+          "role": {
+            "type": "string",
+            "description": "Role"
+          },
+          "approval_status": {
+            "type": "string",
+            "description": "Approval status"
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Is active"
+          },
+          "hashed_refresh_token": {
+            "type": "object",
+            "description": "Hashed refresh token"
+          },
+          "last_login_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Last login at"
+          },
+          "reset_password_token_hash": {
+            "type": "object",
+            "description": "Hashed reset password token"
+          },
+          "reset_password_expires_at": {
+            "type": "object",
+            "description": "Reset password expiration"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Created at"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Updated at"
+          },
+          "deleted_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Deleted at"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "phone",
+          "password_hash",
+          "role",
+          "approval_status",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "deleted_at"
+        ]
+      },
       "Shop": {
         "type": "object",
         "properties": {
@@ -6693,6 +6785,14 @@
           "created_by_user_id": {
             "type": "string",
             "description": "Created by user id"
+          },
+          "created_by_user": {
+            "description": "Created by User relation",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              }
+            ]
           },
           "created_by_salesman_id": {
             "type": "string",
