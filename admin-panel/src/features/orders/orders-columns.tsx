@@ -109,7 +109,7 @@ export const getOrdersColumns = ({
       const statusStr = typeof row.original.status === 'object' ? (row.original.status as any)?.name : row.original.status;
       const showEdit = (() => {
         if (userRole === 'SALESMAN') {
-          return !['DISPATCHED', 'DELIVERED', 'CANCELLED'].includes(statusStr);
+          return !['SHIPPED', 'DELIVERED', 'CANCELLED'].includes(statusStr);
         }
         if (userRole === 'DISTRIBUTOR_ADMIN' || userRole === 'MANUFACTURER_ADMIN') {
           return statusStr === 'DRAFT';
@@ -119,7 +119,7 @@ export const getOrdersColumns = ({
       const showCancel = (() => {
         if (statusStr === 'CANCELLED') return false;
         if (userRole === 'SALESMAN') {
-          return !['DISPATCHED', 'DELIVERED'].includes(statusStr);
+          return !['SHIPPED', 'DELIVERED'].includes(statusStr);
         }
         if (userRole === 'DISTRIBUTOR_ADMIN' || userRole === 'SUPER_ADMIN') {
           return true;

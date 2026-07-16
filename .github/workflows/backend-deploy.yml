@@ -86,6 +86,8 @@ jobs:
 
             npm run migration:run
 
+            npm run seed:dev:full
+
             pm2 reload ecosystem.config.js --update-env
 
             pm2 save

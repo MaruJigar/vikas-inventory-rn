@@ -7,16 +7,14 @@ interface OrderStatusBadgeProps {
 export function OrderStatusBadge({ status }: OrderStatusBadgeProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'CREATED':
+      case 'DRAFT':
         return 'bg-slate-100 text-slate-800 border-slate-200';
-      case 'CONFIRMED':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'PROCESSING':
-        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-      case 'PACKED':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'DISPATCHED':
+      case 'PENDING':
         return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'ORDERED':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      case 'SHIPPED':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'DELIVERED':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'CANCELLED':

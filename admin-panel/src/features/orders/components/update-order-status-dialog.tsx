@@ -14,6 +14,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { OrderDto, UpdateOrderStatusDto } from '@/types/api/order.types';
 import { useUpdateOrderStatusMutation } from '@/hooks/orders/useUpdateOrderStatusMutation';
+import { useCancelOrderMutation } from '@/hooks/orders/useCancelOrderMutation';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -25,7 +26,7 @@ import {
 } from '@/components/ui/select';
 
 const statusSchema = z.object({
-  status: z.enum(['CONFIRMED', 'PROCESSING', 'PACKED', 'DISPATCHED', 'DELIVERED']),
+  status: z.enum(['PENDING', 'ORDERED', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
   notes: z.string().max(500, 'Notes cannot exceed 500 characters').optional(),
 });
 
@@ -38,34 +39,40 @@ interface UpdateOrderStatusDialogProps {
 }
 
 const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
-  CREATED: ['CONFIRMED'],
-  CONFIRMED: ['PROCESSING'],
-  PROCESSING: ['PACKED'],
-  PACKED: ['DISPATCHED'],
-  DISPATCHED: ['DELIVERED'],
+  DRAFT: ['PENDING'],
+  PENDING: ['ORDERED'],
+  ORDERED: ['SHIPPED'],
+  SHIPPED: ['DELIVERED'],
   DELIVERED: [],
   CANCELLED: [],
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  CREATED: 'Created',
-  CONFIRMED: 'Confirmed',
-  PROCESSING: 'Processing',
-  PACKED: 'Packed',
-  DISPATCHED: 'Dispatched',
+  DRAFT: 'Draft',
+  PENDING: 'Pending',
+  ORDERED: 'Ordered',
+  SHIPPED: 'Shipped',
   DELIVERED: 'Delivered',
   CANCELLED: 'Cancelled',
 };
 
 export function UpdateOrderStatusDialog({ order, isOpen, onClose }: UpdateOrderStatusDialogProps) {
-  const { mutate: updateStatus, isPending } = useUpdateOrderStatusMutation(order?.id || null);
+  const { mutate: updateStatus, isPending: isUpdating } = useUpdateOrderStatusMutation(order?.id || null);
+  const { mutate: cancelOrder, isPending: isCancelling } = useCancelOrderMutation(order?.id || null);
+  const isPending = isUpdating || isCancelling;
 
   const { register, handleSubmit, reset, control, formState: { errors, isValid } } = useForm<StatusFormValues>({
     resolver: zodResolver(statusSchema),
     mode: 'onChange',
   });
 
-  const availableTransitions = order ? (ALLOWED_STATUS_TRANSITIONS[order.status] || []) : [];
+  const statusStr = order ? (typeof order.status === 'object' ? (order.status as any)?.name : order.status) : '';
+  const canCancel = order && typeof order.status === 'object' && (order.status as any)?.can_cancel_order;
+  
+  const availableTransitions = [...(statusStr ? (ALLOWED_STATUS_TRANSITIONS[statusStr] || []) : [])];
+  if (canCancel && !availableTransitions.includes('CANCELLED')) {
+    availableTransitions.push('CANCELLED');
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -82,12 +89,17 @@ export function UpdateOrderStatusDialog({ order, isOpen, onClose }: UpdateOrderS
 
   const onSubmit = (data: StatusFormValues) => {
     if (!order) return;
-    updateStatus(data, {
-      onSuccess: () => {
-        reset();
-        onClose();
-      },
-    });
+    
+    const onSuccess = () => {
+      reset();
+      onClose();
+    };
+
+    if (data.status === 'CANCELLED') {
+      cancelOrder({ cancellationReason: data.notes || 'Cancelled via status update' }, { onSuccess });
+    } else {
+      updateStatus(data, { onSuccess });
+    }
   };
 
   if (!order) return null;
@@ -118,7 +130,7 @@ export function UpdateOrderStatusDialog({ order, isOpen, onClose }: UpdateOrderS
                 Distributor: <span className="font-medium">{order.distributor?.business_name || 'N/A'}</span>
               </div>
               <div className="mt-2 pt-2 border-t text-slate-700">
-                Current Status: <span className="font-bold">{STATUS_LABELS[order.status] || order.status}</span>
+                Current Status: <span className="font-bold">{STATUS_LABELS[statusStr] || statusStr}</span>
               </div>
             </div>
 
@@ -135,7 +147,7 @@ export function UpdateOrderStatusDialog({ order, isOpen, onClose }: UpdateOrderS
                       <Select
                         disabled={isPending}
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value || ''}
                       >
                         <SelectTrigger className={errors.status ? "border-red-500" : ""}>
                           <SelectValue placeholder="Select next status..." />

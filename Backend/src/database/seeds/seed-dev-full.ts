@@ -490,6 +490,7 @@ async function bootstrap() {
   console.log('[SEED] Seeding Order Statuses...');
   const orderStatuses: OrderStatus[] = [];
   const statusNames = [
+    'DRAFT',
     'PENDING',
     'ORDERED',
     'SHIPPED',
@@ -503,7 +504,7 @@ async function bootstrap() {
       orderStatusRepo.create({
         name: statusNames[i],
         sequence: i + 1,
-        can_cancel_order: i < 3,
+        can_cancel_order: ['DRAFT', 'PENDING', 'ORDERED', 'SHIPPED'].includes(statusNames[i]),
         isactive: true,
         is_cancel_status: isCancel,
         is_dispatch_status: isDispatch,
