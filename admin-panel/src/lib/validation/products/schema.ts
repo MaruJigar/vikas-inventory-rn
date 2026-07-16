@@ -2,9 +2,9 @@ import * as z from 'zod';
 
 export const CreateProductSchema = z.object({
   product_source: z.enum(['MANUFACTURER_CREATED', 'DISTRIBUTOR_CREATED']),
-  manufacturer_id: z.string().uuid().optional(),
-  distributor_id: z.string().uuid().optional(),
-  external_manufacturer_name: z.string().min(1, 'External manufacturer name is required').optional(),
+  manufacturer_id: z.string().uuid().optional().or(z.literal('')).transform(v => v === '' ? undefined : v),
+  distributor_id: z.string().uuid().optional().or(z.literal('')).transform(v => v === '' ? undefined : v),
+  external_manufacturer_name: z.string().optional().or(z.literal('')).transform(v => v === '' ? undefined : v),
   category_id: z.string().uuid().optional(),
   name: z.string().min(1, 'Product name is required').max(200, 'Product name is too long'),
   sku: z.string().max(100).optional(),

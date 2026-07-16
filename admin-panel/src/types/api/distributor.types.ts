@@ -10,6 +10,7 @@ export interface CreateDistributorAdminDto {
   state?: string;
   country?: string;
   is_active?: boolean;
+  is_internal_distributor?: boolean;
   manufacturer_ids: string[];
 }
 
@@ -24,6 +25,7 @@ export interface UpdateDistributorAdminDto {
   state?: string;
   country?: string;
   is_active?: boolean;
+  is_internal_distributor?: boolean;
   manufacturer_ids?: string[];
 }
 
@@ -41,6 +43,7 @@ export interface DistributorDto {
   country: string;
   approval_status: string;
   is_active: boolean;
+  is_internal_distributor?: boolean;
   created_at: string;
   updated_at: string;
   manufacturer_ids?: string[];

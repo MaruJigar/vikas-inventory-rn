@@ -51,6 +51,11 @@ export class CreateDistributorAdminDto {
   is_active?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  @ApiPropertyOptional({ description: 'Is internal distributor' })
+  is_internal_distributor?: boolean;
+
+  @IsOptional()
   @IsString()
   @ApiPropertyOptional({ description: 'Address' })
   address?: string;

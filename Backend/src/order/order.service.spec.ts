@@ -141,6 +141,7 @@ describe('OrderService', () => {
         { provide: DataSource, useValue: mockDataSource },
         { provide: AuditLogService, useValue: mockAuditLogService },
         { provide: AppSocketGateway, useValue: mockSocketGateway },
+        { provide: 'OrderStatusService', useValue: {} },
       ],
     }).compile();
 

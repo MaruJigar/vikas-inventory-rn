@@ -15,7 +15,7 @@ import { OrderService } from './order.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateOrderDto, CreateDistributorManufacturerOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto, CancelOrderDto } from './dto/update-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderListQueryDto } from './dto/order-list-query.dto';
@@ -47,6 +47,28 @@ export class OrdersController {
   @ApiBearerAuth('bearer')
   createOrder(@Request() req, @Body() dto: CreateOrderDto) {
     return this.orderService.createOrder(req.user.userId, dto);
+  }
+
+  @Post('distributor-to-manufacturer')
+  @Roles('DISTRIBUTOR_ADMIN')
+  @ApiOperation({
+    summary: 'Create Distributor Order (DISTRIBUTOR_ADMIN only)',
+    description: 'Accepts a single payload of products and splits them into separate orders based on the manufacturer. Distributor self-products (manufacturer=null) are grouped into their own order. The provided bill discount is applied independently to each created order. Returns an array of created orders.',
+  })
+  @ApiBearerAuth('bearer')
+  createDistributorManufacturerOrder(
+    @Request() req,
+    @Body() dto: CreateDistributorManufacturerOrderDto,
+  ) {
+    return this.orderService.createDistributorManufacturerOrder(req.user.userId, dto);
+  }
+
+  @Post('purchase-request/generate')
+  @Roles('DISTRIBUTOR_ADMIN')
+  @ApiOperation({ summary: 'Generate Purchase Request (DISTRIBUTOR_ADMIN only)' })
+  @ApiBearerAuth('bearer')
+  generatePurchaseRequest(@Request() req) {
+    return this.orderService.generatePurchaseRequest(req.user.userId);
   }
 
   // ─── List ────────────────────────────────────────────────────────────────
@@ -137,15 +159,15 @@ export class OrdersController {
   // Editing re-allocates inventory using the salesman's distributor context.
 
   @Patch(':id')
-  @Roles('SALESMAN')
-  @ApiOperation({ summary: 'Edit Order (SALESMAN only, pre-CANCELLED/DELIVERED)' })
+  @Roles('SALESMAN', 'DISTRIBUTOR_ADMIN', 'MANUFACTURER_ADMIN')
+  @ApiOperation({ summary: 'Edit Order (SALESMAN/DISTRIBUTOR_ADMIN/MANUFACTURER_ADMIN)' })
   @ApiBearerAuth('bearer')
   updateOrder(
     @Request() req,
     @Param('id') id: string,
     @Body() dto: UpdateOrderDto,
   ) {
-    return this.orderService.updateOrder(req.user.userId, id, dto);
+    return this.orderService.updateOrder(req.user.userId, req.user.role, id, dto);
   }
 
   // ─── Cancel ──────────────────────────────────────────────────────────────

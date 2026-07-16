@@ -36,7 +36,19 @@ export const getOrdersColumns = ({
     header: 'Order Number',
     cell: ({ row }) => (
       <div className="font-medium text-slate-900">{row.original.id ? row.original.order_number ?? row.original.id.substring(0,8).toUpperCase() : 'N/A'}</div>
-    ), // Temporary fallback for order_number if not in DTO explicitly, using id or 'N/A'. Wait, order_number is standard. Let's cast it since backend returns it.
+    ),
+  },
+  {
+    id: 'type',
+    header: 'Type',
+    cell: ({ row }) => {
+      const isPO = row.original.salesman_id === null;
+      return (
+        <span className={`px-2 py-1 text-xs rounded-full font-medium ${isPO ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+          {isPO ? 'Purchase Order' : 'Salesman Order'}
+        </span>
+      );
+    },
   },
   {
     accessorKey: 'shop',
@@ -91,8 +103,15 @@ export const getOrdersColumns = ({
   {
     id: 'actions',
     cell: ({ row }) => {
-      const showEdit = userRole === 'SALESMAN' && 
-                       !['DISPATCHED', 'DELIVERED', 'CANCELLED'].includes(row.original.status);
+      const showEdit = (() => {
+        if (userRole === 'SALESMAN') {
+          return !['DISPATCHED', 'DELIVERED', 'CANCELLED'].includes(row.original.status);
+        }
+        if (userRole === 'DISTRIBUTOR_ADMIN' || userRole === 'MANUFACTURER_ADMIN') {
+          return row.original.status === 'DRAFT';
+        }
+        return false;
+      })();
       const showCancel = (() => {
         if (row.original.status === 'CANCELLED') return false;
         if (userRole === 'SALESMAN') {

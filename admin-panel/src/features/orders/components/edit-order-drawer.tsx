@@ -8,8 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useOrderQuery } from '@/hooks/orders/useOrderQuery';
 import { useUpdateOrderMutation } from '@/hooks/orders/useUpdateOrderMutation';
+import { useManufacturersQuery } from '@/hooks/manufacturers/useManufacturersQuery';
+import { useProductsQuery } from '@/hooks/products/useProductsQuery';
 import { UpdateOrderDto } from '@/types/api/order.types';
 import { useForm, useFieldArray } from 'react-hook-form';
+import { Trash2, PlusCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface EditOrderDrawerProps {
   orderId: string | null;
@@ -24,12 +29,12 @@ type FormValues = {
     sku_snapshot: string;
     mrp_snapshot: number;
     quantity: number;
-    itemDiscountType: 'NONE' | 'PERCENTAGE' | 'FLAT';
-    itemDiscountValue: number;
   }[];
-  billDiscountType: 'NONE' | 'PERCENTAGE' | 'FLAT';
-  billDiscountValue: number;
+  standardDiscountPercent: number;
+  specialDiscountPercent: number;
+  transportMode: string;
   reason: string;
+  manufacturerId?: string;
 };
 
 export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerProps) {
@@ -38,16 +43,26 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
 
   const { mutate: updateOrder, isPending } = useUpdateOrderMutation(orderId);
 
-  const { register, control, handleSubmit, reset, watch } = useForm<FormValues>({
+  const user = useAuthStore((state) => state.user);
+  const isManufacturerAdmin = user?.role === 'MANUFACTURER_ADMIN';
+
+  const { data: mfrResponse, isLoading: mfrLoading } = useManufacturersQuery({ limit: 100 });
+  const { data: prodResponse, isLoading: prodLoading } = useProductsQuery({ limit: 100 });
+  const manufacturers = mfrResponse?.data || [];
+  const allProducts = prodResponse?.data || [];
+
+  const { register, control, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
     defaultValues: {
       products: [],
-      billDiscountType: 'NONE',
-      billDiscountValue: 0,
-      reason: ''
+      standardDiscountPercent: 0,
+      specialDiscountPercent: 0,
+      transportMode: '',
+      reason: '',
+      manufacturerId: ''
     }
   });
 
-  const { fields } = useFieldArray({
+  const { fields, remove, append } = useFieldArray({
     control,
     name: "products"
   });
@@ -62,30 +77,46 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
           sku_snapshot: item.sku_snapshot,
           mrp_snapshot: Number(item.mrp_snapshot),
           quantity: Number(item.quantity),
-          itemDiscountType: 'FLAT', // Backend OrderItemDto has discount_amount but not type explicitly in the read DTO, assuming FLAT for the UI or calculating it. Let's use FLAT with discount_amount.
-          itemDiscountValue: Number(item.discount_amount),
         })),
-        billDiscountType: 'FLAT',
-        billDiscountValue: Number(order.bill_discount_amount || 0),
-        reason: ''
+        standardDiscountPercent: Number(order.standard_discount_percent || 0),
+        specialDiscountPercent: Number(order.special_discount_percent || 0),
+        transportMode: order.transport_mode || '',
+        reason: '',
+        manufacturerId: order.manufacturer_id || ''
       });
     }
   }, [order, isOpen, reset]);
 
   const watchedProducts = watch('products') || [];
-  const watchedBillDiscountType = watch('billDiscountType');
-  const watchedBillDiscountValue = watch('billDiscountValue') || 0;
+  const watchedStdDisc = watch('standardDiscountPercent') || 0;
+  const watchedSpecDisc = watch('specialDiscountPercent') || 0;
+  const watchedTransportMode = watch('transportMode') || '';
 
   // Real-time calculations
   const grossAmount = watchedProducts.reduce((sum, p) => sum + (p.mrp_snapshot * (p.quantity || 0)), 0);
-  const productDiscountAmount = watchedProducts.reduce((sum, p) => sum + Number(p.itemDiscountValue || 0), 0);
-  const netAfterProductDiscount = grossAmount - productDiscountAmount;
-  
-  const billDiscountAmount = watchedBillDiscountType === 'PERCENTAGE' 
-    ? (netAfterProductDiscount * (watchedBillDiscountValue / 100))
-    : Number(watchedBillDiscountValue || 0);
+  const netAfterProductDiscount = grossAmount;
 
-  const finalAmount = netAfterProductDiscount - billDiscountAmount;
+  const standardDiscountAmount = netAfterProductDiscount * (watchedStdDisc / 100);
+  const afterStdDisc = netAfterProductDiscount - standardDiscountAmount;
+  const specialDiscountAmount = afterStdDisc * (watchedSpecDisc / 100);
+
+  const totalDiscount = standardDiscountAmount + specialDiscountAmount;
+
+  let totalGstAmount = 0;
+  watchedProducts.forEach(p => {
+    const product = allProducts.find(ap => ap.id === p.productId);
+    const gstPercent = product ? Number(product.gst_percent) : 0;
+    const itemGross = p.mrp_snapshot * (p.quantity || 0);
+    const itemNet = itemGross;
+
+    const itemProportion = netAfterProductDiscount > 0 ? itemNet / netAfterProductDiscount : 0;
+    const proratedDisc = itemProportion * totalDiscount;
+    const taxableAmount = itemNet - proratedDisc;
+
+    totalGstAmount += taxableAmount * (gstPercent / 100);
+  });
+
+  const finalAmount = netAfterProductDiscount - totalDiscount + totalGstAmount;
 
   const onSubmit = (data: FormValues) => {
     if (!orderId) return;
@@ -94,12 +125,12 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
       products: data.products.map(p => ({
         productId: p.productId,
         quantity: Number(p.quantity),
-        itemDiscountType: p.itemDiscountType,
-        itemDiscountValue: Number(p.itemDiscountValue)
       })),
-      billDiscountType: data.billDiscountType,
-      billDiscountValue: Number(data.billDiscountValue),
-      reason: data.reason || 'Edited by Salesman'
+      standardDiscountPercent: Number(data.standardDiscountPercent),
+      specialDiscountPercent: Number(data.specialDiscountPercent),
+      transportMode: data.transportMode || undefined,
+      reason: data.reason || 'Edited by Admin',
+      manufacturerId: data.manufacturerId || undefined
     };
 
     updateOrder(payload, {
@@ -123,21 +154,81 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
           </div>
         ) : !order ? null : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 pb-10">
-            
+
             {/* Shop Context (Read Only) */}
-            <section className="bg-slate-50 p-4 rounded-md border">
-              <h3 className="text-sm font-semibold text-slate-900 mb-2">Shop Context</h3>
-              <div className="text-sm text-slate-600">
-                <span className="font-medium text-slate-900">{order.shop?.name || 'N/A'}</span>
-                {order.shop?.city && ` • ${order.shop.city}`}
-              </div>
-            </section>
+            {order.shop ? (
+              <section className="bg-slate-50 p-4 rounded-md border">
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">Shop Context</h3>
+                <div className="text-sm text-slate-600">
+                  <span className="font-medium text-slate-900">{order.shop.name}</span>
+                  {order.shop.city && ` • ${order.shop.city}`}
+                </div>
+              </section>
+            ) : order.salesman_id === null && order.status?.name === 'DRAFT' ? (
+              <section className="bg-slate-50 p-4 rounded-md border">
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">Manufacturer Target</h3>
+                <div className="text-sm text-slate-600">
+                  <Select
+                    value={watch('manufacturerId') || ""}
+                    onValueChange={(val) => setValue('manufacturerId', val || undefined)}
+                  >
+                    <SelectTrigger className="w-full bg-white">
+                      <SelectValue placeholder="Select a Manufacturer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {manufacturers.map((mfr) => (
+                        <SelectItem key={mfr.id} value={mfr.id}>
+                          {mfr.company_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </section>
+            ) : order.manufacturer_id && (
+              <section className="bg-slate-50 p-4 rounded-md border">
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">Manufacturer</h3>
+                <div className="text-sm text-slate-600">
+                  <span className="font-medium text-slate-900">ID: {order.manufacturer_id}</span>
+                </div>
+              </section>
+            )}
 
             {/* Order Items Editor */}
             <section>
-              <h3 className="text-sm font-semibold text-slate-900 mb-3 border-b pb-2">Order Items</h3>
+              <div className="flex justify-between items-center border-b pb-2 mb-3">
+                <h3 className="text-sm font-semibold text-slate-900">Order Items</h3>
+                {(order.status?.name === 'DRAFT' || order.status?.name === 'CREATED') && (
+                  <div className="flex items-center gap-2">
+                    <Select onValueChange={(productId) => {
+                      const product = allProducts.find(p => p.id === productId);
+                      if (product && !watchedProducts.some(wp => wp.productId === product.id)) {
+                        append({
+                          productId: product.id,
+                          product_name_snapshot: product.name,
+                          sku_snapshot: product.sku || "",
+                          mrp_snapshot: Number(product.mrp),
+                          quantity: 1
+                        });
+                      }
+                    }}>
+                      <SelectTrigger className="w-[200px] h-8 text-xs">
+                        <SelectValue placeholder="Add new product..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allProducts.map((p) => (
+                          <SelectItem key={p.id} value={p.id} disabled={watchedProducts.some(wp => wp.productId === p.id)}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
               {fields.length === 0 ? (
-                <div className="text-red-500 text-sm italic py-4">Error: No items found to edit.</div>
+                <div className="text-red-500 text-sm italic py-4">No items in order.</div>
               ) : (
                 <div className="border rounded-md overflow-hidden">
                   <Table>
@@ -147,16 +238,15 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                         <TableHead>SKU</TableHead>
                         <TableHead className="text-right">MRP</TableHead>
                         <TableHead className="w-24 text-right">Qty</TableHead>
-                        <TableHead className="w-24 text-right">Discount (FLAT)</TableHead>
                         <TableHead className="text-right">Line Total</TableHead>
+                        <TableHead className="w-12 text-center"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {fields.map((field, index) => {
                         const qty = watchedProducts[index]?.quantity || 0;
                         const mrp = watchedProducts[index]?.mrp_snapshot || 0;
-                        const disc = watchedProducts[index]?.itemDiscountValue || 0;
-                        const lineTotal = (mrp * qty) - disc;
+                        const lineTotal = mrp * qty;
 
                         return (
                           <TableRow key={field.id}>
@@ -164,29 +254,77 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                             <TableCell className="text-slate-500">{field.sku_snapshot}</TableCell>
                             <TableCell className="text-right">₹{Number(field.mrp_snapshot).toFixed(2)}</TableCell>
                             <TableCell className="text-right">
-                              <Input 
-                                type="number" 
-                                min="1" 
+                              <Input
+                                type="number"
+                                min="1"
                                 step="1"
                                 className="w-20 text-right ml-auto"
                                 {...register(`products.${index}.quantity` as const, { required: true, min: 1 })}
                               />
                             </TableCell>
-                            <TableCell className="text-right">
-                              <Input 
-                                type="number" 
-                                min="0"
-                                step="0.01"
-                                className="w-24 text-right ml-auto"
-                                {...register(`products.${index}.itemDiscountValue` as const, { min: 0 })}
-                              />
-                            </TableCell>
                             <TableCell className="text-right font-medium">₹{Number(lineTotal).toFixed(2)}</TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => remove(index)}
+                                className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         );
                       })}
                     </TableBody>
                   </Table>
+                </div>
+              )}
+            </section>
+
+            {/* Logistics & Extra Discounts */}
+            <section className="grid grid-cols-1 md:grid-cols-3 gap-4 border rounded-md p-4 bg-white">
+              <div>
+                <Label>Transport Mode</Label>
+                <Select
+                  value={['By Air', 'By Road', 'By Train'].includes(watchedTransportMode) ? watchedTransportMode : (watchedTransportMode ? 'Other' : '')}
+                  onValueChange={(val) => {
+                    if (val === 'Other') {
+                      setValue('transportMode', ' '); // Use a space to distinguish from empty but not predefined
+                    } else {
+                      setValue('transportMode', val);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full bg-white mt-1">
+                    <SelectValue placeholder="Select Transport Mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="By Air">By Air</SelectItem>
+                    <SelectItem value="By Road">By Road</SelectItem>
+                    <SelectItem value="By Train">By Train</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(!['By Air', 'By Road', 'By Train'].includes(watchedTransportMode) && watchedTransportMode !== '') && (
+                  <Input
+                    id="transportModeText"
+                    placeholder="Enter custom transport mode"
+                    {...register('transportMode')}
+                    className="mt-2"
+                    onChange={(e) => setValue('transportMode', e.target.value.trimStart())}
+                  />
+                )}
+              </div>
+              <div>
+                <Label htmlFor="stdDisc">Standard Discount (%)</Label>
+                <Input id="stdDisc" type="number" min="0" max="100" step="0.01" {...register('standardDiscountPercent')} className="mt-1" />
+              </div>
+              {isManufacturerAdmin && (
+                <div>
+                  <Label htmlFor="specDisc">Special Discount (%)</Label>
+                  <Input id="specDisc" type="number" min="0" max="100" step="0.01" {...register('specialDiscountPercent')} className="mt-1" />
                 </div>
               )}
             </section>
@@ -199,13 +337,15 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                   <span>Gross Amount</span>
                   <span>₹{Number(grossAmount).toFixed(2)}</span>
                 </div>
+                {totalDiscount > 0 && (
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Order Level Discounts</span>
+                    <span className="text-red-500">- ₹{Number(totalDiscount).toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-slate-600">
-                  <span>Product Discount</span>
-                  <span className="text-red-500">- ₹{Number(productDiscountAmount).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center text-slate-600">
-                  <span>Bill Discount</span>
-                  <span className="text-red-500">- ₹{Number(billDiscountAmount).toFixed(2)}</span>
+                  <span>Total GST Amount</span>
+                  <span className="text-emerald-600">+ ₹{Number(totalGstAmount).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center font-bold text-slate-900 pt-2 border-t border-slate-200 mt-2">
                   <span>Final Amount</span>
@@ -217,7 +357,7 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
             {/* Reason */}
             <section>
               <Label htmlFor="reason">Reason for Edit (Optional)</Label>
-              <Input 
+              <Input
                 id="reason"
                 placeholder="e.g. Customer requested quantity change"
                 {...register('reason')}

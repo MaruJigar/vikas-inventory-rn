@@ -20,22 +20,22 @@ interface AuthState {
 
 function getInitialState() {
   if (typeof window === 'undefined') return null;
-  
+
   const token = document.cookie
     .split('; ')
     .find(row => row.startsWith('accessToken='))
     ?.split('=')[1] || localStorage.getItem('accessToken');
-    
+
   if (!token) return null;
-  
+
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
     const payload = JSON.parse(jsonPayload);
-    
+
     const hasRefreshToken = !!document.cookie
       .split('; ')
       .find(row => row.startsWith('refreshToken='));
@@ -71,6 +71,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       localStorage.removeItem('accessToken');
       document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      window.location.href = '/login';
     }
     set({ user: null, isAuthenticated: false, isLoading: false });
   },

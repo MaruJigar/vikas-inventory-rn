@@ -41,6 +41,10 @@ export class OrderStatusService {
     return status;
   }
 
+  async getStatusByName(name: string): Promise<OrderStatus | null> {
+    return await this.orderStatusRepository.findOne({ where: { name } });
+  }
+
   async update(id: string, updateOrderStatusDto: UpdateOrderStatusDto): Promise<OrderStatus> {
     const status = await this.findOne(id);
 

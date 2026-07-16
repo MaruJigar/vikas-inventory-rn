@@ -35,24 +35,39 @@ export class ProductService {
     if (role !== 'SUPER_ADMIN') {
       if (dto.product_source === 'MANUFACTURER_CREATED') {
         const profile = await this.manufacturerRepo.findOne({
-        where: { user_id: userId },
-      });
-      if (!profile || profile.id !== dto.manufacturer_id)
-        throw new ForbiddenException(
-          'Cannot create product for another manufacturer',
-        );
+          where: { user_id: userId },
+        });
+        if (!profile)
+          throw new ForbiddenException(
+            'Cannot create product for another manufacturer',
+          );
+        dto.manufacturer_id = profile.id;
+        dto.distributor_id = undefined;
       } else if (dto.product_source === 'DISTRIBUTOR_CREATED') {
         const profile = await this.distributorRepo.findOne({
-        where: { user_id: userId },
-      });
-      if (!profile || profile.id !== dto.distributor_id)
-        throw new ForbiddenException(
-          'Cannot create product for another distributor',
-        );
-      if (!dto.external_manufacturer_name)
-        throw new BadRequestException(
-          'Distributor products must define external manufacturer name',
-        );
+          where: { user_id: userId },
+        });
+        if (!profile) {
+          throw new ForbiddenException(
+            'Cannot create product for another distributor',
+          );
+        }
+
+        if (profile.is_internal_distributor) {
+          if (!dto.manufacturer_id) {
+            throw new BadRequestException('Manufacturer ID is required for internal distributor products');
+          }
+          dto.distributor_id = undefined;
+          dto.external_manufacturer_name = undefined;
+        } else {
+          dto.manufacturer_id = undefined;
+          dto.distributor_id = profile.id;
+          if (!dto.external_manufacturer_name) {
+            throw new BadRequestException(
+              'Distributor products must define external manufacturer name',
+            );
+          }
+        }
       }
     }
 
@@ -202,9 +217,9 @@ export class ProductService {
           throw new ForbiddenException('Unauthorized to modify this product');
       } else if (product.product_source === 'DISTRIBUTOR_CREATED') {
         const profile = await this.distributorRepo.findOne({
-        where: { user_id: userId },
-      });
-        if (!profile || profile.id !== product.distributor_id)
+          where: { user_id: userId },
+        });
+        if (!profile || (!profile.is_internal_distributor && profile.id !== product.distributor_id))
           throw new ForbiddenException('Unauthorized to modify this product');
       }
     }
@@ -274,9 +289,9 @@ export class ProductService {
           throw new ForbiddenException('Unauthorized to delete this product');
       } else if (product.product_source === 'DISTRIBUTOR_CREATED') {
         const profile = await this.distributorRepo.findOne({
-        where: { user_id: userId },
-      });
-        if (!profile || profile.id !== product.distributor_id)
+          where: { user_id: userId },
+        });
+        if (!profile || (!profile.is_internal_distributor && profile.id !== product.distributor_id))
           throw new ForbiddenException('Unauthorized to delete this product');
       }
     }

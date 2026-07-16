@@ -38,24 +38,24 @@ export class Order {
   @ApiProperty({ description: 'Order number' })
   order_number: string;
 
-  @Column({ type: 'uuid' })
-  @ApiProperty({ description: 'Visit id' })
+  @Column({ type: 'uuid', nullable: true })
+  @ApiProperty({ description: 'Visit id', required: false })
   visit_id: string;
 
   @ManyToOne(() => ShopVisit)
   @JoinColumn({ name: 'visit_id' })
   visit: ShopVisit;
 
-  @Column({ type: 'uuid' })
-  @ApiProperty({ description: 'Shop id' })
+  @Column({ type: 'uuid', nullable: true })
+  @ApiProperty({ description: 'Shop id', required: false })
   shop_id: string;
 
   @ManyToOne(() => Shop)
   @JoinColumn({ name: 'shop_id' })
   shop: Shop;
 
-  @Column({ type: 'uuid' })
-  @ApiProperty({ description: 'Salesman id' })
+  @Column({ type: 'uuid', nullable: true })
+  @ApiProperty({ description: 'Salesman id', required: false })
   salesman_id: string;
 
   @ManyToOne(() => Salesman)
@@ -91,24 +91,32 @@ export class Order {
   gross_order_amount: number;
 
   @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
-  @ApiProperty({ description: 'Total product discount amount' })
-  total_product_discount_amount: number;
+  @ApiProperty({ description: 'Total gst amount' })
+  total_gst_amount: number;
 
-  @Column({ type: 'varchar', length: 50, default: 'NONE' })
-  @ApiProperty({ description: 'Bill discount type' })
-  bill_discount_type: string;
-
-  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
-  @ApiProperty({ description: 'Bill discount value' })
-  bill_discount_value: number;
+  @Column({ type: 'numeric', precision: 5, scale: 2, default: 0 })
+  @ApiProperty({ description: 'Standard discount percent' })
+  standard_discount_percent: number;
 
   @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
-  @ApiProperty({ description: 'Bill discount amount' })
-  bill_discount_amount: number;
+  @ApiProperty({ description: 'Standard discount amount' })
+  standard_discount_amount: number;
+
+  @Column({ type: 'numeric', precision: 5, scale: 2, default: 0 })
+  @ApiProperty({ description: 'Special discount percent' })
+  special_discount_percent: number;
+
+  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
+  @ApiProperty({ description: 'Special discount amount' })
+  special_discount_amount: number;
 
   @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
   @ApiProperty({ description: 'Final order amount' })
   final_order_amount: number;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  @ApiPropertyOptional({ description: 'Transport mode' })
+  transport_mode: string;
 
   @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
   @ApiProperty({ description: 'Total quantity' })
