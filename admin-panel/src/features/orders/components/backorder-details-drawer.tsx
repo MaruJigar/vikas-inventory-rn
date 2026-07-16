@@ -17,8 +17,8 @@ interface BackorderDetailsDrawerProps {
 }
 
 export function BackorderDetailsDrawer({ backorderId, isOpen, onClose }: BackorderDetailsDrawerProps) {
-  const { data, isLoading, isError } = useBackorderQuery(backorderId);
-  const backorder = data?.data;
+  const { data: response, isLoading, isError } = useBackorderQuery(backorderId);
+  const backorder = response && 'data' in response ? response.data : response;
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>

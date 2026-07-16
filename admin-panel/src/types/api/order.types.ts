@@ -55,8 +55,9 @@ export interface OrderDto {
     name: string;
     owner_name?: string;
     phone?: string;
-    city?: string;
-    state?: string;
+    city_name?: string;
+    state_name?: string;
+    address?: string;
   };
   salesman?: {
     id: string;
@@ -76,10 +77,12 @@ export interface OrderItemDto {
   product_name_snapshot: string;
   sku_snapshot: string;
   quantity: number;
-  mrp_snapshot: number;
-  discount_amount: number;
-  line_total: number;
-  status: string;
+  mrp: number;
+  gross_line_amount: number;
+  net_line_amount: number;
+  gst_amount?: number;
+  status?: string;
+  status_id?: string;
 }
 
 export interface OrderRevisionDto {
