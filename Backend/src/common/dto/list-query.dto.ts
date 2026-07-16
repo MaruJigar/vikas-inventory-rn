@@ -22,7 +22,7 @@ export class ListQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
+  @Max(1000)
   @ApiPropertyOptional({ description: 'Limit' })
   limit?: number = 20;
 
