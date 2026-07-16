@@ -5741,9 +5741,12 @@
             "type": "string",
             "description": "Password"
           },
-          "manufacturer_id": {
-            "type": "string",
-            "description": "Manufacturer id"
+          "manufacturer_ids": {
+            "description": "Manufacturer ids",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "business_name": {
             "type": "string",
@@ -5788,6 +5791,7 @@
         },
         "required": [
           "password",
+          "manufacturer_ids",
           "business_name",
           "phone",
           "email"
@@ -5831,6 +5835,13 @@
           "is_active": {
             "type": "boolean",
             "description": "Is active"
+          },
+          "manufacturer_ids": {
+            "description": "Manufacturer ids",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
