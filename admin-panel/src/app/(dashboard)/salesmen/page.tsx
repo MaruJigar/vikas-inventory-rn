@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
+import { useAuthStore } from '@/store/useAuthStore';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { DataTable } from '@/components/data-table/DataTable';
@@ -18,6 +19,13 @@ import { ReviewSalesmanApprovalDialog } from '@/features/salesmen/components/Rev
 import { SalesmanDto } from '@/types/api/salesman.types';
 
 function SalesmenPageContent() {
+  const { user } = useAuthStore();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const [selectedSalesman, setSelectedSalesman] = useState<SalesmanDto | null>(null);
   const [editingSalesmanId, setEditingSalesmanId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -54,10 +62,12 @@ function SalesmenPageContent() {
               Manage and view registered salesmen.
             </p>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Salesman
-          </Button>
+          {(isMounted && user?.role !== 'MANUFACTURER_ADMIN') && (
+            <Button onClick={() => setIsCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Salesman
+            </Button>
+          )}
         </div>
 
         {/* Toolbar: Search & Filter */}
