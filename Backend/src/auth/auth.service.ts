@@ -32,7 +32,13 @@ export class AuthService {
     const isMatch = await bcrypt.compare(pass, user.password_hash);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
-    if (!user.is_active) throw new UnauthorizedException('Account deactivated');
+    if (!user.is_active) {
+      throw new UnauthorizedException('Account deactivated');
+    }
+
+    if (user.approval_status !== 'APPROVED') {
+      throw new UnauthorizedException('Account not approved');
+    }
 
     return user;
   }
