@@ -19,8 +19,7 @@ interface EditManufacturerDrawerProps {
 }
 
 export function EditManufacturerDrawer({ manufacturerId, isOpen, onClose }: EditManufacturerDrawerProps) {
-  const { data: response, isLoading: isLoadingManufacturer } = useManufacturerQuery(manufacturerId || undefined);
-  const manufacturer = response?.data;
+  const { data: manufacturer, isLoading: isLoadingManufacturer } = useManufacturerQuery(manufacturerId || undefined);
   
   const { mutate: updateManufacturer, isPending } = useUpdateManufacturerMutation();
 

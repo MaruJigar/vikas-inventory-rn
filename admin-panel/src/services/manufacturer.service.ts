@@ -10,5 +10,5 @@ export const manufacturerService = {
   getProfile: () => api.get<ApiResponse<ManufacturerDto>>('/manufacturers/profile').then(res => res.data),
   updateProfile: (data: UpdateManufacturerDto) => api.put<ApiResponse<ManufacturerDto>>('/manufacturers/profile', data).then(res => res.data),
   getManufacturers: (params?: Record<string, unknown>) => api.get<PaginatedResponse<ManufacturerDto>>('/manufacturers', { params }).then(res => res.data),
-  getManufacturerById: (id: string) => api.get<ApiResponse<ManufacturerDto>>(`/manufacturers/${id}`).then(res => res.data),
+  getManufacturerById: (id: string) => api.get<ManufacturerDto>(`/manufacturers/${id}`).then(res => res.data),
 };

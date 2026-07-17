@@ -11,8 +11,7 @@ interface ManufacturerDetailsDrawerProps {
 }
 
 export function ManufacturerDetailsDrawer({ manufacturerId, isOpen, onClose }: ManufacturerDetailsDrawerProps) {
-  const { data: response, isLoading, isError } = useManufacturerQuery(manufacturerId);
-  const manufacturer = response?.data;
+  const { data: manufacturer, isLoading, isError } = useManufacturerQuery(manufacturerId);
 
   return (
     <EntityFormDrawer

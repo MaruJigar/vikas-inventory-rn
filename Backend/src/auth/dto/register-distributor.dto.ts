@@ -4,6 +4,7 @@ import {
   IsString,
   MinLength,
   IsOptional,
+  IsBoolean,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -43,6 +44,16 @@ export class RegisterDistributorDto {
   @IsOptional()
   @IsString()
   gst_number?: string;
+
+  @ApiPropertyOptional({ description: 'City' })
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional({ description: 'Is internal distributor' })
+  @IsOptional()
+  @IsBoolean()
+  is_internal_distributor?: boolean;
 
   @ApiProperty({
     description: 'Manufacturer ID',

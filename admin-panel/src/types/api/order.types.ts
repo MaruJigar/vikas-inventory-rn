@@ -1,8 +1,6 @@
 export interface OrderProductDto {
   productId: string;
   quantity: number;
-  itemDiscountType?: 'NONE' | 'PERCENTAGE' | 'FLAT';
-  itemDiscountValue?: number;
 }
 
 import { PaginatedResponse } from '@/types/api/common.types';
@@ -11,16 +9,16 @@ export interface CreateOrderDto {
   visitId: string;
   shopId: string;
   products: OrderProductDto[];
-  billDiscountType?: 'NONE' | 'PERCENTAGE' | 'FLAT';
-  billDiscountValue?: number;
   isOfflineCreated?: boolean;
   idempotencyKey?: string;
 }
 
 export interface UpdateOrderDto {
   products: OrderProductDto[];
-  billDiscountType?: 'NONE' | 'PERCENTAGE' | 'FLAT';
-  billDiscountValue?: number;
+  standardDiscountPercent?: number;
+  specialDiscountPercent?: number;
+  transportMode?: string;
+  manufacturerId?: string;
   reason?: string;
 }
 
@@ -42,8 +40,13 @@ export interface OrderDto {
   status: string;
   total_amount: number;
   gross_order_amount: number;
-  total_product_discount_amount: number;
-  bill_discount_amount: number;
+  total_gst_amount?: number;
+  standard_discount_percent?: number;
+  special_discount_percent?: number;
+  standard_discount_amount?: number;
+  special_discount_amount?: number;
+  transport_mode?: string;
+  manufacturer_id?: string;
   final_order_amount: number;
   total_quantity: number;
   created_at: string;
@@ -52,8 +55,9 @@ export interface OrderDto {
     name: string;
     owner_name?: string;
     phone?: string;
-    city?: string;
-    state?: string;
+    city_name?: string;
+    state_name?: string;
+    address?: string;
   };
   salesman?: {
     id: string;
@@ -73,10 +77,12 @@ export interface OrderItemDto {
   product_name_snapshot: string;
   sku_snapshot: string;
   quantity: number;
-  mrp_snapshot: number;
-  discount_amount: number;
-  line_total: number;
-  status: string;
+  mrp: number;
+  gross_line_amount: number;
+  net_line_amount: number;
+  gst_amount?: number;
+  status?: string;
+  status_id?: string;
 }
 
 export interface OrderRevisionDto {

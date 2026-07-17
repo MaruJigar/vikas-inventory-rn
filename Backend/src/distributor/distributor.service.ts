@@ -145,7 +145,15 @@ export class DistributorService {
         throw new ForbiddenException('Unauthorized or Distributor not found');
       throw new NotFoundException('Distributor not found');
     }
-    return distributor;
+
+    const links = await this.manufacturerDistributorRepo.find({
+      where: { distributor_id: id },
+    });
+    
+    return {
+      ...distributor,
+      manufacturer_ids: links.map(link => link.manufacturer_id),
+    };
   }
 
   async createDistributorAdmin(
@@ -194,19 +202,19 @@ export class DistributorService {
       await queryRunner.manager.save(distributor);
 
       // Resolve Linkage
-      let manufacturerId: string | null = null;
+      let manufacturerIds: string[] = [];
       if (role === 'MANUFACTURER_ADMIN') {
         const mfr = await queryRunner.manager.findOne('Manufacturer', {
           where: { user_id: actorUserId },
         });
-        if (mfr) manufacturerId = (mfr as any).id;
-      } else if (role === 'SUPER_ADMIN' && dto.manufacturer_id) {
-        manufacturerId = dto.manufacturer_id;
+        if (mfr) manufacturerIds = [(mfr as any).id];
+      } else if (role === 'SUPER_ADMIN' && dto.manufacturer_ids && dto.manufacturer_ids.length > 0) {
+        manufacturerIds = dto.manufacturer_ids;
       }
 
-      if (manufacturerId) {
+      for (const mfrId of manufacturerIds) {
         const link = queryRunner.manager.create(ManufacturerDistributor, {
-          manufacturer_id: manufacturerId,
+          manufacturer_id: mfrId,
           distributor_id: distributor.id,
           status: 'APPROVED',
         });
@@ -255,8 +263,22 @@ export class DistributorService {
       // or we just fetch it, verify ownership, then do transaction
       const distributor = await this.getDistributorById(actorUserId, role, id);
       const oldValues = { ...distributor };
-      Object.assign(distributor, dto);
+      
+      const { manufacturer_ids, ...updateData } = dto;
+      Object.assign(distributor, updateData);
       const updated = await queryRunner.manager.save(distributor);
+
+      if (role === 'SUPER_ADMIN' && manufacturer_ids) {
+        await queryRunner.manager.delete(ManufacturerDistributor, { distributor_id: id });
+        for (const mfrId of manufacturer_ids) {
+          const link = queryRunner.manager.create(ManufacturerDistributor, {
+            manufacturer_id: mfrId,
+            distributor_id: id,
+            status: 'APPROVED',
+          });
+          await queryRunner.manager.save(link);
+        }
+      }
 
       if (distributor.user_id) {
         const user = await queryRunner.manager.findOne(User, {

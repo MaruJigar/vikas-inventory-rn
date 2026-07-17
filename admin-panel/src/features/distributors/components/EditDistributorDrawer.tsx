@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
+import { manufacturerService } from '@/services/manufacturer.service';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { EntityFormDrawer } from '@/components/shared/EntityFormDrawer';
 import { Button } from '@/components/ui/button';
@@ -27,6 +30,7 @@ export function EditDistributorDrawer({ distributorId, isOpen, onClose }: EditDi
     reset,
     setValue,
     watch,
+    control,
     formState: { errors },
   } = useForm<UpdateDistributorFormValues>({
     resolver: zodResolver(updateDistributorSchema),
@@ -41,8 +45,19 @@ export function EditDistributorDrawer({ distributorId, isOpen, onClose }: EditDi
       state: '',
       country: '',
       is_active: true,
+      manufacturer_ids: [],
     },
   });
+
+  const { data: manufacturersRes, isLoading: isManufacturersLoading } = useQuery({
+    queryKey: ['manufacturers'],
+    queryFn: () => manufacturerService.getManufacturers({ limit: 1000 }),
+  });
+  
+  const manufacturerOptions = manufacturersRes?.data?.map((m: any) => ({
+    label: m.company_name || m.business_name || m.owner_name || m.id,
+    value: m.id,
+  })) || [];
 
   const isActive = watch('is_active');
 
@@ -59,6 +74,7 @@ export function EditDistributorDrawer({ distributorId, isOpen, onClose }: EditDi
         state: distributor.state || '',
         country: distributor.country || '',
         is_active: distributor.is_active,
+        manufacturer_ids: distributor.manufacturer_ids || [],
       });
     }
   }, [distributor, reset]);
@@ -101,6 +117,26 @@ export function EditDistributorDrawer({ distributorId, isOpen, onClose }: EditDi
               <Label htmlFor="edit_business_name">Business Name *</Label>
               <Input id="edit_business_name" {...register('business_name')} placeholder="e.g. Acme Corp" />
               {errors.business_name && <p className="text-sm text-red-500">{errors.business_name.message}</p>}
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Manufacturer Assignment</h3>
+            <div className="grid gap-2">
+              <Label htmlFor="manufacturer_ids">Manufacturers *</Label>
+              <Controller
+                name="manufacturer_ids"
+                control={control}
+                render={({ field }) => (
+                  <MultiSelect
+                    options={manufacturerOptions}
+                    selected={field.value || []}
+                    onChange={field.onChange}
+                    placeholder={isManufacturersLoading ? "Loading..." : "Select manufacturers"}
+                  />
+                )}
+              />
+              {errors.manufacturer_ids && <p className="text-sm text-red-500">{errors.manufacturer_ids.message}</p>}
             </div>
           </div>
 

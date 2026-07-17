@@ -94,8 +94,6 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
 
   const selectedStateId = watch('state_id');
   const { data: states, isLoading: isLoadingStates } = useStates({ enabled: isOpen });
-  console.log("=== States ===");
-  console.log(states);
   const { data: cities, isLoading: isLoadingCities } = useCities(selectedStateId, { enabled: isOpen });
 
   const [verificationImage, setVerificationImage] = useState<File | null>(null);
@@ -157,13 +155,13 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
       const createdShop = await createShopMutation.mutateAsync(shopPayload);
 
       // 3. Upload Image
-      if (verificationImage && createdShop.data.id) {
+      if (verificationImage && createdShop.id) {
         try {
           const formData = new FormData();
           formData.append('file', verificationImage);
 
           await uploadImageMutation.mutateAsync({
-            shopId: createdShop.data.id,
+            shopId: createdShop.id,
             formData,
           });
 
@@ -270,12 +268,6 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
                 control={control}
                 name="state_id"
                 render={({ field }) => {
-                  console.log("=== Field Value ===");
-                  console.log(field.value);
-
-                  console.log("=== Matching State ===");
-                  console.log(states?.find((s) => s.id === field.value));
-
                   return (
                     <Select
                       key={states ? 'loaded' : 'loading'}

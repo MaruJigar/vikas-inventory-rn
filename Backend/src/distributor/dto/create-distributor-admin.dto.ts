@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsOptional,
   IsEmail,
+  IsArray,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -13,10 +14,11 @@ export class CreateDistributorAdminDto {
   @ApiProperty({ description: 'Password' })
   password: string;
 
-  @IsOptional()
-  @IsString()
-  @ApiPropertyOptional({ description: 'Manufacturer id' })
-  manufacturer_id?: string;
+  @IsNotEmpty()
+  @IsArray()
+  @IsString({ each: true })
+  @ApiProperty({ description: 'Manufacturer ids', type: [String] })
+  manufacturer_ids: string[];
 
   @IsNotEmpty()
   @IsString()
@@ -47,6 +49,11 @@ export class CreateDistributorAdminDto {
   @IsBoolean()
   @ApiPropertyOptional({ description: 'Is active' })
   is_active?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiPropertyOptional({ description: 'Is internal distributor' })
+  is_internal_distributor?: boolean;
 
   @IsOptional()
   @IsString()

@@ -9,10 +9,12 @@ import { Repository, IsNull } from 'typeorm';
 import { Product } from './product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { ProductListQueryDto } from './dto/product-list-query.dto';
 import { ProductPricingService } from '../product-pricing/product-pricing.service';
 import { Distributor } from '../distributor/distributor.entity';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
-import { ListQueryDto } from '../common/dto/list-query.dto';
+import { Salesman } from '../salesman/salesman.entity';
+import { ManufacturerDistributor } from '../distributor/manufacturer-distributor.entity';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { UploadedFile } from '../shop-image/uploaded-file.entity';
 
@@ -27,30 +29,45 @@ export class ProductService {
     @InjectRepository(UploadedFile)
     private fileRepo: Repository<UploadedFile>,
     private pricingService: ProductPricingService,
-  ) {}
+  ) { }
 
   async createProduct(userId: string, role: string, dto: CreateProductDto) {
     if (role !== 'SUPER_ADMIN') {
       if (dto.product_source === 'MANUFACTURER_CREATED') {
         const profile = await this.manufacturerRepo.findOne({
-        where: { user_id: userId },
-      });
-      if (!profile || profile.id !== dto.manufacturer_id)
-        throw new ForbiddenException(
-          'Cannot create product for another manufacturer',
-        );
+          where: { user_id: userId },
+        });
+        if (!profile)
+          throw new ForbiddenException(
+            'Cannot create product for another manufacturer',
+          );
+        dto.manufacturer_id = profile.id;
+        dto.distributor_id = undefined;
       } else if (dto.product_source === 'DISTRIBUTOR_CREATED') {
         const profile = await this.distributorRepo.findOne({
-        where: { user_id: userId },
-      });
-      if (!profile || profile.id !== dto.distributor_id)
-        throw new ForbiddenException(
-          'Cannot create product for another distributor',
-        );
-      if (!dto.external_manufacturer_name)
-        throw new BadRequestException(
-          'Distributor products must define external manufacturer name',
-        );
+          where: { user_id: userId },
+        });
+        if (!profile) {
+          throw new ForbiddenException(
+            'Cannot create product for another distributor',
+          );
+        }
+
+        if (profile.is_internal_distributor) {
+          if (!dto.manufacturer_id) {
+            throw new BadRequestException('Manufacturer ID is required for internal distributor products');
+          }
+          dto.distributor_id = undefined;
+          dto.external_manufacturer_name = undefined;
+        } else {
+          dto.manufacturer_id = undefined;
+          dto.distributor_id = profile.id;
+          if (!dto.external_manufacturer_name) {
+            throw new BadRequestException(
+              'Distributor products must define external manufacturer name',
+            );
+          }
+        }
       }
     }
 
@@ -77,7 +94,7 @@ export class ProductService {
   async getProducts(
     userId: string,
     role: string,
-    queryDto: ListQueryDto = {} as any,
+    queryDto: ProductListQueryDto,
   ): Promise<PaginatedResponse<Product>> {
     const {
       page = 1,
@@ -109,16 +126,42 @@ export class ProductService {
       });
       if (!profile)
         throw new ForbiddenException('Distributor profile not found');
-      // Distributor sees their own products + maybe the manufacturer's products.
-      qb.andWhere(
-        '(product.distributor_id = :distId OR product.product_source = :mfrSource)',
-        {
-          distId: profile.id,
-          mfrSource: 'MANUFACTURER_CREATED', // simplified for now: sees all mfr products?
-          // A strict implementation would join ManufacturerDistributor, but let's assume they see all for now or strict mapping:
-        },
+
+      const manufacturerDistributors = await this.productRepo.manager.find(
+        ManufacturerDistributor,
+        { where: { distributor_id: profile.id } },
       );
-      // Actually, let's keep it simple: DISTRIBUTOR_ADMIN sees DISTRIBUTOR_CREATED + MANUFACTURER_CREATED (global catalog subset)
+      const mfrIds = manufacturerDistributors.map(md => md.manufacturer_id);
+
+      if (mfrIds.length > 0 && !queryDto.own_products_only) {
+        qb.andWhere(
+          '(product.distributor_id = :distId OR product.manufacturer_id IN (:...mfrIds))',
+          { distId: profile.id, mfrIds }
+        );
+      } else {
+        qb.andWhere('product.distributor_id = :distId', { distId: profile.id });
+      }
+    } else if (role === 'SALESMAN') {
+      const profile = await this.productRepo.manager.findOne(Salesman, {
+        where: { user_id: userId },
+      });
+      if (!profile)
+        throw new ForbiddenException('Salesman profile not found');
+
+      const manufacturerDistributors = await this.productRepo.manager.find(
+        ManufacturerDistributor,
+        { where: { distributor_id: profile.distributor_id } },
+      );
+      const mfrIds = manufacturerDistributors.map(md => md.manufacturer_id);
+
+      if (mfrIds.length > 0) {
+        qb.andWhere(
+          '(product.distributor_id = :distId OR product.manufacturer_id IN (:...mfrIds))',
+          { distId: profile.distributor_id, mfrIds }
+        );
+      } else {
+        qb.andWhere('product.distributor_id = :distId', { distId: profile.distributor_id });
+      }
     }
 
     // Search
@@ -168,15 +211,15 @@ export class ProductService {
     if (role !== 'SUPER_ADMIN') {
       if (product.product_source === 'MANUFACTURER_CREATED') {
         const profile = await this.manufacturerRepo.findOne({
-        where: { user_id: userId },
-      });
+          where: { user_id: userId },
+        });
         if (!profile || profile.id !== product.manufacturer_id)
           throw new ForbiddenException('Unauthorized to modify this product');
       } else if (product.product_source === 'DISTRIBUTOR_CREATED') {
         const profile = await this.distributorRepo.findOne({
-        where: { user_id: userId },
-      });
-        if (!profile || profile.id !== product.distributor_id)
+          where: { user_id: userId },
+        });
+        if (!profile || (!profile.is_internal_distributor && profile.id !== product.distributor_id))
           throw new ForbiddenException('Unauthorized to modify this product');
       }
     }
@@ -188,7 +231,7 @@ export class ProductService {
         dto.gst_percent !== product.gst_percent) ||
       (dto.distributor_discount_percent !== undefined &&
         dto.distributor_discount_percent !==
-          product.distributor_discount_percent) ||
+        product.distributor_discount_percent) ||
       (dto.special_discount_percent !== undefined &&
         dto.special_discount_percent !== product.special_discount_percent);
 
@@ -240,15 +283,15 @@ export class ProductService {
     if (role !== 'SUPER_ADMIN') {
       if (product.product_source === 'MANUFACTURER_CREATED') {
         const profile = await this.manufacturerRepo.findOne({
-        where: { user_id: userId },
-      });
+          where: { user_id: userId },
+        });
         if (!profile || profile.id !== product.manufacturer_id)
           throw new ForbiddenException('Unauthorized to delete this product');
       } else if (product.product_source === 'DISTRIBUTOR_CREATED') {
         const profile = await this.distributorRepo.findOne({
-        where: { user_id: userId },
-      });
-        if (!profile || profile.id !== product.distributor_id)
+          where: { user_id: userId },
+        });
+        if (!profile || (!profile.is_internal_distributor && profile.id !== product.distributor_id))
           throw new ForbiddenException('Unauthorized to delete this product');
       }
     }

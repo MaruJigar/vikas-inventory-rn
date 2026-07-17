@@ -136,6 +136,7 @@ export class ShopService {
       .createQueryBuilder('shop')
       .leftJoinAndSelect('shop.distributor', 'distributor')
       .leftJoinAndSelect('shop.created_by_salesman', 'created_by_salesman')
+      .leftJoinAndSelect('shop.created_by_user', 'created_by_user')
       .leftJoinAndSelect('shop.city', 'city')
       .leftJoinAndSelect('shop.state', 'state');
 
@@ -239,6 +240,7 @@ export class ShopService {
       .createQueryBuilder('shop')
       .leftJoinAndSelect('shop.distributor', 'distributor')
       .leftJoinAndSelect('shop.created_by_salesman', 'created_by_salesman')
+      .leftJoinAndSelect('shop.created_by_user', 'created_by_user')
       .leftJoinAndSelect('shop.city', 'city')
       .leftJoinAndSelect('shop.state', 'state')
       .where('shop.id = :id', { id });

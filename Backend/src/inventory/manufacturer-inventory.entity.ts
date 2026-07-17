@@ -6,8 +6,11 @@ import {
   UpdateDateColumn,
   Unique,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
+import { Product } from '../product/product.entity';
 
 @Entity('manufacturer_inventory')
 @Unique(['manufacturer_id', 'product_id'])
@@ -24,6 +27,10 @@ export class ManufacturerInventory {
   @Column({ type: 'uuid' })
   @ApiProperty({ description: 'Product id' })
   product_id: string;
+
+  @ManyToOne(() => Product)
+  @JoinColumn({ name: 'product_id' })
+  product: Product;
 
   @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
   @ApiProperty({ description: 'Available quantity' })

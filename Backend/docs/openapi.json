@@ -1700,6 +1700,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "own_products_only",
+            "required": false,
+            "in": "query",
+            "description": "Filter only own products",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -2954,6 +2963,57 @@
         ]
       }
     },
+    "/v1/orders/distributor-to-manufacturer": {
+      "post": {
+        "description": "Accepts a single payload of products and splits them into separate orders based on the manufacturer. Distributor self-products (manufacturer=null) are grouped into their own order. The provided bill discount is applied independently to each created order. Returns an array of created orders.",
+        "operationId": "OrdersController_createDistributorManufacturerOrder_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDistributorManufacturerOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create Distributor Order (DISTRIBUTOR_ADMIN only)",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/v1/orders/purchase-request/generate": {
+      "post": {
+        "operationId": "OrdersController_generatePurchaseRequest_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generate Purchase Request (DISTRIBUTOR_ADMIN only)",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
     "/v1/orders/export/csv": {
       "get": {
         "operationId": "OrdersController_exportCsv_v1",
@@ -3415,7 +3475,7 @@
             "bearer": []
           }
         ],
-        "summary": "Edit Order (SALESMAN only, pre-CANCELLED/DELIVERED)",
+        "summary": "Edit Order (SALESMAN/DISTRIBUTOR_ADMIN/MANUFACTURER_ADMIN)",
         "tags": [
           "Orders"
         ]
@@ -5038,6 +5098,14 @@
             "description": "GST Number",
             "example": "22AAAAA0000A1Z5"
           },
+          "city": {
+            "type": "string",
+            "description": "City"
+          },
+          "is_internal_distributor": {
+            "type": "boolean",
+            "description": "Is internal distributor"
+          },
           "manufacturer_id": {
             "type": "string",
             "description": "Manufacturer ID",
@@ -5707,6 +5775,10 @@
             "type": "boolean",
             "description": "Is active"
           },
+          "is_internal_distributor": {
+            "type": "boolean",
+            "description": "Is internal distributor"
+          },
           "created_at": {
             "format": "date-time",
             "type": "string",
@@ -5729,6 +5801,7 @@
           "country",
           "approval_status",
           "is_active",
+          "is_internal_distributor",
           "created_at",
           "updated_at",
           "deleted_at"
@@ -5741,9 +5814,12 @@
             "type": "string",
             "description": "Password"
           },
-          "manufacturer_id": {
-            "type": "string",
-            "description": "Manufacturer id"
+          "manufacturer_ids": {
+            "description": "Manufacturer ids",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "business_name": {
             "type": "string",
@@ -5769,6 +5845,10 @@
             "type": "boolean",
             "description": "Is active"
           },
+          "is_internal_distributor": {
+            "type": "boolean",
+            "description": "Is internal distributor"
+          },
           "address": {
             "type": "string",
             "description": "Address"
@@ -5788,6 +5868,7 @@
         },
         "required": [
           "password",
+          "manufacturer_ids",
           "business_name",
           "phone",
           "email"
@@ -5831,6 +5912,13 @@
           "is_active": {
             "type": "boolean",
             "description": "Is active"
+          },
+          "manufacturer_ids": {
+            "description": "Manufacturer ids",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -6621,6 +6709,87 @@
           "state_id"
         ]
       },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Full name"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Phone"
+          },
+          "password_hash": {
+            "type": "string",
+            "description": "Password hash"
+          },
+          "role": {
+            "type": "string",
+            "description": "Role"
+          },
+          "approval_status": {
+            "type": "string",
+            "description": "Approval status"
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Is active"
+          },
+          "hashed_refresh_token": {
+            "type": "object",
+            "description": "Hashed refresh token"
+          },
+          "last_login_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Last login at"
+          },
+          "reset_password_token_hash": {
+            "type": "object",
+            "description": "Hashed reset password token"
+          },
+          "reset_password_expires_at": {
+            "type": "object",
+            "description": "Reset password expiration"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Created at"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Updated at"
+          },
+          "deleted_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Deleted at"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "phone",
+          "password_hash",
+          "role",
+          "approval_status",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "deleted_at"
+        ]
+      },
       "Shop": {
         "type": "object",
         "properties": {
@@ -6643,6 +6812,14 @@
           "created_by_user_id": {
             "type": "string",
             "description": "Created by user id"
+          },
+          "created_by_user": {
+            "description": "Created by User relation",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              }
+            ]
           },
           "created_by_salesman_id": {
             "type": "string",
@@ -6830,14 +7007,6 @@
               "type": "string"
             }
           },
-          "billDiscountType": {
-            "type": "string",
-            "description": "BillDiscountType"
-          },
-          "billDiscountValue": {
-            "type": "number",
-            "description": "BillDiscountValue"
-          },
           "isOfflineCreated": {
             "type": "boolean",
             "description": "IsOfflineCreated"
@@ -6845,11 +7014,54 @@
           "idempotencyKey": {
             "type": "string",
             "description": "IdempotencyKey"
+          },
+          "transportMode": {
+            "type": "string",
+            "description": "Transport Mode"
+          },
+          "standardDiscountPercent": {
+            "type": "number",
+            "description": "Standard Discount Percent"
+          },
+          "specialDiscountPercent": {
+            "type": "number",
+            "description": "Special Discount Percent"
           }
         },
         "required": [
           "visitId",
           "shopId",
+          "products"
+        ]
+      },
+      "CreateDistributorManufacturerOrderDto": {
+        "type": "object",
+        "properties": {
+          "products": {
+            "description": "Products",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "IdempotencyKey"
+          },
+          "transportMode": {
+            "type": "string",
+            "description": "Transport Mode"
+          },
+          "standardDiscountPercent": {
+            "type": "number",
+            "description": "Standard Discount Percent"
+          },
+          "specialDiscountPercent": {
+            "type": "number",
+            "description": "Special Discount Percent"
+          }
+        },
+        "required": [
           "products"
         ]
       },
@@ -6892,25 +7104,33 @@
             "type": "number",
             "description": "Gross order amount"
           },
-          "total_product_discount_amount": {
+          "total_gst_amount": {
             "type": "number",
-            "description": "Total product discount amount"
+            "description": "Total gst amount"
           },
-          "bill_discount_type": {
-            "type": "string",
-            "description": "Bill discount type"
-          },
-          "bill_discount_value": {
+          "standard_discount_percent": {
             "type": "number",
-            "description": "Bill discount value"
+            "description": "Standard discount percent"
           },
-          "bill_discount_amount": {
+          "standard_discount_amount": {
             "type": "number",
-            "description": "Bill discount amount"
+            "description": "Standard discount amount"
+          },
+          "special_discount_percent": {
+            "type": "number",
+            "description": "Special discount percent"
+          },
+          "special_discount_amount": {
+            "type": "number",
+            "description": "Special discount amount"
           },
           "final_order_amount": {
             "type": "number",
             "description": "Final order amount"
+          },
+          "transport_mode": {
+            "type": "string",
+            "description": "Transport mode"
           },
           "total_quantity": {
             "type": "number",
@@ -6968,16 +7188,14 @@
         "required": [
           "id",
           "order_number",
-          "visit_id",
-          "shop_id",
-          "salesman_id",
           "distributor_id",
           "status_id",
           "gross_order_amount",
-          "total_product_discount_amount",
-          "bill_discount_type",
-          "bill_discount_value",
-          "bill_discount_amount",
+          "total_gst_amount",
+          "standard_discount_percent",
+          "standard_discount_amount",
+          "special_discount_percent",
+          "special_discount_amount",
           "final_order_amount",
           "total_quantity",
           "total_backordered_quantity",
@@ -7015,17 +7233,25 @@
               "type": "string"
             }
           },
-          "billDiscountType": {
-            "type": "string",
-            "description": "BillDiscountType"
-          },
-          "billDiscountValue": {
-            "type": "number",
-            "description": "BillDiscountValue"
-          },
           "reason": {
             "type": "string",
             "description": "Reason"
+          },
+          "manufacturerId": {
+            "type": "string",
+            "description": "Manufacturer ID (for Draft Distributor->Manufacturer orders)"
+          },
+          "transportMode": {
+            "type": "string",
+            "description": "Transport Mode"
+          },
+          "standardDiscountPercent": {
+            "type": "number",
+            "description": "Standard Discount Percent"
+          },
+          "specialDiscountPercent": {
+            "type": "number",
+            "description": "Special Discount Percent"
           }
         },
         "required": [

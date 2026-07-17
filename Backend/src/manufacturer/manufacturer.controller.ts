@@ -39,7 +39,7 @@ import { Manufacturer } from './manufacturer.entity';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiTags('Manufacturer')
 export class ManufacturerController {
-  constructor(private manufacturerService: ManufacturerService) {}
+  constructor(private manufacturerService: ManufacturerService) { }
 
   @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
   @Post('profile')
@@ -65,7 +65,7 @@ export class ManufacturerController {
     return this.manufacturerService.updateProfile(req.user.userId, dto);
   }
 
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Get()
   @ApiOperation({ summary: 'Get Manufacturers' })
   @ApiBearerAuth('bearer')

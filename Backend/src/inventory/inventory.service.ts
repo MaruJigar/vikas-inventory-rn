@@ -93,6 +93,8 @@ export class InventoryService {
       qb.orderBy('inv.updated_at', 'DESC');
     }
 
+    qb.leftJoinAndSelect('inv.product', 'product');
+
     const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
     const totalPages = Math.ceil(total / limit);
 
@@ -114,32 +116,29 @@ export class InventoryService {
     userId: string,
     userRole: string,
   ) {
-    if (!dto.distributor_id && !dto.manufacturer_id) {
-      throw new BadRequestException('Must provide either distributor_id or manufacturer_id');
-    }
-
-    if (dto.distributor_id && dto.manufacturer_id) {
-      throw new BadRequestException('Cannot provide both distributor_id and manufacturer_id');
-    }
-
     if (userRole === 'DISTRIBUTOR_ADMIN') {
-      if (!dto.distributor_id) throw new ForbiddenException('Must provide distributor_id');
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
-      if (!dist || dist.id !== dto.distributor_id) {
-        throw new ForbiddenException(
-          'Cannot adjust inventory for another distributor',
-        );
+      if (!dist) {
+        throw new ForbiddenException('Distributor profile not found');
       }
+      dto.distributor_id = dist.id;
+      dto.manufacturer_id = undefined;
     } else if (userRole === 'MANUFACTURER_ADMIN') {
-      if (!dto.manufacturer_id) throw new ForbiddenException('Must provide manufacturer_id');
       const mfrResult = await this.dataSource.query(
         `SELECT id FROM manufacturers WHERE user_id = $1`,
         [userId],
       );
-      if (!mfrResult.length || mfrResult[0].id !== dto.manufacturer_id) {
-        throw new ForbiddenException(
-          'Cannot adjust inventory for another manufacturer',
-        );
+      if (!mfrResult.length) {
+        throw new ForbiddenException('Manufacturer profile not found');
+      }
+      dto.manufacturer_id = mfrResult[0].id;
+      dto.distributor_id = undefined;
+    } else {
+      if (!dto.distributor_id && !dto.manufacturer_id) {
+        throw new BadRequestException('Must provide either distributor_id or manufacturer_id');
+      }
+      if (dto.distributor_id && dto.manufacturer_id) {
+        throw new BadRequestException('Cannot provide both distributor_id and manufacturer_id');
       }
     }
 
@@ -147,6 +146,13 @@ export class InventoryService {
       where: { id: dto.product_id },
     });
     if (!product) throw new NotFoundException('Product not found');
+
+    if (userRole === 'DISTRIBUTOR_ADMIN' && product.distributor_id !== dto.distributor_id) {
+      throw new ForbiddenException('You can only adjust inventory for products you own');
+    }
+    if (userRole === 'MANUFACTURER_ADMIN' && product.manufacturer_id !== dto.manufacturer_id) {
+      throw new ForbiddenException('You can only adjust inventory for products you own');
+    }
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();

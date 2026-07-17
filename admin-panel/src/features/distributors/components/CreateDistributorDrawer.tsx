@@ -1,4 +1,7 @@
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
+import { manufacturerService } from '@/services/manufacturer.service';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { EntityFormDrawer } from '@/components/shared/EntityFormDrawer';
 import { Button } from '@/components/ui/button';
@@ -20,6 +23,7 @@ export function CreateDistributorDrawer({ isOpen, onClose }: CreateDistributorDr
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<CreateDistributorFormValues>({
     resolver: zodResolver(createDistributorSchema),
@@ -34,8 +38,19 @@ export function CreateDistributorDrawer({ isOpen, onClose }: CreateDistributorDr
       city: '',
       state: '',
       country: '',
+      manufacturer_ids: [],
     },
   });
+
+  const { data: manufacturersRes, isLoading: isManufacturersLoading } = useQuery({
+    queryKey: ['manufacturers'],
+    queryFn: () => manufacturerService.getManufacturers({ limit: 1000 }),
+  });
+  
+  const manufacturerOptions = manufacturersRes?.data?.map((m: any) => ({
+    label: m.company_name || m.business_name || m.owner_name || m.id,
+    value: m.id,
+  })) || [];
 
   const onSubmit = (data: CreateDistributorFormValues) => {
     const sanitizedData = {
@@ -82,6 +97,27 @@ export function CreateDistributorDrawer({ isOpen, onClose }: CreateDistributorDr
             <Label htmlFor="password">Password *</Label>
             <Input id="password" type="password" {...register('password')} placeholder="Minimum 6 characters" />
             {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
+          </div>
+        </div>
+
+        <div className="space-y-4 pt-4 border-t">
+          <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Manufacturer Assignment</h3>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="manufacturer_ids">Manufacturers *</Label>
+            <Controller
+              name="manufacturer_ids"
+              control={control}
+              render={({ field }) => (
+                <MultiSelect
+                  options={manufacturerOptions}
+                  selected={field.value || []}
+                  onChange={field.onChange}
+                  placeholder={isManufacturersLoading ? "Loading..." : "Select manufacturers"}
+                />
+              )}
+            />
+            {errors.manufacturer_ids && <p className="text-sm text-red-500">{errors.manufacturer_ids.message}</p>}
           </div>
         </div>
 
