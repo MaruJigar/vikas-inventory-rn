@@ -14,6 +14,7 @@ import { UpdateShopDto } from './dto/update-shop.dto';
 import { ShopDuplicateDetectionService } from '../shop-duplicate-detection/shop-duplicate-detection.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { UploadedFile } from '../shop-image/uploaded-file.entity';
+import { ApprovalRequest } from '../approval/approval-request.entity';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import * as fs from 'fs';
@@ -88,6 +89,18 @@ export class ShopService {
       });
 
       const savedShop = await queryRunner.manager.save(shop);
+
+      if (savedShop.verification_status === 'PENDING') {
+        const approval = queryRunner.manager.create(ApprovalRequest, {
+          request_type: 'SHOP_APPROVAL',
+          requester_user_id: userId,
+          shop_id: savedShop.id,
+          distributor_id: distributorId,
+          salesman_id: salesmanId,
+          status: 'PENDING_APPROVAL',
+        });
+        await queryRunner.manager.save(approval);
+      }
 
       if (dto.duplicate_bypass) {
         await this.duplicateDetectionService.createLog(queryRunner, {

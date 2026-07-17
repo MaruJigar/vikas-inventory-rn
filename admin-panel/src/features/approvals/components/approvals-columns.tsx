@@ -48,6 +48,11 @@ export const getApprovalColumns = ({
     cell: ({ row }) => row.original.manufacturer_name || '-',
   },
   {
+    accessorKey: 'shop_name',
+    header: 'Shop',
+    cell: ({ row }) => row.original.shop_name || '-',
+  },
+  {
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => <ApprovalStatusBadge status={row.original.status} />,

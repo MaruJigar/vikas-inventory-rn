@@ -139,9 +139,11 @@ function ShopsPageContent() {
   );
 }
 
+import { PERMISSIONS } from '@/config/permissions';
+
 export default function ShopsPage() {
   return (
-    <RoleGuard>
+    <RoleGuard allowedRoles={PERMISSIONS.SHOPS_VIEW}>
       <Suspense fallback={
         <AppLayout>
           <div className="space-y-4 p-6">

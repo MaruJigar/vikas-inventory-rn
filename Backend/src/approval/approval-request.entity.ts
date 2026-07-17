@@ -37,6 +37,10 @@ export class ApprovalRequest {
   @ApiPropertyOptional({ description: 'Salesman id' })
   salesman_id: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  @ApiPropertyOptional({ description: 'Shop id' })
+  shop_id: string;
+
   @Column({ type: 'varchar', length: 50, default: 'PENDING_APPROVAL' })
   @ApiProperty({ description: 'Status' })
   status: string;

@@ -179,6 +179,21 @@ export class ApprovalService {
         }
       }
 
+      // Sync Shop entity
+      if (
+        request.shop_id &&
+        request.request_type === 'SHOP_APPROVAL'
+      ) {
+        const shop = await queryRunner.manager.findOne(Shop, {
+          where: { id: request.shop_id },
+        });
+        if (shop) {
+          shop.verification_status = status === 'APPROVED' ? 'VERIFIED' : 'REJECTED';
+          shop.is_active = status === 'APPROVED';
+          await queryRunner.manager.save(shop);
+        }
+      }
+
 
       await queryRunner.commitTransaction();
 
@@ -216,7 +231,8 @@ export class ApprovalService {
           rolePrefix = 'DISTRIBUTOR';
         else if (request.request_type === 'MANUFACTURER_APPROVAL')
           rolePrefix = 'MANUFACTURER';
-
+        else if (request.request_type === 'SHOP_APPROVAL')
+          rolePrefix = 'SHOP';
         else if (request.request_type === 'LINK_REQUEST')
           rolePrefix = 'LINK_REQUEST';
 
@@ -348,6 +364,16 @@ export class ApprovalService {
               select: { company_name: true },
             });
           raw.manufacturer_name = mfg?.company_name || null;
+        }
+
+        if (item.shop_id) {
+          const shop = await this.dataSource
+            .getRepository(Shop)
+            .findOne({
+              where: { id: item.shop_id },
+              select: { name: true },
+            });
+          raw.shop_name = shop?.name || null;
         }
 
         return raw;
