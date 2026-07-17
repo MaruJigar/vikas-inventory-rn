@@ -87,6 +87,7 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
       city_id: '',
       state_id: '',
       gst_number: '',
+      maps_link: '',
       distributor_id: '',
     },
   });
@@ -108,6 +109,7 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
         city_id: '',
         state_id: '',
         gst_number: '',
+        maps_link: '',
         distributor_id: '',
       });
       setErrorMsg(null);
@@ -148,6 +150,7 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
         city: cityName,
         state: stateName,
         gst_number: data.gst_number || undefined,
+        maps_link: data.maps_link || undefined,
         distributor_id: data.distributor_id || undefined,
         verification_photo_url: undefined,
       };
@@ -375,6 +378,12 @@ export function CreateShopDrawer({ isOpen, onClose }: CreateShopDrawerProps) {
             <Label htmlFor="gst_number">GST Number</Label>
             <Input id="gst_number" {...register('gst_number')} />
             {errors.gst_number && <p className="text-red-500 text-xs mt-1">{errors.gst_number.message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="maps_link">Maps Link (URL)</Label>
+            <Input id="maps_link" {...register('maps_link')} />
+            {errors.maps_link && <p className="text-red-500 text-xs mt-1">{errors.maps_link.message}</p>}
           </div>
 
 

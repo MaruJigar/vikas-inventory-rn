@@ -86,6 +86,25 @@ export const getShopsColumns = ({
     },
   },
   {
+    accessorKey: 'maps_link',
+    header: 'Location',
+    cell: ({ row }) => {
+      const mapsLink = row.original.maps_link;
+      return mapsLink ? (
+        <a 
+          href={mapsLink} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline"
+        >
+          View Map
+        </a>
+      ) : (
+        <span className="text-slate-600">-</span>
+      );
+    }
+  },
+  {
     accessorKey: 'verification_status',
     header: 'Status',
     cell: ({ row }) => <ShopStatusBadge status={row.original.verification_status} />,

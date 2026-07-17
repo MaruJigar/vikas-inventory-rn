@@ -83,6 +83,7 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
       city_id: '',
       state_id: '',
       gst_number: '',
+      maps_link: '',
       distributor_id: '',
     },
   });
@@ -108,6 +109,7 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
         city_id: shop.city_id || '',
         state_id: shop.state_id || '',
         gst_number: shop.gst_number || '',
+        maps_link: shop.maps_link || '',
         distributor_id: shop.distributor_id || '',
       });
     }
@@ -132,6 +134,7 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
         city: cityName,
         state: stateName,
         gst_number: data.gst_number || undefined,
+        maps_link: data.maps_link || undefined,
         distributor_id: data.distributor_id || undefined,
       };
 
@@ -322,6 +325,12 @@ export function EditShopDrawer({ shop, isOpen, onClose }: EditShopDrawerProps) {
             <Label htmlFor="gst_number">GST Number</Label>
             <Input id="gst_number" {...register('gst_number')} />
             {errors.gst_number && <p className="text-red-500 text-xs mt-1">{errors.gst_number.message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="maps_link">Maps Link (URL)</Label>
+            <Input id="maps_link" {...register('maps_link')} />
+            {errors.maps_link && <p className="text-red-500 text-xs mt-1">{errors.maps_link.message}</p>}
           </div>
         </div>
       </form>

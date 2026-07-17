@@ -8,6 +8,7 @@ export const createShopBaseSchema = z.object({
   city_id: z.string().optional(),
   state_id: z.string().min(1, 'State is required'),
   gst_number: z.string().optional().nullable(),
+  maps_link: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   distributor_id: z.string().optional(),
 });
 

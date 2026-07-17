@@ -13,6 +13,7 @@ export interface CreateShopDto {
   city?: string;
   state?: string;
   gst_number?: string;
+  maps_link?: string;
   distributor_id?: string;
   verification_photo_url?: string | null;
   duplicate_bypass?: DuplicateBypassDto;
@@ -41,6 +42,7 @@ export interface ShopDto {
   city_id: string | null;
   state_id: string | null;
   gst_number: string | null;
+  maps_link: string | null;
   location: { type: 'Point'; coordinates: [number, number] } | null;
   verification_photo_url: string | null;
   verification_status: string;
