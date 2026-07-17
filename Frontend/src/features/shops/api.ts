@@ -9,6 +9,7 @@ import type {
   DuplicateMatch,
   PickedImage,
   Shop,
+  UpdateShopPayload,
 } from '@/types/shop';
 
 export const shopsApi = {
@@ -22,6 +23,9 @@ export const shopsApi = {
 
   create: (payload: CreateShopPayload) =>
     apiClient.post<Shop>('/shops', payload).then((r) => r.data),
+
+  update: (id: string, payload: UpdateShopPayload) =>
+    apiClient.patch<Shop>(`/shops/${id}`, payload).then((r) => r.data),
 
   delete: (id: string) =>
     apiClient.delete(`/shops/${id}`).then((r) => r.data),

@@ -10,6 +10,7 @@ import type {
   CheckDuplicatePayload,
   CreateShopPayload,
   PickedImage,
+  UpdateShopPayload,
 } from '@/types/shop';
 
 const PAGE_SIZE = 20;
@@ -68,6 +69,30 @@ export function useCreateShop() {
       return shop;
     },
     onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: shopKeys.all });
+    },
+  });
+}
+
+/**
+ * Update a shop and, if a new photo was picked, upload it (best-effort, like
+ * create). Refreshes the shop detail + list caches on success.
+ */
+export function useUpdateShop(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      payload: UpdateShopPayload;
+      image?: PickedImage;
+    }) => {
+      const shop = await shopsApi.update(id, input.payload);
+      if (input.image) {
+        await shopsApi.uploadImage(id, input.image);
+      }
+      return shop;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: shopKeys.detail(id) });
       void qc.invalidateQueries({ queryKey: shopKeys.all });
     },
   });

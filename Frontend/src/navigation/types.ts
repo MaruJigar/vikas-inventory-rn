@@ -45,11 +45,12 @@ export type HomeStackParamList = {
 export type HomeScreenProps<T extends keyof HomeStackParamList> =
   NativeStackScreenProps<HomeStackParamList, T>;
 
-/** Shops tab stack (listing → detail → add). */
+/** Shops tab stack (listing → detail → add / edit). */
 export type ShopsStackParamList = {
   ShopsList: undefined;
   ShopDetail: { id: string };
   AddShop: undefined;
+  EditShop: { id: string };
 };
 
 export type ShopsScreenProps<T extends keyof ShopsStackParamList> =

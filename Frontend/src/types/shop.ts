@@ -44,6 +44,20 @@ export interface CreateShopPayload {
   duplicate_bypass?: { matched_shop_id: string; match_type: string };
 }
 
+/** PATCH /v1/shops/:id — all fields optional (city/state sent as id + name). */
+export interface UpdateShopPayload {
+  name?: string;
+  owner_name?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  city_id?: string;
+  state_id?: string;
+  maps_link?: string;
+  gst_number?: string;
+}
+
 /** POST /v1/shops/check-duplicate */
 export interface CheckDuplicatePayload {
   name: string;

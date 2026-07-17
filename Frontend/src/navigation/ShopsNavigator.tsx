@@ -7,6 +7,7 @@ import { colors } from '@/theme';
 import { ShopsListScreen } from '@/features/shops/screens/ShopsListScreen';
 import { ShopDetailScreen } from '@/features/shops/screens/ShopDetailScreen';
 import { AddShopScreen } from '@/features/shops/screens/AddShopScreen';
+import { EditShopScreen } from '@/features/shops/screens/EditShopScreen';
 
 const Stack = createNativeStackNavigator<ShopsStackParamList>();
 
@@ -35,6 +36,11 @@ export function ShopsNavigator() {
         name="AddShop"
         component={AddShopScreen}
         options={{ title: t('shops.add'), headerBackTitle: t('common.back') }}
+      />
+      <Stack.Screen
+        name="EditShop"
+        component={EditShopScreen}
+        options={{ title: t('shops.edit.title'), headerBackTitle: t('common.back') }}
       />
     </Stack.Navigator>
   );
