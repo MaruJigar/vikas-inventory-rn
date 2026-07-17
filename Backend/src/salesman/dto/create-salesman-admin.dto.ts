@@ -32,13 +32,13 @@ export class CreateSalesmanAdminDto {
   @MinLength(6)
   password: string;
 
-  @ApiProperty({
-    description: 'Distributor ID (Required if Manufacturer Admin is creating)',
+  @ApiPropertyOptional({
+    description: 'Distributor ID (Required if Admin/Manufacturer is creating)',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsUUID()
-  distributor_id: string;
+  distributor_id?: string;
 
   @ApiProperty({ description: 'State id' })
   @IsNotEmpty()

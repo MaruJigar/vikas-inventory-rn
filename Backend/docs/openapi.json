@@ -5951,7 +5951,7 @@
           },
           "distributor_id": {
             "type": "string",
-            "description": "Distributor ID (Required if Manufacturer Admin is creating)",
+            "description": "Distributor ID (Required if Admin/Manufacturer is creating)",
             "example": "123e4567-e89b-12d3-a456-426614174000"
           },
           "state_id": {
@@ -5976,7 +5976,6 @@
           "email",
           "phone",
           "password",
-          "distributor_id",
           "state_id",
           "state"
         ]
