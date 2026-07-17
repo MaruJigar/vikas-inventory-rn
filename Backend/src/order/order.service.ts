@@ -128,13 +128,8 @@ export class OrderService {
     if (role === 'MANUFACTURER_ADMIN') {
       const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
       if (!mfr) throw new ForbiddenException('Manufacturer not found');
-      const linked = await this.mfrDistRepo.findOne({
-        where: {
-          manufacturer_id: mfr.id,
-          distributor_id: order.distributor_id,
-        },
-      });
-      if (!linked) throw new ForbiddenException('Not in your ecosystem');
+      if (order.manufacturer_id !== mfr.id)
+        throw new ForbiddenException('Not your order');
       return;
     }
     if (role === 'SALESMAN') {
@@ -1207,24 +1202,7 @@ export class OrderService {
     } else if (role === 'MANUFACTURER_ADMIN') {
       const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
       if (!mfr) throw new ForbiddenException('Manufacturer not found');
-      const links = await this.mfrDistRepo.find({
-        where: { manufacturer_id: mfr.id },
-      });
-      const distIds = links.map((l) => l.distributor_id);
-      if (distIds.length === 0) {
-        return {
-          data: [],
-          meta: {
-            page: Number(page),
-            limit: Number(limit),
-            total: 0,
-            totalPages: 0,
-            hasNextPage: false,
-            hasPreviousPage: false,
-          },
-        };
-      }
-      qb.andWhere('order.distributor_id IN (:...distIds)', { distIds });
+      qb.andWhere('order.manufacturer_id = :mfrId', { mfrId: mfr.id });
     } else if (role === 'SALESMAN') {
       const salesman = await this.salesmanRepo.findOne({
         where: { user_id: userId },
