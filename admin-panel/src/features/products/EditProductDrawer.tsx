@@ -26,7 +26,7 @@ interface EditProductDrawerProps {
 
 export function EditProductDrawer({ open, onOpenChange, product }: EditProductDrawerProps) {
   const updateMutation = useUpdateProductMutation(product?.id ?? '');
-  const { data: categoriesResponse } = useGetCategories();
+  const { data: categoriesResponse, isLoading: isCategoriesLoading } = useGetCategories({ limit: 1000 });
   const categories = categoriesResponse?.data ?? [];
 
   const uploadMutation = useUploadProductImageMutation();
@@ -180,8 +180,14 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
         <div className="space-y-1">
           <Label htmlFor="edit-category_id">Category</Label>
           <Select value={categoryId || 'none'} onValueChange={(val: string | null) => setValue('category_id', val === 'none' || val === null ? undefined : val)}>
-            <SelectTrigger>
-              <SelectValue placeholder="— Select Category —" />
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="— Select Category —">
+                {isCategoriesLoading 
+                  ? "Loading categories..."
+                  : categoryId && categoryId !== 'none' 
+                    ? categories.find(c => c.id === categoryId)?.name || (product as any)?.category?.name || categoryId 
+                    : "— Select Category —"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">None</SelectItem>
