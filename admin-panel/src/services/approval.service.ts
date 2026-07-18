@@ -10,6 +10,11 @@ export const approvalService = {
     return response.data;
   },
 
+  getApproval: async (id: string): Promise<any> => {
+    const response = await apiClient.get<any>(`/approvals/${id}`);
+    return response.data;
+  },
+
   reviewApproval: async (id: string, data: ReviewApprovalDto): Promise<{ message: string }> => {
     const response = await apiClient.post<{ message: string }>(`/approvals/${id}/review`, data);
     return response.data;

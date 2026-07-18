@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { UploadCloud, X, Loader2 } from 'lucide-react';
 import { getImageUrl } from '@/lib/utils/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 interface EditProductDrawerProps {
   open: boolean;
@@ -30,7 +31,7 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
   const categories = categoriesResponse?.data ?? [];
 
   const uploadMutation = useUploadProductImageMutation();
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   const {
     register,
@@ -59,11 +60,12 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
         distributor_discount_percent: product.distributor_discount_percent ?? 0,
         special_discount_percent: product.special_discount_percent ?? 0,
         category_id: product.category_id ?? '',
+        is_active: product.is_active ?? true,
       });
       if (product.product_image_url) {
-        setImagePreview(getImageUrl(product.product_image_url));
+        setImagePreviews(product.product_image_url.split(',').filter(Boolean).map(getImageUrl));
       } else {
-        setImagePreview(null);
+        setImagePreviews([]);
       }
     }
   }, [product, reset]);
@@ -72,7 +74,7 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
   useEffect(() => {
     if (!open) {
       reset();
-      setImagePreview(null);
+      setImagePreviews([]);
     }
   }, [open, reset]);
 
@@ -87,29 +89,44 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
     updateMutation.mutate(values);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
 
-    setImagePreview(URL.createObjectURL(file));
-    uploadMutation.mutate(file, {
-      onSuccess: (data) => {
-        setValue('product_image_url', data.url, { shouldValidate: true });
-      },
-      onError: () => {
+    const currentUrls = watch('product_image_url')?.split(',').filter(Boolean) || [];
+    if (currentUrls.length + files.length > 3) {
+      // @ts-ignore
+      alert('A product can have a maximum of 3 images.');
+      return;
+    }
+
+    for (const file of files) {
+      const tempPreview = URL.createObjectURL(file);
+      setImagePreviews((prev) => [...prev, tempPreview]);
+      
+      try {
+        const data = await uploadMutation.mutateAsync(file);
+        const latestUrls = watch('product_image_url')?.split(',').filter(Boolean) || [];
+        setValue('product_image_url', [...latestUrls, data.url].join(','), { shouldValidate: true });
+      } catch (error) {
         // Revert to original if it fails
         if (product?.product_image_url) {
-          setImagePreview(getImageUrl(product.product_image_url));
+          setImagePreviews(product.product_image_url.split(',').filter(Boolean).map(getImageUrl));
         } else {
-          setImagePreview(null);
+          setImagePreviews([]);
         }
       }
-    });
+    }
+    
+    // Clear input so same file can be selected again
+    e.target.value = '';
   };
 
-  const removeImage = () => {
-    setImagePreview(null);
-    setValue('product_image_url', '');
+  const removeImage = (indexToRemove: number) => {
+    setImagePreviews((prev) => prev.filter((_, i) => i !== indexToRemove));
+    const currentUrls = watch('product_image_url')?.split(',').filter(Boolean) || [];
+    const newUrls = currentUrls.filter((_, i) => i !== indexToRemove);
+    setValue('product_image_url', newUrls.join(','));
   };
 
   const isPending = isSubmitting || updateMutation.isPending;
@@ -134,46 +151,22 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
     >
       <form id="edit-product-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         
-        {/* Image Upload */}
-        <div className="space-y-2">
-          <Label>Product Image</Label>
-          <input type="hidden" {...register('product_image_url')} />
-          {imagePreview ? (
-            <div className="relative w-32 h-32 rounded-lg border overflow-hidden bg-slate-50">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imagePreview} alt="Preview" className="object-cover w-full h-full" />
-              {uploadMutation.isPending && (
-                <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              )}
-              {!uploadMutation.isPending && (
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-sm transition-colors"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
+        <div className="space-y-4 pt-4 border-t">
+          <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Account Status</h3>
+          <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50">
+            <div className="space-y-0.5">
+              <Label className="text-base font-medium">Active Product</Label>
+              <p className="text-sm text-slate-500">
+                {watch('is_active') 
+                  ? 'Visible to everyone with permission.' 
+                  : 'Hidden from others. Visible only to you.'}
+              </p>
             </div>
-          ) : (
-            <div className="relative">
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/jpg,image/webp"
-                onChange={handleImageUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                disabled={uploadMutation.isPending}
-              />
-              <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
-                <UploadCloud className="h-8 w-8 text-slate-400 mb-2" />
-                <span className="text-sm text-slate-600 font-medium">Click to replace image</span>
-                <span className="text-xs text-slate-500 mt-1">JPEG, PNG, WEBP (Max 5MB)</span>
-              </div>
-            </div>
-          )}
-          {errors.product_image_url && <p className="text-xs text-destructive">{errors.product_image_url.message}</p>}
+            <Switch 
+              checked={watch('is_active')} 
+              onCheckedChange={(checked) => setValue('is_active', checked, { shouldDirty: true })} 
+            />
+          </div>
         </div>
 
         {/* Category */}
@@ -181,7 +174,11 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
           <Label htmlFor="edit-category_id">Category</Label>
           <Select value={categoryId || 'none'} onValueChange={(val: string | null) => setValue('category_id', val === 'none' || val === null ? undefined : val)}>
             <SelectTrigger>
-              <SelectValue placeholder="— Select Category —" />
+              <SelectValue placeholder="— Select Category —">
+                {categoryId && categories.length > 0 
+                  ? categories.find(c => c.id === categoryId)?.name || '— Select Category —' 
+                  : '— Select Category —'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">None</SelectItem>
@@ -249,6 +246,52 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
             rows={3}
             className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
           />
+        </div>
+
+        {/* Image Upload */}
+        <div className="space-y-2 pt-4 border-t">
+          <Label>Product Images (Max 3)</Label>
+          <input type="hidden" {...register('product_image_url')} />
+          
+          <div className="flex flex-wrap gap-4">
+            {imagePreviews.map((preview, idx) => (
+              <div key={idx} className="relative w-32 h-32 rounded-lg border overflow-hidden bg-slate-50">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={preview} alt="Preview" className="object-cover w-full h-full" />
+                {!uploadMutation.isPending && (
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-sm transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {(watch('product_image_url')?.split(',').filter(Boolean) || []).length < 3 && (
+              <div className="relative w-32 h-32 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 transition-colors flex flex-col items-center justify-center">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/jpg,image/webp"
+                  onChange={handleImageUpload}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={uploadMutation.isPending}
+                />
+                {uploadMutation.isPending ? (
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                ) : (
+                  <>
+                    <UploadCloud className="h-8 w-8 text-slate-400 mb-2" />
+                    <span className="text-xs text-slate-600 font-medium text-center px-2">Upload</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          {errors.product_image_url && <p className="text-xs text-destructive">{errors.product_image_url.message}</p>}
         </div>
 
         {updateMutation.isError && (

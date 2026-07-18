@@ -50,6 +50,8 @@ export class ApprovalService {
   ) {
     if (status !== 'APPROVED' && status !== 'REJECTED')
       throw new BadRequestException('Invalid status');
+    if (status === 'REJECTED' && !reason)
+      throw new BadRequestException('Rejection reason is required');
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -246,6 +248,65 @@ export class ApprovalService {
     }
   }
 
+  async getApprovalById(id: string, currentUser: { userId: string; role: string }) {
+    const qb = this.reqRepo.createQueryBuilder('req')
+      .where('req.id = :id', { id });
+
+    if (currentUser.role === 'MANUFACTURER_ADMIN') {
+      const mfg = await this.dataSource.getRepository(Manufacturer).findOne({ where: { user_id: currentUser.userId } });
+      if (!mfg) throw new ForbiddenException('Manufacturer not found');
+      qb.andWhere('req.manufacturer_id = :mfgId', { mfgId: mfg.id });
+      qb.andWhere('req.request_type = :reqType', { reqType: 'DISTRIBUTOR_APPROVAL' });
+    } else if (currentUser.role === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.dataSource.getRepository(Distributor).findOne({ where: { user_id: currentUser.userId } });
+      if (!dist) throw new ForbiddenException('Distributor not found');
+      qb.andWhere('req.distributor_id = :distId', { distId: dist.id });
+      qb.andWhere('req.request_type IN (:...reqTypes)', { reqTypes: ['SALESMAN_APPROVAL', 'SHOP_APPROVAL'] });
+    } else if (currentUser.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Unauthorized role');
+    }
+
+    const request = await qb.getOne();
+    if (!request) throw new NotFoundException('Approval request not found');
+
+    const logs = await this.logRepo.find({
+      where: { approval_request_id: request.id },
+      order: { created_at: 'DESC' },
+    });
+
+    const logsWithUsers = await Promise.all(logs.map(async log => {
+      let userName = 'System';
+      if (log.acted_by_user_id) {
+        const user = await this.userRepo.findOne({ where: { id: log.acted_by_user_id }, select: ['full_name']});
+        if (user) userName = user.full_name;
+      }
+      return { ...log, acted_by_user_name: userName };
+    }));
+
+    let entityInfo = null;
+    if (request.request_type === 'DISTRIBUTOR_APPROVAL' && request.distributor_id) {
+       entityInfo = await this.dataSource.getRepository(Distributor).findOne({ where: { id: request.distributor_id } });
+    } else if (request.request_type === 'SALESMAN_APPROVAL' && request.salesman_id) {
+       entityInfo = await this.dataSource.getRepository(Salesman).findOne({ where: { id: request.salesman_id } });
+    } else if (request.request_type === 'MANUFACTURER_APPROVAL' && request.manufacturer_id) {
+       entityInfo = await this.dataSource.getRepository(Manufacturer).findOne({ where: { id: request.manufacturer_id } });
+    } else if (request.request_type === 'SHOP_APPROVAL' && request.metadata?.shop_id) {
+       entityInfo = await this.dataSource.getRepository(Shop).findOne({ where: { id: request.metadata.shop_id } });
+    }
+
+    let requester = null;
+    if (request.requester_user_id) {
+       requester = await this.userRepo.findOne({ where: { id: request.requester_user_id }, select: ['id', 'full_name', 'email', 'phone']});
+    }
+
+    return {
+      request,
+      logs: logsWithUsers,
+      entity: entityInfo,
+      requester,
+    };
+  }
+
   async getPendingRequests(
     currentUser: { userId: string; role: string },
     queryDto: ListQueryDto = {} as any,
@@ -262,7 +323,8 @@ export class ApprovalService {
     } = queryDto;
     const skip = (page - 1) * limit;
 
-    const qb = this.reqRepo.createQueryBuilder('req');
+    const qb = this.reqRepo.createQueryBuilder('req')
+      .leftJoin(User, 'user', 'user.id = req.requester_user_id');
 
     if (currentUser.role === 'SUPER_ADMIN') {
       // Global
@@ -272,18 +334,24 @@ export class ApprovalService {
         .findOne({ where: { user_id: currentUser.userId } });
       if (!mfg) throw new ForbiddenException('Manufacturer not found');
       qb.andWhere('req.manufacturer_id = :mfgId', { mfgId: mfg.id });
+      qb.andWhere('req.request_type = :reqType', { reqType: 'DISTRIBUTOR_APPROVAL' });
     } else if (currentUser.role === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.dataSource
         .getRepository(Distributor)
         .findOne({ where: { user_id: currentUser.userId } });
       if (!dist) throw new ForbiddenException('Distributor not found');
       qb.andWhere('req.distributor_id = :distId', { distId: dist.id });
+      qb.andWhere('req.request_type IN (:...reqTypes)', { reqTypes: ['SALESMAN_APPROVAL', 'SHOP_APPROVAL'] });
     } else {
       throw new ForbiddenException('Unauthorized role');
     }
 
     if (status) {
       qb.andWhere('req.status = :status', { status });
+    }
+
+    if (search) {
+      qb.andWhere('(req.request_type ILIKE :search OR user.full_name ILIKE :search)', { search: `%${search}%` });
     }
 
     if (startDate)

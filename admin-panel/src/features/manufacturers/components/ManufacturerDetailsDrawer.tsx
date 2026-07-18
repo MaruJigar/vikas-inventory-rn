@@ -62,7 +62,7 @@ export function ManufacturerDetailsDrawer({ manufacturerId, isOpen, onClose }: M
             <div className="grid grid-cols-3 border-b pb-3 gap-4">
               <span className="text-muted-foreground font-medium">Address</span>
               <span className="col-span-2">
-                {[manufacturer.address, manufacturer.city, manufacturer.state, manufacturer.country].filter(Boolean).join(', ') || '-'}
+                {[manufacturer.address, manufacturer.city, manufacturer.state, manufacturer.country, manufacturer.pincode].filter(Boolean).join(', ') || '-'}
               </span>
             </div>
 

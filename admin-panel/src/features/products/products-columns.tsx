@@ -4,7 +4,9 @@ import { ColumnDef } from '@tanstack/react-table';
 import { ProductDto } from '@/types/api/product.types';
 import Image from 'next/image';
 import { getImageUrl } from '@/lib/utils/image';
-import { MoreHorizontal, Edit, Trash } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
+import { MoreHorizontal, Edit, Trash, Eye } from 'lucide-react';
+import Link from 'next/link';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,10 +89,9 @@ export function getProductColumns({ onEdit, onDelete }: ProductsColumnsProps): C
       header: 'Created At',
       cell: ({ row }) => {
         const data = row.original as ProductRowData;
-        if (!data.created_at) return <span className="text-sm text-muted-foreground">—</span>;
         return (
           <span className="text-sm text-muted-foreground">
-            {new Date(data.created_at).toLocaleDateString()}
+            {formatDate(data.created_at)}
           </span>
         );
       },
@@ -105,6 +106,14 @@ export function getProductColumns({ onEdit, onDelete }: ProductsColumnsProps): C
               <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href={`/products/${row.original.id}`} className="cursor-pointer flex items-center">
+                  <Eye className="mr-2 h-4 w-4" />
+                  View
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onEdit(row.original)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Product

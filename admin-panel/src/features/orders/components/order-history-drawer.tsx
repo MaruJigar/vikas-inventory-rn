@@ -13,7 +13,7 @@ import { OrderDto, OrderRevisionDto, OrderStatusHistoryDto } from '@/types/api/o
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils';
 
 interface OrderHistoryDrawerProps {
   order: OrderDto | null;
@@ -99,7 +99,7 @@ function RevisionHistoryTab({ orderId }: { orderId: string }) {
                 </div>
               </div>
               <div className="text-xs text-slate-400">
-                {format(new Date(rev.created_at), 'dd MMM yyyy, hh:mm a')}
+                {formatDate(rev.created_at)}
               </div>
             </div>
             
@@ -214,7 +214,7 @@ function StatusTimelineTab({ orderId }: { orderId: string }) {
                   {event.new_status}
                 </div>
                 <div className="text-xs text-slate-400">
-                  {format(new Date(event.created_at), 'dd MMM yyyy, hh:mm a')}
+                  {formatDate(event.created_at)}
                 </div>
               </div>
               <div className="text-xs text-slate-500">

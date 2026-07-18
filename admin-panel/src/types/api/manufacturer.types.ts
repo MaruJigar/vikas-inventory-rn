@@ -8,6 +8,7 @@ export interface CreateManufacturerDto {
   city?: string;
   state?: string;
   country?: string;
+  pincode?: string;
 }
 
 export interface CreateManufacturerAdminDto extends CreateManufacturerDto {
@@ -24,6 +25,9 @@ export interface UpdateManufacturerDto {
   address?: string;
   city?: string;
   state?: string;
+  country?: string;
+  pincode?: string;
+  is_active?: boolean;
 }
 
 export interface ManufacturerDto {
@@ -38,6 +42,7 @@ export interface ManufacturerDto {
   city?: string;
   state?: string;
   country: string;
+  pincode?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;

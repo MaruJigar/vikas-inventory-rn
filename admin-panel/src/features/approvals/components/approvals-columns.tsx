@@ -1,5 +1,5 @@
 import { ColumnDef } from '@tanstack/react-table';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils';
 import { ApprovalRequestDto } from '@/types/approval.types';
 import { ApprovalStatusBadge } from './ApprovalStatusBadge';
 import { CheckCircle } from 'lucide-react';
@@ -57,7 +57,7 @@ export const getApprovalColumns = ({
     header: 'Submitted',
     cell: ({ row }) => {
       const dateStr = row.getValue<string>('submitted_at');
-      return dateStr ? format(new Date(dateStr), 'PPp') : '-';
+      return dateStr ? formatDate(dateStr) : '-';
     },
   },
   {
@@ -73,12 +73,10 @@ export const getApprovalColumns = ({
             <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {isPending && (
-              <DropdownMenuItem onClick={() => onReview(approval.id)}>
-                <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                Review Request
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={() => onReview(approval.id)}>
+              <CheckCircle className={`mr-2 h-4 w-4 ${isPending ? 'text-green-600' : 'text-gray-500'}`} />
+              {isPending ? 'Review Request' : 'View Details'}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

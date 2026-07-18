@@ -9,6 +9,7 @@ export interface CreateDistributorAdminDto {
   city?: string;
   state?: string;
   country?: string;
+  pincode?: string;
   is_active?: boolean;
   is_internal_distributor?: boolean;
   manufacturer_ids: string[];
@@ -24,6 +25,7 @@ export interface UpdateDistributorAdminDto {
   city?: string;
   state?: string;
   country?: string;
+  pincode?: string;
   is_active?: boolean;
   is_internal_distributor?: boolean;
   manufacturer_ids?: string[];
@@ -41,6 +43,7 @@ export interface DistributorDto {
   city?: string;
   state?: string;
   country: string;
+  pincode?: string;
   approval_status: string;
   is_active: boolean;
   is_internal_distributor?: boolean;

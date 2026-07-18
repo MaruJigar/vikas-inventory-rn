@@ -83,7 +83,7 @@ export class ManufacturerService {
 
     if (search) {
       qb.andWhere(
-        '(manufacturer.company_name ILIKE :search OR manufacturer.contact_person ILIKE :search)',
+        '(manufacturer.company_name ILIKE :search OR manufacturer.contact_person ILIKE :search OR manufacturer.phone ILIKE :search OR manufacturer.email ILIKE :search)',
         { search: `%${search}%` },
       );
     }

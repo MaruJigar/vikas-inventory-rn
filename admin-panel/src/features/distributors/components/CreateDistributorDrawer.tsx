@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { createDistributorSchema, CreateDistributorFormValues } from '@/lib/validation/distributors/schema';
 import { useCreateDistributorMutation } from '@/hooks/distributors/useCreateDistributorMutation';
 import { Textarea } from '@/components/ui/textarea';
+import { LocationSelector } from '@/components/shared/LocationSelector';
 
 interface CreateDistributorDrawerProps {
   isOpen: boolean;
@@ -37,7 +38,8 @@ export function CreateDistributorDrawer({ isOpen, onClose }: CreateDistributorDr
       address: '',
       city: '',
       state: '',
-      country: '',
+      country: 'India',
+      pincode: '',
       manufacturer_ids: [],
     },
   });
@@ -60,7 +62,8 @@ export function CreateDistributorDrawer({ isOpen, onClose }: CreateDistributorDr
       address: data.address || undefined,
       city: data.city || undefined,
       state: data.state || undefined,
-      country: data.country || undefined,
+      country: data.country || 'India',
+      pincode: data.pincode || undefined,
     };
 
     createDistributor(sanitizedData, {
@@ -160,24 +163,30 @@ export function CreateDistributorDrawer({ isOpen, onClose }: CreateDistributorDr
             {errors.address && <p className="text-sm text-red-500">{errors.address.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="city">City</Label>
-              <Input id="city" {...register('city')} placeholder="e.g. Mumbai" />
-              {errors.city && <p className="text-sm text-red-500">{errors.city.message}</p>}
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="state">State</Label>
-              <Input id="state" {...register('state')} placeholder="e.g. Maharashtra" />
-              {errors.state && <p className="text-sm text-red-500">{errors.state.message}</p>}
-            </div>
-          </div>
+          <Controller
+            name="state"
+            control={control}
+            render={({ field: stateField }) => (
+              <Controller
+                name="city"
+                control={control}
+                render={({ field: cityField }) => (
+                  <LocationSelector
+                    stateValue={stateField.value || ''}
+                    cityValue={cityField.value || ''}
+                    onStateChange={stateField.onChange}
+                    onCityChange={cityField.onChange}
+                    disabled={isPending}
+                  />
+                )}
+              />
+            )}
+          />
 
           <div className="grid gap-2">
-            <Label htmlFor="country">Country</Label>
-            <Input id="country" {...register('country')} placeholder="e.g. India" />
-            {errors.country && <p className="text-sm text-red-500">{errors.country.message}</p>}
+            <Label htmlFor="pincode">Pincode</Label>
+            <Input id="pincode" {...register('pincode')} placeholder="e.g. 400001" maxLength={10} />
+            {errors.pincode && <p className="text-sm text-red-500">{errors.pincode.message}</p>}
           </div>
         </div>
 

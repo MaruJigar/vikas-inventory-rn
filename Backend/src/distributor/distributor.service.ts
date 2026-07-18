@@ -79,7 +79,7 @@ export class DistributorService {
 
     if (search) {
       qb.andWhere(
-        '(distributor.business_name ILIKE :search OR distributor.email ILIKE :search)',
+        '(distributor.business_name ILIKE :search OR distributor.email ILIKE :search OR distributor.owner_name ILIKE :search OR distributor.phone ILIKE :search)',
         { search: `%${search}%` },
       );
     }

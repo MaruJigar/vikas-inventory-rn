@@ -71,7 +71,10 @@ export class ProductService {
       }
     }
 
-    const product = this.productRepo.create(dto);
+    const product = this.productRepo.create({
+      ...dto,
+      created_by_user_id: userId,
+    });
     const savedProduct = await this.productRepo.save(product);
 
     if (savedProduct.product_image_url) {
@@ -164,6 +167,11 @@ export class ProductService {
       }
     }
 
+    // Active / Inactive Visibility Rules
+    if (role !== 'SUPER_ADMIN') {
+      qb.andWhere('(product.is_active = true OR product.created_by_user_id = :userId)', { userId });
+    }
+
     // Search
     if (search) {
       qb.andWhere('(product.name ILIKE :search OR product.sku ILIKE :search)', {
@@ -196,6 +204,61 @@ export class ProductService {
     };
   }
 
+  async getProductById(userId: string, role: string, productId: string) {
+    const qb = this.productRepo.createQueryBuilder('product')
+      .leftJoinAndSelect('product.manufacturer', 'manufacturer')
+      .leftJoinAndSelect('product.distributor', 'distributor')
+      .leftJoinAndSelect('product.category', 'category')
+      .where('product.id = :productId', { productId });
+
+    // Active / Inactive Visibility Rules
+    if (role !== 'SUPER_ADMIN') {
+      qb.andWhere('(product.is_active = true OR product.created_by_user_id = :userId)', { userId });
+    }
+
+    const product = await qb.getOne();
+    
+    if (!product) throw new NotFoundException('Product not found');
+
+    // Ownership Enforcement (Read)
+    if (role === 'MANUFACTURER_ADMIN') {
+      const profile = await this.manufacturerRepo.findOne({
+        where: { user_id: userId },
+      });
+      if (!profile || profile.id !== product.manufacturer_id) {
+        throw new ForbiddenException('Unauthorized to view this product');
+      }
+    } else if (role === 'DISTRIBUTOR_ADMIN') {
+      const profile = await this.distributorRepo.findOne({
+        where: { user_id: userId },
+      });
+      if (!profile) throw new ForbiddenException('Distributor profile not found');
+
+      const mds = await this.productRepo.manager.find(ManufacturerDistributor, {
+        where: { distributor_id: profile.id },
+      });
+      const mfrIds = mds.map((md) => md.manufacturer_id);
+
+      const canView = product.distributor_id === profile.id || (product.manufacturer_id && mfrIds.includes(product.manufacturer_id));
+      if (!canView) throw new ForbiddenException('Unauthorized to view this product');
+    } else if (role === 'SALESMAN') {
+      const profile = await this.productRepo.manager.findOne(Salesman, {
+        where: { user_id: userId },
+      });
+      if (!profile) throw new ForbiddenException('Salesman profile not found');
+
+      const mds = await this.productRepo.manager.find(ManufacturerDistributor, {
+        where: { distributor_id: profile.distributor_id },
+      });
+      const mfrIds = mds.map((md) => md.manufacturer_id);
+
+      const canView = product.distributor_id === profile.distributor_id || (product.manufacturer_id && mfrIds.includes(product.manufacturer_id));
+      if (!canView) throw new ForbiddenException('Unauthorized to view this product');
+    }
+
+    return product;
+  }
+
   async updateProduct(
     userId: string,
     role: string,
@@ -222,6 +285,11 @@ export class ProductService {
         if (!profile || (!profile.is_internal_distributor && profile.id !== product.distributor_id))
           throw new ForbiddenException('Unauthorized to modify this product');
       }
+    }
+
+    // Prevent modifying another user's inactive product
+    if (role !== 'SUPER_ADMIN' && !product.is_active && product.created_by_user_id !== userId) {
+      throw new ForbiddenException('Unauthorized to modify this inactive product');
     }
 
     // Check if price history needs logging
@@ -294,6 +362,11 @@ export class ProductService {
         if (!profile || (!profile.is_internal_distributor && profile.id !== product.distributor_id))
           throw new ForbiddenException('Unauthorized to delete this product');
       }
+    }
+
+    // Prevent deleting another user's inactive product
+    if (role !== 'SUPER_ADMIN' && !product.is_active && product.created_by_user_id !== userId) {
+      throw new ForbiddenException('Unauthorized to delete this inactive product');
     }
 
     await this.productRepo.softDelete(productId);

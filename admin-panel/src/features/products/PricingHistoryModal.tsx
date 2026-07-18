@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { usePricingHistoryQuery } from '@/hooks/products/usePricingHistoryQuery';
 import { ProductDto } from '@/types/api/product.types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatDate } from '@/lib/utils';
 
 interface PricingHistoryModalProps {
   open: boolean;
@@ -60,7 +61,7 @@ export function PricingHistoryModal({ open, onOpenChange, product }: PricingHist
                       Changed by {entry.changed_by_user_name}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {new Date(entry.created_at).toLocaleString()}
+                      {formatDate(entry.created_at)}
                     </span>
                   </div>
                   <div>

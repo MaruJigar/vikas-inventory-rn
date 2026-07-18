@@ -46,4 +46,9 @@ export class UpdateManufacturerDto {
   @IsString()
   @ApiPropertyOptional({ description: 'Country' })
   country?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'Pincode' })
+  pincode?: string;
 }

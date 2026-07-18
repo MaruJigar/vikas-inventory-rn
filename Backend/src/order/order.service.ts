@@ -950,11 +950,22 @@ export class OrderService {
     // Verify ownership (SUPER_ADMIN, DISTRIBUTOR_ADMIN, MANUFACTURER_ADMIN)
     await this.verifyOrderOwnership(order, role, userId);
 
+    let targetStatusId = dto.status_id;
+    if (!targetStatusId && dto.status) {
+      const statusObj = await this.orderStatusService.getStatusByName(dto.status);
+      if (!statusObj) throw new BadRequestException(`Status ${dto.status} not found`);
+      targetStatusId = statusObj.id;
+    }
+
+    if (!targetStatusId) {
+      throw new BadRequestException('Status or Status ID is required');
+    }
+
     // Validate transition
     const nextStatus = await this.orderStatusService.getNextStatus(
       order.status_id,
     );
-    if (dto.status_id !== nextStatus.id) {
+    if (targetStatusId !== nextStatus.id) {
       throw new BadRequestException(
         `Cannot transition order from ${order.status.name} to the requested status. ` +
           `Allowed: [${nextStatus.name}]`,
@@ -965,7 +976,7 @@ export class OrderService {
       throw new BadRequestException('Manufacturer ID is required before placing a Distributor to Manufacturer order');
     }
 
-    const newStatus = await this.orderStatusService.findOne(dto.status_id);
+    const newStatus = await this.orderStatusService.findOne(targetStatusId);
     const oldStatusId = order.status_id;
 
     await this.dataSource.transaction(async (manager) => {
@@ -1301,6 +1312,7 @@ export class OrderService {
       .leftJoinAndSelect('order.salesman', 'salesman')
       .leftJoinAndSelect('order.distributor', 'distributor')
       .leftJoinAndSelect('order.items', 'items')
+      .leftJoinAndSelect('items.product', 'product')
       .leftJoinAndSelect('order.status', 'status')
       .where('order.id = :orderId', { orderId })
       .getOne();

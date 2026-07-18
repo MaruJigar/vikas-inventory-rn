@@ -93,7 +93,8 @@ export function DistributorDetailsDrawer({ distributor, isOpen, onClose }: Distr
                     distributor.address,
                     distributor.city,
                     distributor.state,
-                    distributor.country
+                    distributor.country,
+                    distributor.pincode
                   ].filter(Boolean).join(', ') || '-'}
                 </p>
               </div>

@@ -41,4 +41,14 @@ export class UpdateDistributorProfileDto {
   @IsString()
   @ApiPropertyOptional({ description: 'State' })
   state?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'Country' })
+  country?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'Pincode' })
+  pincode?: string;
 }

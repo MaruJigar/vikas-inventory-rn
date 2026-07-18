@@ -15,6 +15,7 @@ export const CreateProductSchema = z.object({
   gst_percent: z.coerce.number().min(0).max(100).optional(),
   distributor_discount_percent: z.coerce.number().min(0).max(100).optional(),
   special_discount_percent: z.coerce.number().min(0).max(100).optional(),
+  is_active: z.boolean().optional().default(true),
 });
 
 export const UpdateProductSchema = CreateProductSchema.partial();

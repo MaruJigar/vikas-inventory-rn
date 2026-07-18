@@ -83,6 +83,9 @@ export interface OrderItemDto {
   gst_amount?: number;
   status?: string;
   status_id?: string;
+  product?: {
+    product_image_url?: string | string[];
+  };
 }
 
 export interface OrderRevisionDto {

@@ -1,6 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/utils";
 import { ApprovalDto } from "@/types/api/approval.types";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -87,7 +88,7 @@ export function ApprovalsTable({ approvals, isLoading, onRowClick }: ApprovalsTa
                   {approval.status}
                 </Badge>
               </TableCell>
-              <TableCell>{new Date(approval.created_at).toLocaleDateString()}</TableCell>
+              <TableCell>{formatDate(approval.created_at)}</TableCell>
               <TableCell>
                 <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onRowClick(approval); }}>
                   View

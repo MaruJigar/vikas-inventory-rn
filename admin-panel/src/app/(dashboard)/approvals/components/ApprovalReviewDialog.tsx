@@ -6,6 +6,7 @@ import { ApprovalDto } from "@/types/api/approval.types";
 import { useReviewApprovalMutation } from "@/hooks/useReviewApprovalMutation";
 import { useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { formatDate } from "@/lib/utils";
 
 interface ApprovalReviewDialogProps {
   approval: ApprovalDto | null;
@@ -78,7 +79,7 @@ export function ApprovalReviewDialog({ approval, open, onOpenChange }: ApprovalR
           </div>
           <div className="grid grid-cols-3 gap-4 border-b pb-4">
             <div className="font-medium text-sm text-gray-500">Date</div>
-            <div className="col-span-2 text-sm">{new Date(approval.created_at).toLocaleString()}</div>
+            <div className="col-span-2 text-sm">{formatDate(approval.created_at)}</div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="font-medium text-sm text-gray-500">Status</div>

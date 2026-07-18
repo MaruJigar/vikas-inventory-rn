@@ -1749,6 +1749,33 @@
       }
     },
     "/v1/products/{id}": {
+      "get": {
+        "operationId": "ProductController_getProductById_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get Product by ID",
+        "tags": [
+          "Product"
+        ]
+      },
       "put": {
         "operationId": "ProductController_updateProduct_v1",
         "parameters": [
@@ -5448,6 +5475,10 @@
           "country": {
             "type": "string",
             "description": "Country"
+          },
+          "pincode": {
+            "type": "string",
+            "description": "Pincode"
           }
         },
         "required": [
@@ -5492,6 +5523,10 @@
           "country": {
             "type": "string",
             "description": "Country"
+          },
+          "pincode": {
+            "type": "string",
+            "description": "Pincode"
           }
         }
       },
@@ -5541,6 +5576,10 @@
           "country": {
             "type": "string",
             "description": "Country"
+          },
+          "pincode": {
+            "type": "string",
+            "description": "Pincode"
           },
           "is_active": {
             "type": "boolean",
@@ -5611,6 +5650,10 @@
             "type": "string",
             "description": "Country"
           },
+          "pincode": {
+            "type": "string",
+            "description": "Pincode"
+          },
           "password": {
             "type": "string",
             "description": "Password"
@@ -5664,6 +5707,10 @@
             "type": "string",
             "description": "Country"
           },
+          "pincode": {
+            "type": "string",
+            "description": "Pincode"
+          },
           "is_active": {
             "type": "boolean",
             "description": "Is active"
@@ -5704,6 +5751,14 @@
           "state": {
             "type": "string",
             "description": "State"
+          },
+          "country": {
+            "type": "string",
+            "description": "Country"
+          },
+          "pincode": {
+            "type": "string",
+            "description": "Pincode"
           }
         }
       },
@@ -5753,6 +5808,10 @@
           "country": {
             "type": "string",
             "description": "Country"
+          },
+          "pincode": {
+            "type": "string",
+            "description": "Pincode"
           },
           "approval_status": {
             "type": "string",
@@ -5864,6 +5923,10 @@
           "country": {
             "type": "string",
             "description": "Country"
+          },
+          "pincode": {
+            "type": "string",
+            "description": "Pincode"
           }
         },
         "required": [
@@ -5908,6 +5971,14 @@
           "state": {
             "type": "string",
             "description": "State"
+          },
+          "country": {
+            "type": "string",
+            "description": "Country"
+          },
+          "pincode": {
+            "type": "string",
+            "description": "Pincode"
           },
           "is_active": {
             "type": "boolean",

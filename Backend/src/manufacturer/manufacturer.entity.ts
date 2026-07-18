@@ -54,6 +54,10 @@ export class Manufacturer {
   @ApiProperty({ description: 'Country' })
   country: string;
 
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  @ApiPropertyOptional({ description: 'Pincode' })
+  pincode: string;
+
   @Column({ type: 'boolean', default: true })
   @ApiProperty({ description: 'Is active' })
   is_active: boolean;

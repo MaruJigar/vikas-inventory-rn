@@ -58,6 +58,13 @@ export class ProductController {
     );
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Get Product by ID' })
+  @ApiBearerAuth('bearer')
+  getProductById(@Request() req, @Param('id') id: string) {
+    return this.productService.getProductById(req.user.userId, req.user.role, id);
+  }
+
   @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Put(':id')
   @ApiOperation({ summary: 'Update Product' })

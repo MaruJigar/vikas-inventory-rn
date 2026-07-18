@@ -11,7 +11,7 @@ import { OrderDto, FulfillmentLogDto } from '@/types/api/order.types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Package, Truck, CheckCircle, PackageOpen } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils';
 
 interface OrderFulfillmentLogsDrawerProps {
   order: OrderDto | null;
@@ -134,9 +134,9 @@ function FulfillmentLogsTimeline({ orderId }: { orderId: string }) {
                   )}
                 </div>
                 <div className="text-xs text-slate-400 text-right">
-                  {format(new Date(log.created_at), 'dd MMM yyyy')}
+                  {formatDate(log.created_at).split(',')[0]}
                   <br />
-                  {format(new Date(log.created_at), 'hh:mm a')}
+                  {formatDate(log.created_at).split(',')[1]?.trim()}
                 </div>
               </div>
               

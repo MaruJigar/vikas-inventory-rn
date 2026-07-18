@@ -45,6 +45,14 @@ export class ApprovalController {
   }
 
   @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Get(':id')
+  @ApiOperation({ summary: 'Get details' })
+  @ApiBearerAuth('bearer')
+  getDetails(@Param('id') id: string, @Request() req) {
+    return this.approvalService.getApprovalById(id, req.user);
+  }
+
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Post(':id/review')
   @ApiOperation({ summary: 'Review' })
   @ApiBearerAuth('bearer')

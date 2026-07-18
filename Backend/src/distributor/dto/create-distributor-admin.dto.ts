@@ -74,4 +74,9 @@ export class CreateDistributorAdminDto {
   @IsString()
   @ApiPropertyOptional({ description: 'Country' })
   country?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({ description: 'Pincode' })
+  pincode?: string;
 }

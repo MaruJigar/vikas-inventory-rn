@@ -401,13 +401,23 @@ export class AnalyticsService {
       )
       .setParameter('today', today);
 
-    this.applyOwnership(qb, 'app', userRole, userId, 'requester_user_id');
+    if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfgSubquery = `SELECT m.id FROM manufacturers m WHERE m.user_id = :userId`;
+      qb.andWhere(`app.manufacturer_id IN (${mfgSubquery})`, { userId });
+      qb.andWhere('app.request_type = :type', { type: 'DISTRIBUTOR_APPROVAL' });
+    } else if (userRole === 'DISTRIBUTOR_ADMIN') {
+      const distSubquery = `SELECT d.id FROM distributors d WHERE d.user_id = :userId`;
+      qb.andWhere(`app.distributor_id IN (${distSubquery})`, { userId });
+      qb.andWhere('app.request_type IN (:...types)', { types: ['SALESMAN_APPROVAL', 'SHOP_APPROVAL'] });
+    } else if (userRole !== 'SUPER_ADMIN') {
+      qb.andWhere('1=0');
+    }
 
     const result = await qb.getRawOne();
     return {
-      pendingApprovals: Number(result?.pending || 0),
-      approvedToday: Number(result?.approved_today || 0),
-      rejectedToday: Number(result?.rejected_today || 0),
+      pendingRequestsCount: Number(result?.pending || 0),
+      approvedRequestsCount: Number(result?.approved_today || 0),
+      rejectedRequestsCount: Number(result?.rejected_today || 0),
     };
   }
 

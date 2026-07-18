@@ -54,6 +54,10 @@ export class Distributor {
   @ApiProperty({ description: 'Country' })
   country: string;
 
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  @ApiPropertyOptional({ description: 'Pincode' })
+  pincode: string;
+
   @Column({ type: 'varchar', length: 50, default: 'PENDING_APPROVAL' })
   @ApiProperty({ description: 'Approval status' })
   approval_status: string;

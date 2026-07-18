@@ -13,6 +13,7 @@ import { updateDistributorSchema, UpdateDistributorFormValues } from '@/lib/vali
 import { useUpdateDistributorMutation } from '@/hooks/distributors/useUpdateDistributorMutation';
 import { useDistributorQuery } from '@/hooks/distributors/useDistributorQuery';
 import { Textarea } from '@/components/ui/textarea';
+import { LocationSelector } from '@/components/shared/LocationSelector';
 
 interface EditDistributorDrawerProps {
   distributorId: string | null;
@@ -43,7 +44,8 @@ export function EditDistributorDrawer({ distributorId, isOpen, onClose }: EditDi
       address: '',
       city: '',
       state: '',
-      country: '',
+      country: 'India',
+      pincode: '',
       is_active: true,
       manufacturer_ids: [],
     },
@@ -72,7 +74,8 @@ export function EditDistributorDrawer({ distributorId, isOpen, onClose }: EditDi
         address: distributor.address || '',
         city: distributor.city || '',
         state: distributor.state || '',
-        country: distributor.country || '',
+        country: distributor.country || 'India',
+        pincode: distributor.pincode || '',
         is_active: distributor.is_active,
         manufacturer_ids: distributor.manufacturer_ids || [],
       });
@@ -87,7 +90,8 @@ export function EditDistributorDrawer({ distributorId, isOpen, onClose }: EditDi
       address: data.address || undefined,
       city: data.city || undefined,
       state: data.state || undefined,
-      country: data.country || undefined,
+      country: data.country || 'India',
+      pincode: data.pincode || undefined,
     };
 
     updateDistributor(sanitizedData, {
@@ -179,24 +183,30 @@ export function EditDistributorDrawer({ distributorId, isOpen, onClose }: EditDi
               {errors.address && <p className="text-sm text-red-500">{errors.address.message}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit_city">City</Label>
-                <Input id="edit_city" {...register('city')} placeholder="e.g. Mumbai" />
-                {errors.city && <p className="text-sm text-red-500">{errors.city.message}</p>}
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="edit_state">State</Label>
-                <Input id="edit_state" {...register('state')} placeholder="e.g. Maharashtra" />
-                {errors.state && <p className="text-sm text-red-500">{errors.state.message}</p>}
-              </div>
-            </div>
+            <Controller
+              name="state"
+              control={control}
+              render={({ field: stateField }) => (
+                <Controller
+                  name="city"
+                  control={control}
+                  render={({ field: cityField }) => (
+                    <LocationSelector
+                      stateValue={stateField.value || ''}
+                      cityValue={cityField.value || ''}
+                      onStateChange={stateField.onChange}
+                      onCityChange={cityField.onChange}
+                      disabled={isPending}
+                    />
+                  )}
+                />
+              )}
+            />
 
             <div className="grid gap-2">
-              <Label htmlFor="edit_country">Country</Label>
-              <Input id="edit_country" {...register('country')} placeholder="e.g. India" />
-              {errors.country && <p className="text-sm text-red-500">{errors.country.message}</p>}
+              <Label htmlFor="edit_pincode">Pincode</Label>
+              <Input id="edit_pincode" {...register('pincode')} placeholder="e.g. 400001" maxLength={10} />
+              {errors.pincode && <p className="text-sm text-red-500">{errors.pincode.message}</p>}
             </div>
           </div>
 

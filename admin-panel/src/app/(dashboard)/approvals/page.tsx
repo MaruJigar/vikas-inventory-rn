@@ -8,7 +8,7 @@ import { useDataTable } from '@/hooks/table/useDataTable';
 import { useApprovalsQuery } from '@/hooks/approvals/useApprovalsQuery';
 import { getApprovalColumns } from '@/features/approvals/components/approvals-columns';
 import { ApprovalFilters } from '@/features/approvals/components/ApprovalFilters';
-import { ApprovalReviewDialog } from '@/features/approvals/components/ApprovalReviewDialog';
+import { ApprovalDetailsDrawer } from '@/features/approvals/components/approval-details-drawer';
 
 function ApprovalsPageContent() {
   const { queryState, setPage, setLimit } = useDataTable();
@@ -58,9 +58,9 @@ function ApprovalsPageContent() {
         />
       </div>
 
-      <ApprovalReviewDialog
-        open={reviewDialogOpen}
-        onOpenChange={setReviewDialogOpen}
+      <ApprovalDetailsDrawer
+        isOpen={reviewDialogOpen}
+        onClose={() => setReviewDialogOpen(false)}
         approvalId={selectedApprovalId}
       />
     </div>

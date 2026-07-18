@@ -1,6 +1,6 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { CategoryDto } from '@/types/api/product.types';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils';
 import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,7 +48,7 @@ export const getCategoryColumns = ({
   {
     accessorKey: 'created_at',
     header: 'Created Date',
-    cell: ({ row }) => format(new Date(row.getValue('created_at')), 'MMM dd, yyyy'),
+    cell: ({ row }) => formatDate(row.getValue('created_at')),
   },
   {
     id: 'actions',

@@ -5,6 +5,17 @@ import { OrderItemDto } from '@/types/api/order.types';
 import { formatDate } from '@/lib/utils';
 import { OrderStatusBadge } from './order-status-badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { getImageUrl } from '@/lib/utils/image';
+import Image from 'next/image';
+import { useUpdateOrderStatusMutation } from '@/hooks/orders/useUpdateOrderStatusMutation';
+import { Button } from '@/components/ui/button';
+import { ArrowRight, Package } from 'lucide-react';
+
+const STATUS_PROGRESSION: Record<string, string> = {
+  'PENDING': 'ORDERED',
+  'ORDERED': 'SHIPPED',
+  'SHIPPED': 'DELIVERED',
+};
 
 interface OrderDetailsDrawerProps {
   orderId: string | null;
@@ -15,6 +26,17 @@ interface OrderDetailsDrawerProps {
 export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDrawerProps) {
   const { data: response, isLoading, isError } = useOrderQuery(orderId);
   const order = response && 'data' in response ? response.data : response;
+  
+  const updateStatusMutation = useUpdateOrderStatusMutation(orderId);
+  
+  const currentStatusName = typeof order?.status === 'object' ? (order.status as any)?.name : order?.status;
+  const nextStatus = currentStatusName ? STATUS_PROGRESSION[currentStatusName] : null;
+
+  const handleAdvanceStatus = () => {
+    if (nextStatus && orderId) {
+      updateStatusMutation.mutate({ status: nextStatus });
+    }
+  };
 
   return (
     <EntityFormDrawer 
@@ -42,7 +64,19 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
           
           {/* Section 1: Order Summary */}
           <section className="border rounded-md bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900 mb-3 border-b pb-2">Order Summary</h3>
+            <div className="flex justify-between items-center mb-3 border-b pb-2">
+              <h3 className="text-sm font-semibold text-slate-900">Order Summary</h3>
+              {nextStatus && (
+                <Button 
+                  size="sm" 
+                  onClick={handleAdvanceStatus} 
+                  disabled={updateStatusMutation.isPending}
+                  className="h-8"
+                >
+                  Move to {nextStatus} <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
               <div>
                 <div className="text-slate-500">Order Number</div>
@@ -127,6 +161,7 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50">
+                      <TableHead className="w-16">Image</TableHead>
                       <TableHead>Product</TableHead>
                       <TableHead>SKU</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
@@ -136,16 +171,39 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {order.items.map((item: OrderItemDto) => (
-                      <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.product_name_snapshot}</TableCell>
+                    {order.items.map((item: OrderItemDto) => {
+                        let imageUrl = item.product?.product_image_url;
+                        if (Array.isArray(imageUrl)) {
+                          imageUrl = imageUrl[0];
+                        } else if (typeof imageUrl === 'string') {
+                          imageUrl = imageUrl.split(',')[0].trim();
+                        }
+                        
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <div className="relative h-10 w-10 overflow-hidden rounded-md border bg-slate-100 flex items-center justify-center">
+                                {imageUrl ? (
+                                  <Image
+                                    src={getImageUrl(imageUrl)}
+                                    alt={item.product_name_snapshot}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <Package className="h-5 w-5 text-slate-400" />
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">{item.product_name_snapshot}</TableCell>
                           <TableCell className="text-slate-500">{item.sku_snapshot}</TableCell>
                           <TableCell className="text-right">{Number(item.quantity || 0)}</TableCell>
                           <TableCell className="text-right">₹{Number(item.mrp || 0).toFixed(2)}</TableCell>
                           <TableCell className="text-right">₹{Number((item.gross_line_amount || 0) - (item.net_line_amount || 0) + (item.gst_amount || 0)).toFixed(2)}</TableCell>
                           <TableCell className="text-right font-medium">₹{Number(item.net_line_amount || 0).toFixed(2)}</TableCell>
                       </TableRow>
-                    ))}
+                        );
+                    })}
                   </TableBody>
                 </Table>
               </div>

@@ -23,7 +23,12 @@ function formatCurrency(value: number): string {
 
 function formatDateLabel(dateStr: string): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+  if (isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    month: 'short',
+    day: 'numeric',
+  }).format(d);
 }
 
 export function AnalyticsRevenueTrendChart({ data, isLoading }: AnalyticsRevenueTrendChartProps) {
