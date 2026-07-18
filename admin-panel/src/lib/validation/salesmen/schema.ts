@@ -5,7 +5,7 @@ export const createSalesmanSchema = z.object({
   email: z.string().email('Invalid email address').min(1, 'Email is required'),
   phone: z.string().min(1, 'Phone number is required').max(30, 'Phone is too long'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  distributor_id: z.string().min(1, 'Distributor selection is required').uuid('Invalid distributor ID format'),
+  distributor_id: z.string().uuid('Invalid distributor ID format').optional().or(z.literal('')),
   state_id: z.string().min(1, 'State is required'),
   state: z.string().optional().or(z.literal('')),
   city_id: z.string().optional().or(z.literal('')),

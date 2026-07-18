@@ -37,7 +37,7 @@ import { Salesman } from './salesman.entity';
 @Controller('salesmen')
 @ApiTags('Salesman')
 export class SalesmanController {
-  constructor(private readonly salesmanService: SalesmanService) {}
+  constructor(private readonly salesmanService: SalesmanService) { }
 
   @Post('register')
   @ApiOperation({ summary: 'Register' })

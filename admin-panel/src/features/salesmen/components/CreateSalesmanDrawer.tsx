@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useAuthStore } from '@/store/useAuthStore';
 import { EntityFormDrawer } from '@/components/shared/EntityFormDrawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ interface CreateSalesmanDrawerProps {
 export function CreateSalesmanDrawer({ isOpen, onClose }: CreateSalesmanDrawerProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const { user } = useAuthStore();
 
   const createSalesmanMutation = useCreateSalesmanMutation();
   
@@ -90,6 +92,10 @@ export function CreateSalesmanDrawer({ isOpen, onClose }: CreateSalesmanDrawerPr
       } else {
         delete payload.city_id;
         delete payload.city;
+      }
+
+      if (!payload.distributor_id) {
+        delete payload.distributor_id;
       }
 
       await createSalesmanMutation.mutateAsync(payload);
@@ -156,41 +162,43 @@ export function CreateSalesmanDrawer({ isOpen, onClose }: CreateSalesmanDrawerPr
             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
           </div>
 
-          <div>
-            <Label htmlFor="distributor_id">Distributor *</Label>
-            <Controller
-              name="distributor_id"
-              control={control}
-              render={({ field }) => (
-              <Select
-                onValueChange={field.onChange}
-                value={field.value}
-                disabled={isLoadingDistributors}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    {isLoadingDistributors 
-                      ? 'Loading...' 
-                      : (distributors.find(d => d.id === field.value)?.business_name || distributors.find(d => d.id === field.value)?.id || 'Select a distributor')
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {distributors.length === 0 && !isLoadingDistributors ? (
-                    <SelectItem value="none" disabled>No distributors found</SelectItem>
-                  ) : (
-                    distributors.map((distributor) => (
-                      <SelectItem key={distributor.id} value={distributor.id}>
-                        {distributor.business_name || distributor.id}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              )}
-            />
-            {errors.distributor_id && <p className="text-red-500 text-xs mt-1">{errors.distributor_id.message}</p>}
-          </div>
+          {user?.role !== 'DISTRIBUTOR_ADMIN' && (
+            <div>
+              <Label htmlFor="distributor_id">Distributor *</Label>
+              <Controller
+                name="distributor_id"
+                control={control}
+                render={({ field }) => (
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  disabled={isLoadingDistributors}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      {isLoadingDistributors 
+                        ? 'Loading...' 
+                        : (distributors.find(d => d.id === field.value)?.business_name || distributors.find(d => d.id === field.value)?.id || 'Select a distributor')
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {distributors.length === 0 && !isLoadingDistributors ? (
+                      <SelectItem value="none" disabled>No distributors found</SelectItem>
+                    ) : (
+                      distributors.map((distributor) => (
+                        <SelectItem key={distributor.id} value={distributor.id}>
+                          {distributor.business_name || distributor.id}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                )}
+              />
+              {errors.distributor_id && <p className="text-red-500 text-xs mt-1">{errors.distributor_id.message}</p>}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">

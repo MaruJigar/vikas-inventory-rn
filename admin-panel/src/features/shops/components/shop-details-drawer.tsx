@@ -82,6 +82,18 @@ export function ShopDetailsDrawer({ shop, isOpen, onClose }: ShopDetailsDrawerPr
                 {[shop.address, cityName, stateName].filter(Boolean).join(', ') || '-'}
               </div>
             </div>
+            <div className="col-span-2">
+              <div className="text-sm font-medium text-slate-500 mb-1">Location</div>
+              <div className="text-sm text-slate-900">
+                {shop.maps_link ? (
+                  <a href={shop.maps_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    View Map
+                  </a>
+                ) : (
+                  '-'
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

@@ -3,6 +3,7 @@ import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { PERMISSIONS, Role } from '@/config/permissions';
 import { ROUTES } from '@/config/routes';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -51,11 +52,16 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Do not default to SUPER_ADMIN to avoid leakage. If no user/role, show no items.
   const role = user?.role;
 
-  const filteredItems = role ? navItems.filter(item => hasRole(role, item.roles)) : [];
+  const filteredItems = (mounted && role) ? navItems.filter(item => hasRole(role, item.roles)) : [];
 
   return (
     <div className="w-64 bg-slate-900 text-white h-full flex flex-col">

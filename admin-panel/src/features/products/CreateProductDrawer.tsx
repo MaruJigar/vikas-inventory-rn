@@ -29,7 +29,7 @@ interface CreateProductDrawerProps {
 export function CreateProductDrawer({ open, onOpenChange }: CreateProductDrawerProps) {
   const user = useAuthStore((s) => s.user);
   const createMutation = useCreateProductMutation();
-  const { data: categoriesResponse } = useGetCategories();
+  const { data: categoriesResponse, isLoading: isCategoriesLoading } = useGetCategories({ limit: 1000 });
   const categories = categoriesResponse?.data ?? [];
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
@@ -238,8 +238,14 @@ export function CreateProductDrawer({ open, onOpenChange }: CreateProductDrawerP
         <div className="space-y-1">
           <Label htmlFor="category_id">Category</Label>
           <Select onValueChange={(val: string | null) => setValue('category_id', val === 'none' || val === null ? undefined : val)}>
-            <SelectTrigger>
-              <SelectValue placeholder="— Select Category —" />
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="— Select Category —">
+                {isCategoriesLoading 
+                  ? "Loading categories..."
+                  : watch('category_id') && watch('category_id') !== 'none' 
+                    ? categories.find(c => c.id === watch('category_id'))?.name || watch('category_id') 
+                    : "— Select Category —"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">None</SelectItem>

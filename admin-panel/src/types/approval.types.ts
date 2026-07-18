@@ -4,6 +4,7 @@ export type RequestType =
   | 'SALESMAN_APPROVAL'
   | 'DISTRIBUTOR_APPROVAL'
   | 'MANUFACTURER_APPROVAL'
+  | 'SHOP_APPROVAL'
   | 'LINK_REQUEST';
 
 export interface ApprovalRequestDto {
@@ -22,6 +23,9 @@ export interface ApprovalRequestDto {
 
   manufacturer_id: string | null;
   manufacturer_name: string | null;
+
+  shop_id?: string | null;
+  shop_name?: string | null;
 
   submitted_at: string;
   created_at: string;

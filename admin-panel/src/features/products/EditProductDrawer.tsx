@@ -27,7 +27,7 @@ interface EditProductDrawerProps {
 
 export function EditProductDrawer({ open, onOpenChange, product }: EditProductDrawerProps) {
   const updateMutation = useUpdateProductMutation(product?.id ?? '');
-  const { data: categoriesResponse } = useGetCategories();
+  const { data: categoriesResponse, isLoading: isCategoriesLoading } = useGetCategories({ limit: 1000 });
   const categories = categoriesResponse?.data ?? [];
 
   const uploadMutation = useUploadProductImageMutation();
@@ -103,7 +103,7 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
     for (const file of files) {
       const tempPreview = URL.createObjectURL(file);
       setImagePreviews((prev) => [...prev, tempPreview]);
-      
+
       try {
         const data = await uploadMutation.mutateAsync(file);
         const latestUrls = watch('product_image_url')?.split(',').filter(Boolean) || [];
@@ -117,7 +117,7 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
         }
       }
     }
-    
+
     // Clear input so same file can be selected again
     e.target.value = '';
   };
@@ -150,21 +150,21 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
       }
     >
       <form id="edit-product-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        
+
         <div className="space-y-4 pt-4 border-t">
           <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Account Status</h3>
           <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50">
             <div className="space-y-0.5">
               <Label className="text-base font-medium">Active Product</Label>
               <p className="text-sm text-slate-500">
-                {watch('is_active') 
-                  ? 'Visible to everyone with permission.' 
+                {watch('is_active')
+                  ? 'Visible to everyone with permission.'
                   : 'Hidden from others. Visible only to you.'}
               </p>
             </div>
-            <Switch 
-              checked={watch('is_active')} 
-              onCheckedChange={(checked) => setValue('is_active', checked, { shouldDirty: true })} 
+            <Switch
+              checked={watch('is_active')}
+              onCheckedChange={(checked) => setValue('is_active', checked, { shouldDirty: true })}
             />
           </div>
         </div>
@@ -173,11 +173,13 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
         <div className="space-y-1">
           <Label htmlFor="edit-category_id">Category</Label>
           <Select value={categoryId || 'none'} onValueChange={(val: string | null) => setValue('category_id', val === 'none' || val === null ? undefined : val)}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="— Select Category —">
-                {categoryId && categories.length > 0 
-                  ? categories.find(c => c.id === categoryId)?.name || '— Select Category —' 
-                  : '— Select Category —'}
+                {isCategoriesLoading
+                  ? "Loading categories..."
+                  : categoryId && categoryId !== 'none'
+                    ? categories.find(c => c.id === categoryId)?.name || (product as any)?.category?.name || categoryId
+                    : "— Select Category —"}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -252,7 +254,7 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
         <div className="space-y-2 pt-4 border-t">
           <Label>Product Images (Max 3)</Label>
           <input type="hidden" {...register('product_image_url')} />
-          
+
           <div className="flex flex-wrap gap-4">
             {imagePreviews.map((preview, idx) => (
               <div key={idx} className="relative w-32 h-32 rounded-lg border overflow-hidden bg-slate-50">

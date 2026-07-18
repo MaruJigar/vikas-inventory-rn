@@ -111,37 +111,39 @@ export class SalesmanService {
       );
     }
 
-    const targetDistributorId = dto.distributor_id;
+    let targetDistributorId = dto.distributor_id;
 
     if (userRole === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distributorRepo.findOne({
         where: { user_id: userId },
       });
       if (!dist) throw new ForbiddenException('Distributor profile not found');
-      if (targetDistributorId !== dist.id) {
-        throw new ForbiddenException(
-          'Cannot create salesman for another distributor',
-        );
+      targetDistributorId = dist.id;
+    } else {
+      if (!targetDistributorId) {
+        throw new BadRequestException('distributor_id is required');
       }
-    } else if (userRole === 'MANUFACTURER_ADMIN') {
-      const mfrResult = await this.dataSource.query(
-        `SELECT id FROM manufacturers WHERE user_id = $1`,
-        [userId],
-      );
-      if (!mfrResult.length)
-        throw new ForbiddenException('Manufacturer profile not found');
 
-      const link = await this.dataSource.query(
-        `SELECT id FROM manufacturer_distributors WHERE manufacturer_id = $1 AND distributor_id = $2`,
-        [mfrResult[0].id, targetDistributorId],
-      );
-      if (!link.length) {
-        throw new ForbiddenException(
-          'Distributor not linked to your manufacturer network',
+      if (userRole === 'MANUFACTURER_ADMIN') {
+        const mfrResult = await this.dataSource.query(
+          `SELECT id FROM manufacturers WHERE user_id = $1`,
+          [userId],
         );
+        if (!mfrResult.length)
+          throw new ForbiddenException('Manufacturer profile not found');
+
+        const link = await this.dataSource.query(
+          `SELECT id FROM manufacturer_distributors WHERE manufacturer_id = $1 AND distributor_id = $2`,
+          [mfrResult[0].id, targetDistributorId],
+        );
+        if (!link.length) {
+          throw new ForbiddenException(
+            'Distributor not linked to your manufacturer network',
+          );
+        }
+      } else if (userRole !== 'SUPER_ADMIN') {
+        throw new ForbiddenException('Unauthorized role');
       }
-    } else if (userRole !== 'SUPER_ADMIN') {
-      throw new ForbiddenException('Unauthorized role');
     }
 
     const distributor = await this.distributorRepo.findOne({
