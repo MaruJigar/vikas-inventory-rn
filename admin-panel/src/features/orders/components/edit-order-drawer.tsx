@@ -39,7 +39,7 @@ type FormValues = {
 
 export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerProps) {
   const { data: response, isLoading } = useOrderQuery(isOpen ? orderId : null);
-  const order = response?.data;
+  const order = response && 'data' in response ? (response as any).data : response;
 
   const { mutate: updateOrder, isPending } = useUpdateOrderMutation(orderId);
 
@@ -75,7 +75,7 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
           productId: item.product_id,
           product_name_snapshot: item.product_name_snapshot,
           sku_snapshot: item.sku_snapshot,
-          mrp_snapshot: Number(item.mrp_snapshot),
+          mrp_snapshot: Number(item.mrp || 0),
           quantity: Number(item.quantity),
         })),
         standardDiscountPercent: Number(order.standard_discount_percent || 0),
@@ -164,32 +164,13 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                   {order.shop.city && ` • ${order.shop.city}`}
                 </div>
               </section>
-            ) : order.salesman_id === null && order.status?.name === 'DRAFT' ? (
+            ) : order.manufacturer_id && (
               <section className="bg-slate-50 p-4 rounded-md border">
                 <h3 className="text-sm font-semibold text-slate-900 mb-2">Manufacturer Target</h3>
                 <div className="text-sm text-slate-600">
-                  <Select
-                    value={watch('manufacturerId') || ""}
-                    onValueChange={(val) => setValue('manufacturerId', val || undefined)}
-                  >
-                    <SelectTrigger className="w-full bg-white">
-                      <SelectValue placeholder="Select a Manufacturer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {manufacturers.map((mfr) => (
-                        <SelectItem key={mfr.id} value={mfr.id}>
-                          {mfr.company_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </section>
-            ) : order.manufacturer_id && (
-              <section className="bg-slate-50 p-4 rounded-md border">
-                <h3 className="text-sm font-semibold text-slate-900 mb-2">Manufacturer</h3>
-                <div className="text-sm text-slate-600">
-                  <span className="font-medium text-slate-900">ID: {order.manufacturer_id}</span>
+                  <span className="font-medium text-slate-900">
+                    {manufacturers.find(m => m.id === order.manufacturer_id)?.company_name || `ID: ${order.manufacturer_id}`}
+                  </span>
                 </div>
               </section>
             )}
@@ -293,7 +274,7 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                     if (val === 'Other') {
                       setValue('transportMode', ' '); // Use a space to distinguish from empty but not predefined
                     } else {
-                      setValue('transportMode', val);
+                      setValue('transportMode', val || '');
                     }
                   }}
                 >
@@ -369,7 +350,7 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
               <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending || watchedProducts.some(p => p.quantity <= 0 || p.itemDiscountValue < 0) || watchedProducts.length === 0}>
+              <Button type="submit" disabled={isPending || watchedProducts.some(p => p.quantity <= 0) || watchedProducts.length === 0}>
                 {isPending ? 'Saving...' : 'Save Changes'}
               </Button>
             </SheetFooter>

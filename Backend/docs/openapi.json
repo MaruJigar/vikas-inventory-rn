@@ -431,6 +431,35 @@
         ]
       }
     },
+    "/v1/approvals/{id}": {
+      "get": {
+        "operationId": "ApprovalController_getDetails_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get details",
+        "tags": [
+          "Approval"
+        ]
+      }
+    },
     "/v1/approvals/{id}/review": {
       "post": {
         "operationId": "ApprovalController_review_v1",

@@ -27,7 +27,8 @@ export interface CancelOrderDto {
 }
 
 export interface UpdateOrderStatusDto {
-  status: string;
+  status_id?: string;
+  status?: string;
   notes?: string;
 }
 
