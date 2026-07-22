@@ -1,5 +1,5 @@
 'use client';
-
+import { PERMISSIONS } from '@/config/permissions';
 import { Suspense, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RoleGuard } from '@/components/auth/RoleGuard';
@@ -139,7 +139,6 @@ function ShopsPageContent() {
   );
 }
 
-import { PERMISSIONS } from '@/config/permissions';
 
 export default function ShopsPage() {
   return (

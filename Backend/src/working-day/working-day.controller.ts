@@ -5,6 +5,7 @@ import {
   Body,
   Request,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { WorkingDayService } from './working-day.service';
 import { CheckInDto } from './dto/check-in.dto';
@@ -12,6 +13,9 @@ import { CheckOutDto } from './dto/check-out.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
+import { WorkingDayQueryDto } from './dto/working-day-query.dto';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
+import { WorkingDay } from './working-day.entity';
 import {
   ApiTags,
   ApiOperation,
@@ -51,8 +55,8 @@ export class WorkingDayController {
   @Get('history')
   @ApiOperation({ summary: 'Get History' })
   @ApiBearerAuth('bearer')
-  getHistory(@Request() req) {
-    // Similarly, manufacturerDistributors should be passed for Manufacturer Admin
-    return this.wdService.getHistory(req.user.userId, req.user.role, []);
+  @ApiPaginatedResponse(WorkingDay)
+  getHistory(@Request() req, @Query() query: WorkingDayQueryDto) {
+    return this.wdService.getHistory(req.user.userId, req.user.role, query);
   }
 }
