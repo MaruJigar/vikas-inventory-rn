@@ -924,6 +924,12 @@ export class OrderService {
     // Verify ownership (SUPER_ADMIN, DISTRIBUTOR_ADMIN, MANUFACTURER_ADMIN)
     await this.verifyOrderOwnership(order, role, userId);
 
+    // The person who created the order (buyer) cannot update its status.
+    // For distributor-to-manufacturer orders, the creator is the DISTRIBUTOR_ADMIN.
+    if (role === 'DISTRIBUTOR_ADMIN' && order.salesman_id === null) {
+      throw new ForbiddenException('The creator of the order cannot update its status.');
+    }
+
     let targetStatusId = dto.status_id;
     if (!targetStatusId && dto.status) {
       const statusObj = await this.orderStatusService.getStatusByName(dto.status);
