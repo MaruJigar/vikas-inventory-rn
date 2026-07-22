@@ -293,13 +293,13 @@ export class ApprovalService {
     const logsWithUsers = await Promise.all(logs.map(async log => {
       let userName = 'System';
       if (log.acted_by_user_id) {
-        const user = await this.userRepo.findOne({ where: { id: log.acted_by_user_id }, select: ['full_name']});
+        const user = await this.userRepo.findOne({ where: { id: log.acted_by_user_id }, select: { full_name: true }});
         if (user) userName = user.full_name;
       }
       return { ...log, acted_by_user_name: userName };
     }));
 
-    let entityInfo = null;
+    let entityInfo: any = null;
     if (request.request_type === 'DISTRIBUTOR_APPROVAL' && request.distributor_id) {
        entityInfo = await this.dataSource.getRepository(Distributor).findOne({ where: { id: request.distributor_id } });
     } else if (request.request_type === 'SALESMAN_APPROVAL' && request.salesman_id) {
@@ -310,9 +310,9 @@ export class ApprovalService {
        entityInfo = await this.dataSource.getRepository(Shop).findOne({ where: { id: request.metadata.shop_id } });
     }
 
-    let requester = null;
+    let requester: any = null;
     if (request.requester_user_id) {
-       requester = await this.userRepo.findOne({ where: { id: request.requester_user_id }, select: ['id', 'full_name', 'email', 'phone']});
+       requester = await this.userRepo.findOne({ where: { id: request.requester_user_id }, select: { id: true, full_name: true, email: true, phone: true }});
     }
 
     return {
