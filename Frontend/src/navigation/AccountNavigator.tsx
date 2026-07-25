@@ -9,6 +9,9 @@ import { EditProfileScreen } from '@/features/profile/screens/EditProfileScreen'
 import { SalesmenListScreen } from '@/features/salesman/screens/SalesmenListScreen';
 import { AddSalesmanScreen } from '@/features/salesman/screens/AddSalesmanScreen';
 import { SalesmanDetailScreen } from '@/features/salesman/screens/SalesmanDetailScreen';
+import { ApprovalsListScreen } from '@/features/approvals/screens/ApprovalsListScreen';
+import { ApprovalDetailScreen } from '@/features/approvals/screens/ApprovalDetailScreen';
+import { AttendanceScreen } from '@/features/attendance/screens/AttendanceScreen';
 
 const Stack = createNativeStackNavigator<AccountStackParamList>();
 
@@ -48,6 +51,21 @@ export function AccountNavigator() {
         name="SalesmanDetail"
         component={SalesmanDetailScreen}
         options={{ title: t('salesmen.detail.title') }}
+      />
+      <Stack.Screen
+        name="Approvals"
+        component={ApprovalsListScreen}
+        options={{ title: t('approvals.title') }}
+      />
+      <Stack.Screen
+        name="ApprovalDetail"
+        component={ApprovalDetailScreen}
+        options={{ title: t('approvals.detail.title') }}
+      />
+      <Stack.Screen
+        name="Attendance"
+        component={AttendanceScreen}
+        options={{ title: t('attendance.title') }}
       />
     </Stack.Navigator>
   );

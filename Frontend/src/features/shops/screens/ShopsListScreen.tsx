@@ -14,6 +14,7 @@ import { Screen, Card, Input, EmptyState, Spinner } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { usePullToRefresh } from '@/lib/usePullToRefresh';
+import { shopStatusColor, shopStatusLabel } from '@/features/shops/constants';
 import { useShops } from '@/features/shops/hooks';
 import type { Shop } from '@/types/shop';
 import type { ShopsScreenProps } from '@/navigation/types';
@@ -42,7 +43,23 @@ export function ShopsListScreen({ navigation }: ShopsScreenProps<'ShopsList'>) {
   const renderItem = ({ item }: { item: Shop }) => (
     <Pressable onPress={() => navigation.navigate('ShopDetail', { id: item.id })}>
       <Card style={styles.card}>
-        <Text style={typography.title}>{item.name}</Text>
+        <View style={styles.cardTop}>
+          <Text style={[typography.title, styles.name]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          {item.verification_status ? (
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: shopStatusColor(item.verification_status) },
+              ]}
+            >
+              <Text style={styles.badgeText}>
+                {shopStatusLabel(t, item.verification_status)}
+              </Text>
+            </View>
+          ) : null}
+        </View>
         {item.owner_name ? (
           <Text style={styles.muted}>{item.owner_name}</Text>
         ) : null}
@@ -120,6 +137,19 @@ export function ShopsListScreen({ navigation }: ShopsScreenProps<'ShopsList'>) {
 const styles = StyleSheet.create({
   header: { marginTop: spacing.sm, marginBottom: spacing.md },
   card: { marginBottom: spacing.md, gap: spacing.xs },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  name: { flex: 1 },
+  badge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  badgeText: { ...typography.caption, color: '#FFFFFF' },
   muted: { ...typography.body, color: colors.textMuted },
   location: { ...typography.caption, marginTop: spacing.xs },
   listContent: { paddingBottom: spacing.xxl * 2, flexGrow: 1 },

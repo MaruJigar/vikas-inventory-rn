@@ -16,6 +16,20 @@ export function availableUnits(product: Product): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/** Display name for a product's manufacturer, tolerant of the several fields the
+ * backend has used (`company_name` is canonical). Falls back to the free-text
+ * external name for distributor-created products. */
+export function manufacturerName(product: Product): string | undefined {
+  const m = product.manufacturer;
+  return (
+    m?.company_name ??
+    m?.business_name ??
+    m?.name ??
+    product.external_manufacturer_name ??
+    undefined
+  );
+}
+
 /** Per-unit distributor price (MRP less distributor + special discount, pre-GST). */
 export function distributorUnitPrice(product: Product): number {
   const mrp = toNum(product.mrp);
@@ -25,27 +39,14 @@ export function distributorUnitPrice(product: Product): number {
   return mrp * (1 - discountPct / 100);
 }
 
-/** Discount kinds — mirrors the backend (`NONE` | `PERCENTAGE` | `FLAT`).
- * Used for the whole-order (bill) discount. */
-export type DiscountType = 'NONE' | 'PERCENTAGE' | 'FLAT';
-
-/** An order-level discount the salesman applies to the whole cart. */
-export interface BillDiscount {
-  type: DiscountType;
-  value: number;
-}
-
-/** Rupee value of a discount on a given basis, mirroring the backend
- * (`calcBillDiscount`: %·basis or a FLAT rupee amount), capped at the basis so
- * the preview can never go negative. */
-export function discountAmount(
-  type: DiscountType,
-  value: number,
-  basis: number,
-): number {
-  if (type === 'NONE' || !value || value <= 0) return 0;
-  const raw = type === 'PERCENTAGE' ? (value / 100) * basis : value;
-  return Math.min(basis, raw);
+/**
+ * Order-level discounts the salesman applies to the whole cart. Both are
+ * percentages; the backend applies them sequentially (special on the amount
+ * left after the standard discount) — see `computeCartTotals`.
+ */
+export interface OrderDiscount {
+  standardPercent: number;
+  specialPercent: number;
 }
 
 export interface CartLine {
@@ -55,55 +56,45 @@ export interface CartLine {
 
 export interface CartTotals {
   subtotal: number;
-  distributorDiscount: number;
-  additionalDiscount: number;
-  billDiscount: number;
-  gst: number;
+  standardDiscount: number;
+  specialDiscount: number;
   finalPayable: number;
   itemCount: number;
 }
 
 /**
- * Distributor cart breakdown (PRD §9.2). GST is charged on MRP per the PRD
- * worked example. This is a client-side PREVIEW — the authoritative total is
- * computed by the backend at order placement.
+ * Cart total preview, mirroring the backend `createOrder` pricing
+ * (Backend/src/order/order.service.ts): gross = Σ(MRP × qty), then the
+ * order-level standard discount is taken off the gross, and the special
+ * discount is taken off what remains (sequential, NOT both on gross). No GST
+ * is added on order creation. This is a client-side PREVIEW — the authoritative
+ * total is computed by the backend at order placement.
  */
 export function computeCartTotals(
   lines: CartLine[],
-  bill?: BillDiscount,
+  discount?: OrderDiscount,
 ): CartTotals {
   let subtotal = 0;
-  let distributorDiscount = 0;
-  let additionalDiscount = 0;
-  let gst = 0;
   let itemCount = 0;
 
   for (const { product, qty } of lines) {
-    const lineMrp = toNum(product.mrp) * qty;
-    subtotal += lineMrp;
-    distributorDiscount += lineMrp * (toNum(product.distributor_discount_percent) / 100);
-    additionalDiscount += lineMrp * (toNum(product.special_discount_percent) / 100);
-    gst += lineMrp * (toNum(product.gst_percent) / 100);
+    subtotal += toNum(product.mrp) * qty;
     itemCount += qty;
   }
 
-  // Whole-order discount applies on the MRP subtotal (mirrors the backend,
-  // which computes the bill discount on the order gross).
-  const billDiscount = discountAmount(
-    bill?.type ?? 'NONE',
-    bill?.value ?? 0,
-    subtotal,
-  );
+  // Percentages are clamped to 0–100.
+  const standardPercent = Math.min(100, Math.max(0, discount?.standardPercent ?? 0));
+  const specialPercent = Math.min(100, Math.max(0, discount?.specialPercent ?? 0));
 
-  const finalPayable =
-    subtotal - distributorDiscount - additionalDiscount - billDiscount + gst;
+  const standardDiscount = (standardPercent / 100) * subtotal;
+  const afterStandard = subtotal - standardDiscount;
+  const specialDiscount = (specialPercent / 100) * afterStandard;
+  const finalPayable = subtotal - standardDiscount - specialDiscount;
 
   return {
     subtotal,
-    distributorDiscount,
-    additionalDiscount,
-    billDiscount,
-    gst,
+    standardDiscount,
+    specialDiscount,
     finalPayable,
     itemCount,
   };

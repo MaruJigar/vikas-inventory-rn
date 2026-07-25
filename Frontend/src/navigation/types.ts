@@ -40,6 +40,10 @@ export type HomeStackParamList = {
   AddProduct: { product?: Product } | undefined;
   Cart: undefined;
   OrderSuccess: { orderNumber: string };
+  /** Distributor→Manufacturer purchase-order flow. */
+  PurchaseOrderProducts: undefined;
+  PurchaseOrderCart: undefined;
+  PurchaseOrderSuccess: { count: number };
 };
 
 export type HomeScreenProps<T extends keyof HomeStackParamList> =
@@ -87,6 +91,11 @@ export type AccountStackParamList = {
   Salesmen: undefined;
   AddSalesman: undefined;
   SalesmanDetail: { id: string };
+  Approvals: undefined;
+  /** `subject` carries the enriched name from the list (the detail endpoint
+   * doesn't re-resolve it for shop approvals). */
+  ApprovalDetail: { id: string; subject?: string };
+  Attendance: undefined;
 };
 
 export type AccountScreenProps<T extends keyof AccountStackParamList> =

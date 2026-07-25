@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { visitApi } from '@/features/visit/api';
 import { shopsApi } from '@/features/shops/api';
 import { useVisitStore } from '@/store/useVisitStore';
+import { isToday } from '@/lib/date';
 import type {
   CheckInPayload,
   EndVisitPayload,
@@ -29,7 +30,10 @@ export function useVisitSession(enabled: boolean) {
       const days = await visitApi.history();
       const activeWd = days.find((d) => d.status === 'ACTIVE') ?? null;
 
-      if (!activeWd) {
+      // An ACTIVE working day from a previous day means the salesman forgot to
+      // check out — don't restore it; they must check in fresh today (the
+      // backend marks the stale day MISSED on their next check-in).
+      if (!activeWd || !isToday(activeWd.check_in_at)) {
         reset();
         return { checkedIn: false };
       }

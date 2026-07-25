@@ -8,7 +8,7 @@ import {
 import { backordersApi } from '@/features/backorders/api';
 import type {
   BackorderStatus,
-  AllocateBackorderPayload,
+  ResolveBackorderPayload,
 } from '@/features/backorders/types';
 
 const PAGE_SIZE = 20;
@@ -44,14 +44,14 @@ export function useBackorder(id: string) {
   });
 }
 
-/** Distributor allocates on-hand stock against a backorder. Allocation also
+/** Distributor resolves (allocates) on-hand stock against a backorder. This also
  * moves inventory and can free the parent order for dispatch, so invalidate
  * orders + dashboard alongside the backorder caches. */
-export function useAllocateBackorder(id: string) {
+export function useResolveBackorder(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: AllocateBackorderPayload) =>
-      backordersApi.allocate(id, payload),
+    mutationFn: (payload: ResolveBackorderPayload) =>
+      backordersApi.resolve(id, payload),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: backorderKeys.detail(id) });
       void qc.invalidateQueries({ queryKey: backorderKeys.all });

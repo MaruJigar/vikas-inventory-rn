@@ -7,6 +7,8 @@ export interface Category {
 
 export interface Manufacturer {
   id: string;
+  /** Canonical backend field (Manufacturer entity). */
+  company_name?: string;
   name?: string;
   business_name?: string;
 }

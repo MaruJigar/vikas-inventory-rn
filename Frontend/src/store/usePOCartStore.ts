@@ -3,17 +3,25 @@ import { create } from 'zustand';
 import type { Product } from '@/types/product';
 import type { CartLine } from '@/features/products/pricing';
 
-interface CartState {
+/**
+ * Purchase-order cart — the distributor's basket for a distributor→manufacturer
+ * order. Kept entirely separate from the salesman `useCartStore` so the two
+ * flows never collide. On submit the backend auto-splits these items into one
+ * order per manufacturer (see features/purchaseOrders).
+ */
+interface POCartState {
   /** Keyed by product id for O(1) qty lookups. */
   items: Record<string, CartLine>;
-  /** Order-level discount percentages applied to the whole cart (backend
-   * standard/special discount). Applied sequentially at placement. */
+  /** Order-level discount percentages (backend standard/special, sequential). */
   standardDiscountPercent: number;
   specialDiscountPercent: number;
-  /** Optional free-text transport mode for the order. */
+  /** Optional free-text transport mode. */
   transportMode: string;
 
   add: (product: Product) => void;
+  /** Set a line to an exact quantity (used to prefill from a reorder
+   * suggestion); qty ≤ 0 removes the line. */
+  setQty: (product: Product, qty: number) => void;
   increment: (productId: string) => void;
   decrement: (productId: string) => void;
   remove: (productId: string) => void;
@@ -21,11 +29,10 @@ interface CartState {
   setSpecialDiscount: (percent: number) => void;
   setTransportMode: (mode: string) => void;
   clear: () => void;
-  /** Quantity of a product currently in the cart (0 if absent). */
   qtyOf: (productId: string) => number;
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
+export const usePOCartStore = create<POCartState>((set, get) => ({
   items: {},
   standardDiscountPercent: 0,
   specialDiscountPercent: 0,
@@ -37,12 +44,17 @@ export const useCartStore = create<CartState>((set, get) => ({
       return {
         items: {
           ...state.items,
-          [product.id]: {
-            product,
-            qty: existing ? existing.qty + 1 : 1,
-          },
+          [product.id]: { product, qty: existing ? existing.qty + 1 : 1 },
         },
       };
+    }),
+
+  setQty: (product, qty) =>
+    set((state) => {
+      const next = { ...state.items };
+      if (qty <= 0) delete next[product.id];
+      else next[product.id] = { product, qty: Math.floor(qty) };
+      return { items: next };
     }),
 
   increment: (productId) =>
@@ -50,10 +62,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       const line = state.items[productId];
       if (!line) return state;
       return {
-        items: {
-          ...state.items,
-          [productId]: { ...line, qty: line.qty + 1 },
-        },
+        items: { ...state.items, [productId]: { ...line, qty: line.qty + 1 } },
       };
     }),
 
@@ -67,10 +76,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         return { items: next };
       }
       return {
-        items: {
-          ...state.items,
-          [productId]: { ...line, qty: line.qty - 1 },
-        },
+        items: { ...state.items, [productId]: { ...line, qty: line.qty - 1 } },
       };
     }),
 

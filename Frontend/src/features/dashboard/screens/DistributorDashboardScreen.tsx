@@ -15,7 +15,10 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Screen, Card, Section, LanguageToggle } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useDistributorOrderSummary } from '@/features/dashboard/hooks';
+import {
+  useDistributorOrderSummary,
+  usePurchaseOrderCount,
+} from '@/features/dashboard/hooks';
 import { useCategories } from '@/features/products/hooks';
 import { iconForCategory } from '@/features/products/categoryIcons';
 import type { Category } from '@/types/product';
@@ -156,6 +159,7 @@ export function DistributorDashboardScreen() {
   const user = useAuthStore((s) => s.user);
   const { data: summary, isLoading: summaryLoading } =
     useDistributorOrderSummary();
+  const { data: poCount, isLoading: poLoading } = usePurchaseOrderCount();
   const navigation =
     useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   const goToOrder = (id: string) =>
@@ -171,26 +175,61 @@ export function DistributorDashboardScreen() {
     navigation
       .getParent<BottomTabNavigationProp<MainTabParamList>>()
       ?.navigate('Orders', { screen: 'OrdersList', params: { initialStatus } });
-  const goToBackorders = () =>
+  // Backorders entry hidden: the backend no longer creates backorders (inventory
+  // is auto-provisioned and only deducted at the final status), so the list is
+  // always empty. The feature code + nav routes remain (dormant) so re-adding
+  // this card is all that's needed if the backend revives backorder creation.
+  const goToApprovals = () =>
     navigation
       .getParent<BottomTabNavigationProp<MainTabParamList>>()
-      ?.navigate('Orders', { screen: 'Backorders' });
+      ?.navigate('Account', { screen: 'Approvals' });
+
+  const [fabOpen, setFabOpen] = React.useState(false);
 
   return (
     <Screen
       edges={['top']}
       floatingAction={
-        <Pressable
-          style={styles.fab}
-          onPress={() => navigation.navigate('AddProduct')}
-          accessibilityRole="button"
-          accessibilityLabel={t('dashboard.distributor.addProduct')}
-        >
-          <Ionicons name="add" size={18} color="#FFFFFF" />
-          <Text style={styles.fabText}>
-            {t('dashboard.distributor.addProduct')}
-          </Text>
-        </Pressable>
+        <View style={styles.speedDial}>
+          {fabOpen ? (
+            <>
+              <Pressable
+                style={styles.dialAction}
+                onPress={() => {
+                  setFabOpen(false);
+                  navigation.navigate('PurchaseOrderProducts');
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t('purchaseOrders.newOrder')}
+              >
+                <Ionicons name="cart-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.fabText}>{t('purchaseOrders.newOrder')}</Text>
+              </Pressable>
+              <Pressable
+                style={styles.dialAction}
+                onPress={() => {
+                  setFabOpen(false);
+                  navigation.navigate('AddProduct');
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t('dashboard.distributor.addProduct')}
+              >
+                <Ionicons name="add" size={16} color="#FFFFFF" />
+                <Text style={styles.fabText}>
+                  {t('dashboard.distributor.addProduct')}
+                </Text>
+              </Pressable>
+            </>
+          ) : null}
+          <Pressable
+            style={styles.fab}
+            onPress={() => setFabOpen((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.actions')}
+          >
+            <Ionicons name={fabOpen ? 'close' : 'add'} size={22} color="#FFFFFF" />
+          </Pressable>
+        </View>
       }
     >
       <View style={styles.topBar}>
@@ -223,26 +262,28 @@ export function DistributorDashboardScreen() {
             loading={summaryLoading}
             onPress={() => goToOrders(summary?.dispatched.statusId)}
           />
+          <SummaryStat
+            label={t('dashboard.distributor.purchaseOrders')}
+            value={poCount?.count ?? 0}
+            loading={poLoading}
+            onPress={() => goToOrders()}
+          />
         </View>
       </Section>
 
       <Pressable
-        onPress={goToBackorders}
+        onPress={goToApprovals}
         accessibilityRole="button"
-        accessibilityLabel={t('backorders.title')}
+        accessibilityLabel={t('approvals.title')}
         style={({ pressed }) => (pressed ? styles.tilePressed : undefined)}
       >
         <Card style={styles.backorderCard}>
-          <Ionicons name="cube-outline" size={24} color={colors.primary} />
+          <Ionicons name="checkmark-done-outline" size={24} color={colors.primary} />
           <View style={styles.backorderText}>
-            <Text style={typography.title}>{t('backorders.title')}</Text>
-            <Text style={styles.muted}>{t('backorders.dashboardHint')}</Text>
+            <Text style={typography.title}>{t('approvals.title')}</Text>
+            <Text style={styles.muted}>{t('approvals.dashboardHint')}</Text>
           </View>
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color={colors.textMuted}
-          />
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </Card>
       </Pressable>
 
@@ -310,17 +351,35 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlign: 'center',
   },
-  fab: {
+  speedDial: {
     position: 'absolute',
     right: spacing.lg,
     bottom: spacing.xl,
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+  },
+  dialAction: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    height: 44,
+    height: 40,
     paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
     backgroundColor: colors.primary,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-end',
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.2,

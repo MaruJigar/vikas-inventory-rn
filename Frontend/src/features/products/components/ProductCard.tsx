@@ -12,6 +12,7 @@ import {
   availableUnits,
   distributorUnitPrice,
   formatINR,
+  manufacturerName,
   toNum,
 } from '@/features/products/pricing';
 import type { Product } from '@/types/product';
@@ -58,11 +59,7 @@ export function ProductCard({
   const price = distributorUnitPrice(product);
   const discounted = price < mrp;
   const imageUrl = resolveMediaUrl(product.product_image_url);
-  const manufacturer =
-    product.manufacturer?.business_name ??
-    product.manufacturer?.name ??
-    product.external_manufacturer_name ??
-    undefined;
+  const manufacturer = manufacturerName(product);
 
   return (
     <Card style={styles.card}>

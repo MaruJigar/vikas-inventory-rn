@@ -63,6 +63,7 @@ function ProfileForm({
       address: profile.address ?? '',
       state: profile.state ?? '',
       city: profile.city ?? '',
+      pincode: profile.pincode ?? '',
     },
   });
 
@@ -81,6 +82,7 @@ function ProfileForm({
       address: clean(values.address),
       state: clean(values.state),
       city: clean(values.city),
+      pincode: clean(values.pincode),
     };
     update.mutate(payload, {
       onSuccess: () => onSaved(),
@@ -135,6 +137,12 @@ function ProfileForm({
         control={control}
         name="city"
         label={t('account.profile.city')}
+      />
+      <ControlledInput
+        control={control}
+        name="pincode"
+        label={t('account.profile.pincode')}
+        keyboardType="number-pad"
       />
 
       <Button

@@ -1,10 +1,12 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { Card } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useRecentOrders, useStatusIndex } from '@/features/orders/hooks';
+import { useManufacturerNames } from '@/features/manufacturers/hooks';
 import { formatINR, statusColor, statusLabel, toNum } from '@/features/orders/constants';
 
 export function RecentOrders({
@@ -14,6 +16,7 @@ export function RecentOrders({
 }) {
   const { t } = useTranslation();
   const { index: statusIndex } = useStatusIndex();
+  const mfrNames = useManufacturerNames();
   const { data, isLoading, isError } = useRecentOrders(5);
   const orders = data ?? [];
 
@@ -53,7 +56,22 @@ export function RecentOrders({
             <Text style={typography.body} numberOfLines={1}>
               {order.order_number}
             </Text>
-            {order.shop ? (
+            {!order.salesman_id ? (
+              <View style={styles.poTag}>
+                <Ionicons
+                  name="business-outline"
+                  size={12}
+                  color={colors.primary}
+                />
+                <Text style={styles.poTagText} numberOfLines={1}>
+                  {order.manufacturer_id && mfrNames.get(order.manufacturer_id)
+                    ? t('orders.toManufacturerNamed', {
+                        name: mfrNames.get(order.manufacturer_id),
+                      })
+                    : t('orders.toManufacturer')}
+                </Text>
+              </View>
+            ) : order.shop ? (
               <Text style={styles.muted} numberOfLines={1}>
                 {order.shop.name}
               </Text>
@@ -97,6 +115,8 @@ const styles = StyleSheet.create({
   rowLeft: { flex: 1, gap: 2 },
   rowRight: { alignItems: 'flex-end', gap: spacing.xs },
   muted: { ...typography.caption, color: colors.textMuted },
+  poTag: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  poTagText: { ...typography.caption, color: colors.primary, flexShrink: 1 },
   badge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,

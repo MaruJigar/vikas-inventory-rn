@@ -34,6 +34,7 @@ export function ProductsScreen({
   const activeVisit = useVisitStore((s) => s.activeVisit);
   const canAdd = !!activeVisit; // add-to-cart only during an active shop visit
   const [query, setQuery] = useState('');
+  const [ownOnly, setOwnOnly] = useState(false);
   const search = useDebouncedValue(query.trim(), 350);
 
   const categoryId = route.params?.categoryId;
@@ -52,7 +53,7 @@ export function ProductsScreen({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useProducts(search);
+  } = useProducts(search, isDistributor && ownOnly);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   // The backend has no category filter param, so we filter client-side. To make
@@ -120,6 +121,30 @@ export function ProductsScreen({
         autoCapitalize="none"
         returnKeyType="search"
       />
+
+      {isDistributor ? (
+        <View style={styles.filterRow}>
+          <Pressable
+            onPress={() => setOwnOnly((v) => !v)}
+            style={[styles.filterChip, ownOnly && styles.filterChipActive]}
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name={ownOnly ? 'checkmark-circle' : 'ellipse-outline'}
+              size={16}
+              color={ownOnly ? '#FFFFFF' : colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.filterChipText,
+                ownOnly && styles.filterChipTextActive,
+              ]}
+            >
+              {t('products.myProducts')}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {!canAdd ? (
         <View style={styles.hint}>
@@ -201,6 +226,23 @@ export function ProductsScreen({
 const styles = StyleSheet.create({
   listContent: { paddingBottom: spacing.xxl * 2.5, flexGrow: 1 },
   footer: { paddingVertical: spacing.lg },
+  filterRow: { flexDirection: 'row', marginBottom: spacing.sm },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterChipText: { ...typography.label, color: colors.textMuted },
+  filterChipTextActive: { color: '#FFFFFF' },
   hint: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -16,6 +16,7 @@ import { colors, radius, spacing, typography } from '@/theme';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { useOrders, useStatusIndex } from '@/features/orders/hooks';
+import { useManufacturerNames } from '@/features/manufacturers/hooks';
 import {
   formatINR,
   statusColor,
@@ -69,6 +70,7 @@ export function OrdersListScreen({
     isFetchingNextPage,
   } = useOrders(search, status, scope);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
+  const mfrNames = useManufacturerNames();
 
   const orders = useMemo(
     () => data?.pages.flatMap((p) => p.data) ?? [],
@@ -93,7 +95,18 @@ export function OrdersListScreen({
             </Text>
           </View>
         </View>
-        {item.shop ? (
+        {!item.salesman_id ? (
+          <View style={styles.typeTag}>
+            <Ionicons name="business-outline" size={13} color={colors.primary} />
+            <Text style={styles.typeTagText} numberOfLines={1}>
+              {item.manufacturer_id && mfrNames.get(item.manufacturer_id)
+                ? t('orders.toManufacturerNamed', {
+                    name: mfrNames.get(item.manufacturer_id),
+                  })
+                : t('orders.toManufacturer')}
+            </Text>
+          </View>
+        ) : item.shop ? (
           <Text style={styles.muted}>{item.shop.name}</Text>
         ) : null}
         <View style={styles.cardBottom}>
@@ -286,6 +299,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   muted: { ...typography.body, color: colors.textMuted },
+  typeTag: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  typeTagText: { ...typography.caption, color: colors.primary },
   date: { ...typography.caption },
   badge: {
     paddingHorizontal: spacing.sm,

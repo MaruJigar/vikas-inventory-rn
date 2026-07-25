@@ -16,21 +16,24 @@ const PAGE_SIZE = 20;
 
 export const productKeys = {
   all: ['products'] as const,
-  list: (search: string) => ['products', 'list', search] as const,
+  list: (search: string, ownOnly = false) =>
+    ['products', 'list', search, ownOnly ? 'own' : 'all'] as const,
   categories: ['products', 'categories'] as const,
   categoryList: (search: string) =>
     ['products', 'categories', 'list', search] as const,
 };
 
-/** Paginated, searchable product list (infinite scroll). */
-export function useProducts(search: string) {
+/** Paginated, searchable product list (infinite scroll). `ownOnly` restricts to
+ * the caller's own products via the backend `own_products_only` filter. */
+export function useProducts(search: string, ownOnly = false) {
   return useInfiniteQuery({
-    queryKey: productKeys.list(search),
+    queryKey: productKeys.list(search, ownOnly),
     queryFn: ({ pageParam }) =>
       productsApi.list({
         page: pageParam,
         limit: PAGE_SIZE,
         search: search || undefined,
+        ...(ownOnly ? { own_products_only: true } : {}),
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>

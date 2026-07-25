@@ -28,8 +28,10 @@ export interface OrderItem {
   quantity: Num;
   mrp: Num;
   gross_line_amount: Num;
-  item_discount_amount: Num;
   net_line_amount: Num;
+  /** Present when the backend snapshots GST on the line (edit/update path). */
+  gst_percent_snapshot?: Num;
+  gst_amount?: Num;
   status_id: string | null;
 }
 
@@ -49,13 +51,22 @@ export interface Order {
   status?: OrderStatusRecord | null;
   shop_id: string;
   shop: OrderShopRef | null;
+  /** Null for distributor→manufacturer orders (the distributor is the creator);
+   * set for salesman→shop orders. Backend gates status updates on this. */
+  salesman_id: string | null;
   salesman: { id: string; full_name: string } | null;
+  /** Set only for distributor→manufacturer orders. */
+  manufacturer_id?: string | null;
   distributor: { id: string; business_name: string } | null;
   gross_order_amount: Num;
-  total_product_discount_amount: Num;
-  bill_discount_type?: BillDiscountType | null;
-  bill_discount_value?: Num;
-  bill_discount_amount: Num;
+  /** Order-level discounts (backend RefactorDiscounts): standard then special,
+   * applied sequentially. Amounts are what the server computed. */
+  standard_discount_percent: Num;
+  standard_discount_amount: Num;
+  special_discount_percent: Num;
+  special_discount_amount: Num;
+  total_gst_amount: Num;
+  transport_mode: string | null;
   final_order_amount: Num;
   total_quantity: Num;
   cancellation_reason: string | null;
@@ -70,23 +81,23 @@ export interface CreateOrderProduct {
   quantity: number;
 }
 
-/** A whole-order (bill) discount — backend `billDiscountType`/`billDiscountValue`. */
-export type BillDiscountType = 'NONE' | 'PERCENTAGE' | 'FLAT';
-
 export interface CreateOrderPayload {
   visitId: string;
   shopId: string;
   products: CreateOrderProduct[];
-  billDiscountType?: BillDiscountType;
-  billDiscountValue?: number;
+  /** Order-level discount percentages (backend RefactorDiscounts). */
+  standardDiscountPercent?: number;
+  specialDiscountPercent?: number;
+  transportMode?: string;
 }
 
 /** PATCH /v1/orders/:id — salesman edits a pre-dispatch order. `products`
- * fully REPLACES the order's items; bill discount is preserved when omitted. */
+ * fully REPLACES the order's items; discounts are preserved when omitted. */
 export interface UpdateOrderPayload {
   products: CreateOrderProduct[];
-  billDiscountType?: BillDiscountType;
-  billDiscountValue?: number;
+  standardDiscountPercent?: number;
+  specialDiscountPercent?: number;
+  transportMode?: string;
   reason?: string;
 }
 

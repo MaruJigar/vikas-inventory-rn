@@ -1,6 +1,7 @@
 import React, { forwardRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -34,23 +35,42 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
     onRightIconPress,
     rightIconLoading,
     rightIconLabel,
+    onFocus,
+    onBlur,
     ...rest
   },
   ref,
 ) {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
+  const [focused, setFocused] = useState(false);
   const isPassword = !!secureTextEntry;
 
   return (
     <View style={styles.wrap}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={[styles.field, !!error && styles.fieldError]}>
+      <View
+        style={[
+          styles.field,
+          focused && styles.fieldFocused,
+          !!error && styles.fieldError,
+        ]}
+      >
         <TextInput
           ref={ref}
           placeholderTextColor={colors.textMuted}
           secureTextEntry={isPassword && !visible}
-          style={[styles.input, style]}
+          // Remove the browser's default focus outline on web — focus is shown
+          // on the rounded field border instead (which respects borderRadius).
+          style={[styles.input, style, Platform.OS === 'web' && webNoOutline]}
+          onFocus={(e) => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
           {...rest}
         />
         {isPassword ? (
@@ -91,6 +111,10 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
   );
 });
 
+/** Web-only: strip the native focus ring (react-native-web renders the field as
+ * an <input>). Typed loosely because `outlineStyle` isn't in RN's style types. */
+const webNoOutline = { outlineStyle: 'none' } as unknown as TextInputProps['style'];
+
 const styles = StyleSheet.create({
   wrap: { marginBottom: spacing.md },
   label: { ...typography.label, marginBottom: spacing.xs },
@@ -104,6 +128,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     backgroundColor: colors.surface,
   },
+  fieldFocused: { borderColor: colors.primary },
   fieldError: { borderColor: colors.danger },
   input: {
     flex: 1,

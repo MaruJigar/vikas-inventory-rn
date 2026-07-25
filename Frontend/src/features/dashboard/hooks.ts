@@ -2,11 +2,31 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { dashboardApi } from '@/features/dashboard/api';
+import { ordersApi } from '@/features/orders/api';
 import { useOrderStatuses } from '@/features/orders/hooks';
 
 export const dashboardKeys = {
   analytics: ['dashboard', 'analytics'] as const,
+  purchaseOrders: ['dashboard', 'purchaseOrders'] as const,
 };
+
+/**
+ * Count of the distributor's purchase orders (distributor→manufacturer, i.e.
+ * `salesman_id` is null). The backend exposes no order-type filter, so we fetch
+ * one large page and count client-side — the list caps at 1000 rows, which is
+ * ample for the app's scale. `capped` flags the rare overflow.
+ */
+export function usePurchaseOrderCount() {
+  return useQuery({
+    queryKey: dashboardKeys.purchaseOrders,
+    queryFn: async () => {
+      const res = await ordersApi.list({ page: 1, limit: 1000 });
+      const count = res.data.filter((o) => !o.salesman_id).length;
+      return { count, capped: res.meta.total > res.data.length };
+    },
+    staleTime: 60_000,
+  });
+}
 
 /**
  * Summary tiles map to a list of candidate status names (statuses are dynamic).

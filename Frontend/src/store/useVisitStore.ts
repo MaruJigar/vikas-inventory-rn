@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { isToday } from '@/lib/date';
+
 const STORAGE_KEY = 'qera.visit';
 
 /** The salesman's active check-in. */
@@ -41,10 +43,15 @@ export const useVisitStore = create<VisitState>((set, get) => ({
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Persisted;
-        set({
-          workingDay: parsed.workingDay ?? null,
-          activeVisit: parsed.activeVisit ?? null,
-        });
+        // A persisted check-in from a previous day means the salesman forgot to
+        // check out — blank it so they start today fresh (the backend marks the
+        // stale day MISSED on their next check-in). Any leftover visit goes too.
+        const staleDay =
+          parsed.workingDay != null && !isToday(parsed.workingDay.checkedInAt);
+        const workingDay = staleDay ? null : parsed.workingDay ?? null;
+        const activeVisit = staleDay ? null : parsed.activeVisit ?? null;
+        set({ workingDay, activeVisit });
+        if (staleDay) persist({ workingDay, activeVisit });
       }
     } catch {
       // Never block app start on a corrupt cache.

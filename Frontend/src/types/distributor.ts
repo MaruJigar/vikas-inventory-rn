@@ -9,6 +9,7 @@ export interface Distributor {
   address: string | null;
   city: string | null;
   state: string | null;
+  pincode: string | null;
   approval_status: string;
 }
 
@@ -23,4 +24,5 @@ export interface UpdateDistributorProfilePayload {
   address?: string;
   city?: string;
   state?: string;
+  pincode?: string;
 }

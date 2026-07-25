@@ -16,5 +16,6 @@ export const editProfileSchema = z.object({
   address: z.string().trim().optional(),
   state: z.string().trim().optional(),
   city: z.string().trim().optional(),
+  pincode: z.string().trim().optional(),
 });
 export type EditProfileForm = z.infer<typeof editProfileSchema>;

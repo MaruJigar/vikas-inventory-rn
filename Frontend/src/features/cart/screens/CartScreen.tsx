@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -13,64 +13,52 @@ import { useCreateOrder } from '@/features/orders/hooks';
 import { useEndVisit } from '@/features/visit/hooks';
 import {
   computeCartTotals,
-  distributorUnitPrice,
   formatINR,
+  toNum,
 } from '@/features/products/pricing';
-import type { CartLine, DiscountType } from '@/features/products/pricing';
+import type { CartLine } from '@/features/products/pricing';
 import type { HomeScreenProps } from '@/navigation/types';
 
-const DISCOUNT_TYPES: DiscountType[] = ['NONE', 'PERCENTAGE', 'FLAT'];
-
-/** Whole-order (bill) discount control: a NONE/%/₹ toggle + a value field.
- * Writes to the cart store; a local text buffer allows partial entry. */
-function OrderDiscount() {
+/** Order-level extras: standard + special discount percentages and an optional
+ * transport mode. Writes straight to the cart store. */
+function OrderExtras() {
   const { t } = useTranslation();
-  const billDiscount = useCartStore((s) => s.billDiscount);
-  const setBillDiscount = useCartStore((s) => s.setBillDiscount);
-  const type = billDiscount.type;
-  const [text, setText] = useState(
-    billDiscount.value ? String(billDiscount.value) : '',
-  );
-
-  const symbol = (dt: DiscountType) =>
-    dt === 'NONE' ? t('cart.discount.none') : dt === 'PERCENTAGE' ? '%' : '₹';
-
-  const onPickType = (dt: DiscountType) => {
-    if (dt === 'NONE') {
-      setText('');
-      setBillDiscount('NONE', 0);
-    } else {
-      setBillDiscount(dt, Number(text) || 0);
-    }
-  };
+  const standard = useCartStore((s) => s.standardDiscountPercent);
+  const special = useCartStore((s) => s.specialDiscountPercent);
+  const transportMode = useCartStore((s) => s.transportMode);
+  const setStandard = useCartStore((s) => s.setStandardDiscount);
+  const setSpecial = useCartStore((s) => s.setSpecialDiscount);
+  const setTransport = useCartStore((s) => s.setTransportMode);
 
   return (
     <Card style={styles.discountCard}>
       <Text style={styles.discountTitle}>{t('cart.orderDiscount')}</Text>
-      <View style={styles.discountToggle}>
-        {DISCOUNT_TYPES.map((dt) => (
-          <Pressable
-            key={dt}
-            onPress={() => onPickType(dt)}
-            style={[styles.dPill, type === dt && styles.dPillActive]}
-          >
-            <Text style={[styles.dPillText, type === dt && styles.dPillTextActive]}>
-              {symbol(dt)}
-            </Text>
-          </Pressable>
-        ))}
+      <View style={styles.discountRow}>
+        <View style={styles.discountField}>
+          <Text style={styles.fieldLabel}>{t('cart.standardDiscount')}</Text>
+          <Input
+            value={standard ? String(standard) : ''}
+            onChangeText={(v) => setStandard(Number(v) || 0)}
+            keyboardType="decimal-pad"
+            placeholder="0"
+          />
+        </View>
+        <View style={styles.discountField}>
+          <Text style={styles.fieldLabel}>{t('cart.specialDiscount')}</Text>
+          <Input
+            value={special ? String(special) : ''}
+            onChangeText={(v) => setSpecial(Number(v) || 0)}
+            keyboardType="decimal-pad"
+            placeholder="0"
+          />
+        </View>
       </View>
-      {type !== 'NONE' ? (
-        <Input
-          value={text}
-          onChangeText={(v) => {
-            setText(v);
-            setBillDiscount(type, Number(v) || 0);
-          }}
-          keyboardType="decimal-pad"
-          placeholder={type === 'PERCENTAGE' ? '0' : '0.00'}
-        />
-      ) : null}
+      <Text style={styles.fieldLabel}>{t('cart.transportMode')}</Text>
+      <Input
+        value={transportMode}
+        onChangeText={setTransport}
+        placeholder={t('cart.transportModePlaceholder')}
+      />
     </Card>
   );
 }
@@ -105,7 +93,9 @@ function SummaryRow({
 export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
   const { t } = useTranslation();
   const items = useCartStore((s) => s.items);
-  const billDiscount = useCartStore((s) => s.billDiscount);
+  const standardDiscountPercent = useCartStore((s) => s.standardDiscountPercent);
+  const specialDiscountPercent = useCartStore((s) => s.specialDiscountPercent);
+  const transportMode = useCartStore((s) => s.transportMode);
   const increment = useCartStore((s) => s.increment);
   const decrement = useCartStore((s) => s.decrement);
   const remove = useCartStore((s) => s.remove);
@@ -118,8 +108,12 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
 
   const lines = useMemo(() => Object.values(items), [items]);
   const totals = useMemo(
-    () => computeCartTotals(lines, billDiscount),
-    [lines, billDiscount],
+    () =>
+      computeCartTotals(lines, {
+        standardPercent: standardDiscountPercent,
+        specialPercent: specialDiscountPercent,
+      }),
+    [lines, standardDiscountPercent, specialDiscountPercent],
   );
 
   const placeOrder = () => {
@@ -127,6 +121,7 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
       notify(t('cart.needVisit'));
       return;
     }
+    const trimmedTransport = transportMode.trim();
     createOrder.mutate(
       {
         visitId: activeVisit.visitId,
@@ -135,12 +130,11 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
           productId: l.product.id,
           quantity: l.qty,
         })),
-        ...(billDiscount.type !== 'NONE' && billDiscount.value > 0
-          ? {
-              billDiscountType: billDiscount.type,
-              billDiscountValue: billDiscount.value,
-            }
+        ...(standardDiscountPercent > 0
+          ? { standardDiscountPercent }
           : {}),
+        ...(specialDiscountPercent > 0 ? { specialDiscountPercent } : {}),
+        ...(trimmedTransport ? { transportMode: trimmedTransport } : {}),
       },
       {
         onSuccess: (order) => {
@@ -175,7 +169,7 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
 
   const renderLine = (line: CartLine) => {
     const { product, qty } = line;
-    const unit = distributorUnitPrice(product);
+    const unit = toNum(product.mrp);
     return (
       <Card key={product.id} style={styles.line}>
         <View style={styles.lineTop}>
@@ -218,28 +212,24 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
 
       {lines.map(renderLine)}
 
-      <OrderDiscount />
+      <OrderExtras />
 
       <Card style={styles.summary}>
         <SummaryRow label={t('cart.subtotal')} value={formatINR(totals.subtotal)} />
-        <SummaryRow
-          label={t('cart.distributorDiscount')}
-          value={formatINR(totals.distributorDiscount)}
-          negative
-        />
-        <SummaryRow
-          label={t('cart.additionalDiscount')}
-          value={formatINR(totals.additionalDiscount)}
-          negative
-        />
-        {totals.billDiscount > 0 ? (
+        {totals.standardDiscount > 0 ? (
           <SummaryRow
-            label={t('cart.orderDiscount')}
-            value={formatINR(totals.billDiscount)}
+            label={t('cart.standardDiscount')}
+            value={formatINR(totals.standardDiscount)}
             negative
           />
         ) : null}
-        <SummaryRow label={t('cart.gst')} value={formatINR(totals.gst)} />
+        {totals.specialDiscount > 0 ? (
+          <SummaryRow
+            label={t('cart.specialDiscount')}
+            value={formatINR(totals.specialDiscount)}
+            negative
+          />
+        ) : null}
         <View style={styles.divider} />
         <SummaryRow
           label={t('cart.finalPayable')}
@@ -309,19 +299,9 @@ const styles = StyleSheet.create({
   lineTotal: { ...typography.title },
   discountCard: { marginTop: spacing.sm, gap: spacing.sm },
   discountTitle: { ...typography.title },
-  discountToggle: { flexDirection: 'row', gap: spacing.xs },
-  dPill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minWidth: 44,
-    alignItems: 'center',
-  },
-  dPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  dPillText: { ...typography.label, color: colors.text },
-  dPillTextActive: { color: '#FFFFFF' },
+  discountRow: { flexDirection: 'row', gap: spacing.md },
+  discountField: { flex: 1, gap: spacing.xs },
+  fieldLabel: { ...typography.label, color: colors.textMuted },
   summary: { marginTop: spacing.sm, gap: spacing.sm },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
   summaryLabel: { ...typography.body, color: colors.textMuted },

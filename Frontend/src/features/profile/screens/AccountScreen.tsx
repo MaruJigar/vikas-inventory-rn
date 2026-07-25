@@ -111,6 +111,7 @@ export function AccountScreen({
   const logout = useAuthStore((s) => s.logout);
   const forgot = useForgotPassword();
   const isDistributor = user?.role === 'DISTRIBUTOR_ADMIN';
+  const isSalesman = user?.role === 'SALESMAN';
 
   const name = user?.full_name ?? '';
   const initial = name.trim().charAt(0).toUpperCase() || '?';
@@ -209,8 +210,28 @@ export function AccountScreen({
             <Row
               icon="people-outline"
               label={t('salesmen.title')}
-              divider={false}
               onPress={() => navigation.navigate('Salesmen')}
+            />
+            <Row
+              icon="checkmark-done-outline"
+              label={t('approvals.title')}
+              divider={false}
+              onPress={() => navigation.navigate('Approvals')}
+            />
+          </Group>
+        </>
+      ) : null}
+
+      {/* Activity — attendance history (both roles; backend scopes it) */}
+      {isDistributor || isSalesman ? (
+        <>
+          <GroupLabel>{t('account.activity')}</GroupLabel>
+          <Group>
+            <Row
+              icon="time-outline"
+              label={t('attendance.title')}
+              divider={false}
+              onPress={() => navigation.navigate('Attendance')}
             />
           </Group>
         </>

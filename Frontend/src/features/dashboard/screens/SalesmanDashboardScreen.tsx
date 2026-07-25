@@ -11,6 +11,7 @@ import { colors, radius, spacing, typography } from '@/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useVisitStore } from '@/store/useVisitStore';
 import { getCurrentCoords, type CoordsResult } from '@/lib/location';
+import { isToday, formatTime } from '@/lib/date';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { notify } from '@/lib/dialog';
 import {
@@ -56,7 +57,9 @@ export function SalesmanDashboardScreen() {
   const [ending, setEnding] = useState(false);
   const [reason, setReason] = useState('');
 
-  const checkedIn = !!workingDay;
+  // Guard against a stale check-in carried over from a previous day (forgot to
+  // check out): only treat it as checked-in if the check-in is from today.
+  const checkedIn = !!workingDay && isToday(workingDay.checkedInAt);
   const busy = locating || checkIn.isPending || checkOut.isPending;
 
   const gpsMessage = (reason: Exclude<CoordsResult, { ok: true }>['reason']) =>
@@ -123,10 +126,7 @@ export function SalesmanDashboardScreen() {
             ? t('common.loading')
             : checkedIn
               ? t('dashboard.salesman.checkedInAt', {
-                  time: new Date(workingDay.checkedInAt).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }),
+                  time: formatTime(workingDay.checkedInAt),
                 })
               : t('dashboard.salesman.notCheckedIn')}
         </Text>

@@ -7,6 +7,9 @@ import type { TFunction } from 'i18next';
 import { Screen, Card, Spinner, EmptyState, Section, Button, Input } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { confirmAction, notify } from '@/lib/dialog';
+import { getApiErrorMessage } from '@/lib/apiError';
+import { formatDateTime } from '@/lib/date';
+import { useManufacturerNames } from '@/features/manufacturers/hooks';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
   useOrder,
@@ -39,7 +42,7 @@ function buildShareText(
     `${t('orders.detail.order')} ${order.order_number}`,
     `${t('orders.detail.status')}: ${statusLabel(t, statusIndex, order.status_id)}`,
     order.shop ? `${t('orders.detail.shop')}: ${order.shop.name}` : '',
-    new Date(order.created_at).toLocaleString(),
+    formatDateTime(order.created_at),
     '',
     ...(order.items ?? []).map(
       (it) =>
@@ -94,6 +97,7 @@ export function OrderDetailScreen({
   const { data: fulfillment } = useOrderFulfillmentLogs(id);
   const advance = useUpdateOrderStatus(id);
   const cancelOrder = useCancelOrder(id);
+  const mfrNames = useManufacturerNames();
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
 
@@ -119,8 +123,9 @@ export function OrderDetailScreen({
   };
 
   const items = order.items ?? [];
-  const productDiscount = toNum(order.total_product_discount_amount);
-  const billDiscount = toNum(order.bill_discount_amount);
+  const standardDiscount = toNum(order.standard_discount_amount);
+  const specialDiscount = toNum(order.special_discount_amount);
+  const gstAmount = toNum(order.total_gst_amount);
   const isCancelled = order.status_id
     ? (statusIndex.get(order.status_id)?.isCancel ?? false)
     : false;
@@ -131,7 +136,18 @@ export function OrderDetailScreen({
   const next = nextStatus(statuses, order.status_id);
   const isDistributor = role === 'DISTRIBUTOR_ADMIN' || role === 'SUPER_ADMIN';
   const inFlight = !isCancelled && !!next;
-  const showAdvance = isDistributor && inFlight;
+  // Backend rule: the order's creator cannot drive its status. A distributor is
+  // the creator of a distributor→manufacturer order (no salesman) → they can't
+  // advance it (the manufacturer does). Salesmen never get the advance action.
+  const isCreatorDistributor =
+    role === 'DISTRIBUTOR_ADMIN' && !order.salesman_id;
+  // A distributor→manufacturer purchase order has no salesman. The distributor
+  // is the buyer here — it's the manufacturer who acts on it.
+  const isPurchaseOrder = !order.salesman_id;
+  const mfrName = order.manufacturer_id
+    ? mfrNames.get(order.manufacturer_id)
+    : undefined;
+  const showAdvance = isDistributor && inFlight && !isCreatorDistributor;
   const showCancel = inFlight && (isDistributor || role === 'SALESMAN');
   // Salesman may edit an order's items while it's still pre-dispatch.
   const showEdit = role === 'SALESMAN' && isPreDispatch(statuses, order.status_id);
@@ -149,7 +165,12 @@ export function OrderDetailScreen({
       onConfirm: () =>
         advance.mutate(
           { status_id: next.id },
-          { onError: () => notify(t('orders.actions.updateError')) },
+          {
+            // Surface the backend's specific reason (e.g. "Insufficient
+            // inventory for X. Required N, Available M.") instead of a generic one.
+            onError: (e) =>
+              notify(getApiErrorMessage(e, t) || t('orders.actions.updateError')),
+          },
         ),
     });
   };
@@ -164,7 +185,8 @@ export function OrderDetailScreen({
           setCancelling(false);
           setReason('');
         },
-        onError: () => notify(t('orders.actions.cancelError')),
+        onError: (e) =>
+          notify(getApiErrorMessage(e, t) || t('orders.actions.cancelError')),
       },
     );
   };
@@ -238,9 +260,35 @@ export function OrderDetailScreen({
           </Text>
         </View>
         <Text style={styles.date}>
-          {new Date(order.created_at).toLocaleString()}
+          {formatDateTime(order.created_at)}
         </Text>
       </View>
+
+      <View style={styles.typeRow}>
+        <Ionicons
+          name={isPurchaseOrder ? 'business-outline' : 'storefront-outline'}
+          size={14}
+          color={colors.textMuted}
+        />
+        <Text style={styles.typeText}>
+          {isPurchaseOrder
+            ? mfrName
+              ? t('orders.toManufacturerNamed', { name: mfrName })
+              : t('orders.purchaseOrder')
+            : t('orders.salesOrder')}
+        </Text>
+      </View>
+
+      {/* A distributor's own purchase order is waiting on the manufacturer —
+          make that explicit since the distributor can't advance it. */}
+      {isPurchaseOrder && isDistributor && inFlight ? (
+        <Card style={styles.noticeCard}>
+          <Ionicons name="time-outline" size={18} color={colors.warning} />
+          <Text style={styles.noticeText}>
+            {t('orders.awaitingManufacturer')}
+          </Text>
+        </Card>
+      ) : null}
 
       {statusesNotConfigured ? (
         <Card style={styles.noticeCard}>
@@ -325,19 +373,22 @@ export function OrderDetailScreen({
           label={t('orders.detail.gross')}
           value={formatINR(toNum(order.gross_order_amount))}
         />
-        {productDiscount > 0 ? (
+        {standardDiscount > 0 ? (
           <Row
-            label={t('orders.detail.productDiscount')}
-            value={formatINR(productDiscount)}
+            label={t('orders.detail.standardDiscount')}
+            value={formatINR(standardDiscount)}
             negative
           />
         ) : null}
-        {billDiscount > 0 ? (
+        {specialDiscount > 0 ? (
           <Row
-            label={t('orders.detail.billDiscount')}
-            value={formatINR(billDiscount)}
+            label={t('orders.detail.specialDiscount')}
+            value={formatINR(specialDiscount)}
             negative
           />
+        ) : null}
+        {gstAmount > 0 ? (
+          <Row label={t('orders.detail.gst')} value={formatINR(gstAmount)} />
         ) : null}
         <View style={styles.divider} />
         <Row
@@ -367,7 +418,7 @@ export function OrderDetailScreen({
                     {statusLabel(t, statusIndex, h.new_status_id)}
                   </Text>
                   <Text style={styles.muted}>
-                    {new Date(h.created_at).toLocaleString()}
+                    {formatDateTime(h.created_at)}
                   </Text>
                 </View>
               </View>
@@ -392,7 +443,7 @@ export function OrderDetailScreen({
                     <Text style={styles.muted}>{f.notes}</Text>
                   ) : null}
                   <Text style={styles.muted}>
-                    {[f.performed_by_user?.full_name, new Date(f.created_at).toLocaleString()]
+                    {[f.performed_by_user?.full_name, formatDateTime(f.created_at)]
                       .filter(Boolean)
                       .join(' · ')}
                   </Text>
@@ -416,7 +467,7 @@ export function OrderDetailScreen({
                     <Text style={styles.muted}>{r.reason}</Text>
                   ) : null}
                   <Text style={styles.muted}>
-                    {[r.changed_by_user?.full_name, new Date(r.created_at).toLocaleString()]
+                    {[r.changed_by_user?.full_name, formatDateTime(r.created_at)]
                       .filter(Boolean)
                       .join(' · ')}
                   </Text>
@@ -446,6 +497,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   date: { ...typography.caption },
+  typeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  typeText: { ...typography.caption, color: colors.textMuted },
   noticeCard: {
     flexDirection: 'row',
     alignItems: 'center',

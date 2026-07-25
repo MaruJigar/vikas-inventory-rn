@@ -30,7 +30,8 @@ export interface BackorderSalesmanRef {
   full_name: string;
 }
 
-/** The parent order — the list/detail queries join order → shop + salesman. */
+/** The parent order. The backend list/detail queries join order → salesman
+ * only (NOT shop), so `shop` is usually absent; kept optional for the UI. */
 export interface BackorderOrderRef {
   id: string;
   order_number: string;
@@ -54,8 +55,10 @@ export interface Backorder {
   order: BackorderOrderRef | null;
 }
 
-/** POST /v1/backorders/:id/allocate — distributor allocates on-hand stock.
- * The backend reads the raw `allocateQuantity` body field (no wrapper DTO). */
-export interface AllocateBackorderPayload {
-  allocateQuantity: number;
+/** PATCH /v1/orders/backorders/:id/resolve — distributor allocates on-hand
+ * stock against the backorder (backend `ResolveBackorderDto`). `resolved_quantity`
+ * is the amount being allocated in this call (added to what's already resolved). */
+export interface ResolveBackorderPayload {
+  resolved_quantity: number;
+  notes?: string;
 }

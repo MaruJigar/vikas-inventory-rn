@@ -11,8 +11,13 @@ import type {
 } from '@/types/product';
 import type { PickedImage } from '@/types/shop';
 
+/** Product list query — extends the base list with the own-products filter. */
+export interface ProductListQuery extends ListQuery {
+  own_products_only?: boolean;
+}
+
 export const productsApi = {
-  list: (query: ListQuery) =>
+  list: (query: ProductListQuery) =>
     apiClient
       .get<Paginated<Product>>('/products', { params: query })
       .then((r) => r.data),

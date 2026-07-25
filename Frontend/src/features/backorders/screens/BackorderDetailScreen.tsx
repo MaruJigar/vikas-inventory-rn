@@ -5,10 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { Screen, Card, Spinner, EmptyState, Section, Button, Input } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { confirmAction, notify } from '@/lib/dialog';
+import { formatDateTime } from '@/lib/date';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
   useBackorder,
-  useAllocateBackorder,
+  useResolveBackorder,
 } from '@/features/backorders/hooks';
 import {
   backorderStatusColor,
@@ -35,7 +36,7 @@ export function BackorderDetailScreen({
   const { id } = route.params;
   const role = useAuthStore((s) => s.user?.role);
   const { data: bo, isLoading, isError, refetch } = useBackorder(id);
-  const allocate = useAllocateBackorder(id);
+  const allocate = useResolveBackorder(id);
   const [allocating, setAllocating] = useState(false);
   const [qty, setQty] = useState('');
 
@@ -73,7 +74,7 @@ export function BackorderDetailScreen({
       cancelLabel: t('common.cancel'),
       onConfirm: () =>
         allocate.mutate(
-          { allocateQuantity: n },
+          { resolved_quantity: n },
           {
             onSuccess: () => {
               setAllocating(false);
@@ -105,7 +106,7 @@ export function BackorderDetailScreen({
           </Text>
         </View>
         <Text style={styles.date}>
-          {new Date(bo.created_at).toLocaleString()}
+          {formatDateTime(bo.created_at)}
         </Text>
       </View>
 
@@ -197,7 +198,7 @@ export function BackorderDetailScreen({
       {bo.resolved_at ? (
         <Text style={styles.resolvedAt}>
           {t('backorders.detail.resolvedAt', {
-            when: new Date(bo.resolved_at).toLocaleString(),
+            when: formatDateTime(bo.resolved_at),
           })}
         </Text>
       ) : null}

@@ -13,11 +13,7 @@ import {
   useStatusIndex,
 } from '@/features/orders/hooks';
 import { formatINR, isPreDispatch, toNum } from '@/features/orders/constants';
-import { discountAmount } from '@/features/products/pricing';
-import type { DiscountType } from '@/features/products/pricing';
 import type { OrdersScreenProps } from '@/navigation/types';
-
-const DISCOUNT_TYPES: DiscountType[] = ['NONE', 'PERCENTAGE', 'FLAT'];
 
 /** A line in the editor — seeded from an order item's snapshot fields. */
 interface EditLine {
@@ -27,51 +23,52 @@ interface EditLine {
   qty: number;
 }
 
-/** Whole-order (bill) discount toggle + value field for the edit screen. */
-function OrderDiscount({
-  type,
-  value,
+/** Order-level standard + special discount percentages and transport mode. */
+function OrderExtras({
+  standard,
+  special,
+  transportMode,
   onChange,
 }: {
-  type: DiscountType;
-  value: number;
-  onChange: (type: DiscountType, value: number) => void;
+  standard: number;
+  special: number;
+  transportMode: string;
+  onChange: (patch: {
+    standard?: number;
+    special?: number;
+    transportMode?: string;
+  }) => void;
 }) {
   const { t } = useTranslation();
-  const [text, setText] = React.useState(value ? String(value) : '');
-  const label = (dt: DiscountType) =>
-    dt === 'NONE' ? t('cart.discount.none') : dt === 'PERCENTAGE' ? '%' : '₹';
-
   return (
     <Card style={styles.discountCard}>
       <Text style={styles.discountTitle}>{t('cart.orderDiscount')}</Text>
-      <View style={styles.discountToggle}>
-        {DISCOUNT_TYPES.map((dt) => (
-          <Pressable
-            key={dt}
-            onPress={() => {
-              if (dt === 'NONE') setText('');
-              onChange(dt, dt === 'NONE' ? 0 : Number(text) || 0);
-            }}
-            style={[styles.dPill, type === dt && styles.dPillActive]}
-          >
-            <Text style={[styles.dPillText, type === dt && styles.dPillTextActive]}>
-              {label(dt)}
-            </Text>
-          </Pressable>
-        ))}
+      <View style={styles.discountRow}>
+        <View style={styles.discountField}>
+          <Text style={styles.fieldLabel}>{t('cart.standardDiscount')}</Text>
+          <Input
+            value={standard ? String(standard) : ''}
+            onChangeText={(v) => onChange({ standard: Number(v) || 0 })}
+            keyboardType="decimal-pad"
+            placeholder="0"
+          />
+        </View>
+        <View style={styles.discountField}>
+          <Text style={styles.fieldLabel}>{t('cart.specialDiscount')}</Text>
+          <Input
+            value={special ? String(special) : ''}
+            onChangeText={(v) => onChange({ special: Number(v) || 0 })}
+            keyboardType="decimal-pad"
+            placeholder="0"
+          />
+        </View>
       </View>
-      {type !== 'NONE' ? (
-        <Input
-          value={text}
-          onChangeText={(v) => {
-            setText(v);
-            onChange(type, Number(v) || 0);
-          }}
-          keyboardType="decimal-pad"
-          placeholder={type === 'PERCENTAGE' ? '0' : '0.00'}
-        />
-      ) : null}
+      <Text style={styles.fieldLabel}>{t('cart.transportMode')}</Text>
+      <Input
+        value={transportMode}
+        onChangeText={(v) => onChange({ transportMode: v })}
+        placeholder={t('cart.transportModePlaceholder')}
+      />
     </Card>
   );
 }
@@ -89,9 +86,10 @@ export function EditOrderScreen({
   // Seed the editable lines from the order's items once it has loaded.
   const [lines, setLines] = useState<Record<string, EditLine> | null>(null);
   const [reason, setReason] = useState('');
-  // Whole-order discount, seeded from the order (if the API returns it).
-  const [billType, setBillType] = useState<DiscountType>('NONE');
-  const [billValue, setBillValue] = useState(0);
+  // Order-level discounts + transport, seeded from the order.
+  const [standardPercent, setStandardPercent] = useState(0);
+  const [specialPercent, setSpecialPercent] = useState(0);
+  const [transportMode, setTransportMode] = useState('');
 
   useEffect(() => {
     if (order && lines === null) {
@@ -105,11 +103,9 @@ export function EditOrderScreen({
         };
       }
       setLines(seeded);
-      const bt = order.bill_discount_type;
-      if (bt === 'PERCENTAGE' || bt === 'FLAT') {
-        setBillType(bt);
-        setBillValue(toNum(order.bill_discount_value));
-      }
+      setStandardPercent(toNum(order.standard_discount_percent));
+      setSpecialPercent(toNum(order.special_discount_percent));
+      setTransportMode(order.transport_mode ?? '');
     }
   }, [order, lines]);
 
@@ -145,7 +141,13 @@ export function EditOrderScreen({
   const current = lines ?? {};
   const list = Object.values(current);
   const grossPreview = list.reduce((sum, l) => sum + l.mrp * l.qty, 0);
-  const billDiscountPreview = discountAmount(billType, billValue, grossPreview);
+  // Sequential: standard off the gross, special off what remains (backend).
+  // Percentages are clamped to 0–100.
+  const clampPct = (v: number) => Math.min(100, Math.max(0, v));
+  const standardPreview = (clampPct(standardPercent) / 100) * grossPreview;
+  const specialPreview =
+    (clampPct(specialPercent) / 100) * (grossPreview - standardPreview);
+  const finalPreview = grossPreview - standardPreview - specialPreview;
 
   const increment = (pid: string) =>
     setLines((s) => ({ ...s, [pid]: { ...s![pid], qty: s![pid].qty + 1 } }));
@@ -173,8 +175,9 @@ export function EditOrderScreen({
     editOrder.mutate(
       {
         products,
-        billDiscountType: billType,
-        billDiscountValue: billType === 'NONE' ? 0 : billValue,
+        standardDiscountPercent: clampPct(standardPercent),
+        specialDiscountPercent: clampPct(specialPercent),
+        transportMode: transportMode.trim() || undefined,
         reason: reason.trim() || undefined,
       },
       {
@@ -232,12 +235,18 @@ export function EditOrderScreen({
         ))
       )}
 
-      <OrderDiscount
-        type={billType}
-        value={billValue}
-        onChange={(type, value) => {
-          setBillType(type);
-          setBillValue(value);
+      <OrderExtras
+        standard={standardPercent}
+        special={specialPercent}
+        transportMode={transportMode}
+        onChange={(patch) => {
+          const clampPct = (v: number) => Math.min(100, Math.max(0, v));
+          if (patch.standard !== undefined)
+            setStandardPercent(clampPct(patch.standard));
+          if (patch.special !== undefined)
+            setSpecialPercent(clampPct(patch.special));
+          if (patch.transportMode !== undefined)
+            setTransportMode(patch.transportMode);
         }}
       />
 
@@ -246,12 +255,26 @@ export function EditOrderScreen({
           <Text style={styles.summaryLabel}>{t('orders.detail.gross')}</Text>
           <Text style={styles.summaryValue}>{formatINR(grossPreview)}</Text>
         </View>
-        {billDiscountPreview > 0 ? (
+        {standardPreview > 0 ? (
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{t('cart.orderDiscount')}</Text>
+            <Text style={styles.summaryLabel}>{t('cart.standardDiscount')}</Text>
             <Text style={[styles.summaryValue, styles.negative]}>
-              - {formatINR(billDiscountPreview)}
+              - {formatINR(standardPreview)}
             </Text>
+          </View>
+        ) : null}
+        {specialPreview > 0 ? (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>{t('cart.specialDiscount')}</Text>
+            <Text style={[styles.summaryValue, styles.negative]}>
+              - {formatINR(specialPreview)}
+            </Text>
+          </View>
+        ) : null}
+        {standardPreview > 0 || specialPreview > 0 ? (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>{t('orders.detail.total')}</Text>
+            <Text style={styles.summaryValue}>{formatINR(finalPreview)}</Text>
           </View>
         ) : null}
       </Card>
@@ -313,19 +336,9 @@ const styles = StyleSheet.create({
   lineTotal: { ...typography.title },
   discountCard: { marginTop: spacing.sm, gap: spacing.sm },
   discountTitle: { ...typography.title },
-  discountToggle: { flexDirection: 'row', gap: spacing.xs },
-  dPill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minWidth: 44,
-    alignItems: 'center',
-  },
-  dPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  dPillText: { ...typography.label, color: colors.text },
-  dPillTextActive: { color: '#FFFFFF' },
+  discountRow: { flexDirection: 'row', gap: spacing.md },
+  discountField: { flex: 1, gap: spacing.xs },
+  fieldLabel: { ...typography.label, color: colors.textMuted },
   summary: { marginTop: spacing.sm, gap: spacing.xs },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
   summaryLabel: { ...typography.body, color: colors.textMuted },
