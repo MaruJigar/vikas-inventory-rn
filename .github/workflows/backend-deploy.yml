@@ -147,11 +147,11 @@ jobs:
             pm2 list
 
             # Backend health check
-            curl -sf https://api.vikas-marketing.work.gd/api/docs > /dev/null \
+            curl -sf https://api.avchousehold.com/api/docs > /dev/null \
               && echo "✅ Backend API: healthy" \
               || (echo "❌ Backend API: unhealthy" && exit 1)
 
             # Admin health check
-            curl -sf https://admin.vikas-marketing.work.gd > /dev/null \
+            curl -sf https://admin.avchousehold.com > /dev/null \
               && echo "✅ Admin Panel: healthy" \
               || (echo "❌ Admin Panel: unhealthy" && exit 1)

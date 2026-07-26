@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'api.vikas-marketing.work.gd',
+        hostname: 'api.avchousehold.com',
       },
       {
         protocol: 'https',

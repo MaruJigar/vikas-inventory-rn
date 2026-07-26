@@ -52,7 +52,7 @@ jobs:
 
     env:
       # Production API base URL — /v1 prefix, no trailing slash
-      EXPO_PUBLIC_API_URL: https://api.vikas-marketing.work.gd/v1
+      EXPO_PUBLIC_API_URL: https://api.avchousehold.com/v1
 
     steps:
       - uses: actions/checkout@v4
@@ -114,6 +114,6 @@ jobs:
 
             # ── 5. Verify web app is reachable ────────────────────────────
             sleep 3
-            curl -sf https://app.vikas-marketing.work.gd > /dev/null \
+            curl -sf https://app.avchousehold.com > /dev/null \
               && echo "✅ Expo Web: healthy" \
               || (echo "❌ Expo Web: unhealthy" && exit 1)
