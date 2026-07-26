@@ -17,6 +17,9 @@ import { CheckOutDto } from './dto/check-out.dto';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AppSocketGateway } from '../socket-gateway/socket.gateway';
 
+import { WorkingDayQueryDto } from './dto/working-day-query.dto';
+import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
+
 @Injectable()
 export class WorkingDayService {
   constructor(
@@ -266,37 +269,73 @@ export class WorkingDayService {
   async getHistory(
     userId: string,
     userRole: string,
-    manufacturerDistributors?: string[],
-  ) {
+    query: WorkingDayQueryDto,
+  ): Promise<PaginatedResponse<WorkingDay>> {
+    const { page = 1, limit = 20, search, startDate, endDate } = query;
+    const skip = (page - 1) * limit;
+
+    const qb = this.wdRepo
+      .createQueryBuilder('wd')
+      .leftJoinAndSelect('wd.salesman', 'salesman')
+      .leftJoinAndSelect('wd.distributor', 'distributor');
+
     if (userRole === 'SALESMAN') {
       const salesman = await this.salesmanRepo.findOne({
         where: { user_id: userId },
       });
-      if (!salesman) return [];
-      return this.wdRepo.find({
-        where: { salesman_id: salesman.id },
-        order: { check_in_at: 'DESC' },
-      });
+      if (!salesman) return { data: [], meta: { page, limit, total: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
+      qb.andWhere('wd.salesman_id = :salesmanId', { salesmanId: salesman.id });
     } else if (userRole === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
-      if (!dist) return [];
-      return this.wdRepo.find({
-        where: { distributor_id: dist.id },
-        order: { check_in_at: 'DESC' },
-      });
+      if (!dist) return { data: [], meta: { page, limit, total: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
+      qb.andWhere('wd.distributor_id = :distId', { distId: dist.id });
     } else if (userRole === 'MANUFACTURER_ADMIN') {
-      if (!manufacturerDistributors || manufacturerDistributors.length === 0)
-        return [];
-      return this.wdRepo
-        .createQueryBuilder('wd')
-        .where('wd.distributor_id IN (:...distIds)', {
-          distIds: manufacturerDistributors,
-        })
-        .orderBy('wd.check_in_at', 'DESC')
-        .getMany();
+      const mfr = await this.dataSource.getRepository('Manufacturer').findOne({ where: { user_id: userId } });
+      if (!mfr) return { data: [], meta: { page, limit, total: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
+      
+      const internalDistributors = await this.distRepo.find({
+        where: { is_internal_distributor: true }
+      });
+      const distIds = internalDistributors.map(d => d.id);
+      
+      if (distIds.length === 0) {
+        return { data: [], meta: { page, limit, total: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
+      }
+      qb.andWhere('wd.distributor_id IN (:...distIds)', { distIds });
     } else if (userRole === 'SUPER_ADMIN') {
-      return this.wdRepo.find({ order: { check_in_at: 'DESC' } });
+      // Sees all
+    } else {
+      return { data: [], meta: { page, limit, total: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
     }
-    return [];
+
+    if (search) {
+      qb.andWhere('salesman.full_name ILIKE :search', { search: `%${search}%` });
+    }
+
+    if (startDate) {
+      qb.andWhere('wd.check_in_at >= :startDate', { startDate: new Date(startDate) });
+    }
+
+    if (endDate) {
+      // To include the end date fully, you might want to add 1 day or rely on the caller to send proper time.
+      qb.andWhere('wd.check_in_at <= :endDate', { endDate: new Date(endDate) });
+    }
+
+    qb.orderBy('wd.check_in_at', 'DESC');
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 }

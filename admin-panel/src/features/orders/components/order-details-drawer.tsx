@@ -1,4 +1,5 @@
 import { EntityFormDrawer } from '@/components/shared/EntityFormDrawer';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useOrderQuery } from '@/hooks/orders/useOrderQuery';
 import { OrderItemDto } from '@/types/api/order.types';
@@ -31,6 +32,9 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
   
   const currentStatusName = typeof order?.status === 'object' ? (order.status as any)?.name : order?.status;
   const nextStatus = currentStatusName ? STATUS_PROGRESSION[currentStatusName] : null;
+
+  const { user } = useAuthStore();
+  const isCreator = order && order.salesman_id === null && user?.role === 'DISTRIBUTOR_ADMIN';
 
   const handleAdvanceStatus = () => {
     if (nextStatus && orderId) {
@@ -66,7 +70,7 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
           <section className="border rounded-md bg-white p-4 shadow-sm">
             <div className="flex justify-between items-center mb-3 border-b pb-2">
               <h3 className="text-sm font-semibold text-slate-900">Order Summary</h3>
-              {nextStatus && (
+              {nextStatus && !isCreator && (
                 <Button 
                   size="sm" 
                   onClick={handleAdvanceStatus} 

@@ -5,7 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Salesman } from '../salesman/salesman.entity';
+import { Distributor } from '../distributor/distributor.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('working_days')
@@ -22,9 +26,17 @@ export class WorkingDay {
   @ApiProperty({ description: 'Salesman id' })
   salesman_id: string;
 
+  @ManyToOne(() => Salesman)
+  @JoinColumn({ name: 'salesman_id' })
+  salesman: Salesman;
+
   @Column({ type: 'uuid' })
   @ApiProperty({ description: 'Distributor id' })
   distributor_id: string;
+
+  @ManyToOne(() => Distributor)
+  @JoinColumn({ name: 'distributor_id' })
+  distributor: Distributor;
 
   @Column({ type: 'timestamp' })
   @ApiProperty({ description: 'Check in at' })

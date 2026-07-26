@@ -10,12 +10,11 @@ export const useGeneratePurchaseRequestMutation = () => {
 
   return useMutation({
     mutationFn: async () => {
-      const response = await api.post<{ data: OrderDto; message: string }>('/orders/purchase-request/generate');
+      const response = await api.post<{ data: { items: any[], gross_order_amount: number, total_quantity: number }; message: string }>('/orders/purchase-request/generate');
       return response.data;
     },
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ordersKeys.lists() });
-      handleSuccessToast('A new draft purchase request has been created.');
+      handleSuccessToast('Purchase request simulation generated.');
     },
     onError: (error: ApiError) => {
       handleUnexpectedToast(error);

@@ -15,6 +15,7 @@ import * as z from 'zod';
 import { OrderDto, UpdateOrderStatusDto } from '@/types/api/order.types';
 import { useUpdateOrderStatusMutation } from '@/hooks/orders/useUpdateOrderStatusMutation';
 import { useCancelOrderMutation } from '@/hooks/orders/useCancelOrderMutation';
+import { useGetNextOrderStatusQuery } from '@/hooks/orders/useGetNextOrderStatusQuery';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -26,7 +27,7 @@ import {
 } from '@/components/ui/select';
 
 const statusSchema = z.object({
-  status: z.enum(['PENDING', 'ORDERED', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
+  status: z.string().min(1, 'Please select a status'),
   notes: z.string().max(500, 'Notes cannot exceed 500 characters').optional(),
 });
 
@@ -37,15 +38,6 @@ interface UpdateOrderStatusDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
-  DRAFT: ['PENDING'],
-  PENDING: ['ORDERED'],
-  ORDERED: ['SHIPPED'],
-  SHIPPED: ['DELIVERED'],
-  DELIVERED: [],
-  CANCELLED: [],
-};
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Draft',
@@ -59,7 +51,11 @@ const STATUS_LABELS: Record<string, string> = {
 export function UpdateOrderStatusDialog({ order, isOpen, onClose }: UpdateOrderStatusDialogProps) {
   const { mutate: updateStatus, isPending: isUpdating } = useUpdateOrderStatusMutation(order?.id || null);
   const { mutate: cancelOrder, isPending: isCancelling } = useCancelOrderMutation(order?.id || null);
-  const isPending = isUpdating || isCancelling;
+  
+  const currentStatusId = order ? (typeof order.status === 'object' ? (order.status as any)?.id : (order as any)?.status_id) : null;
+  const { data: nextStatus, isLoading: isLoadingNextStatus } = useGetNextOrderStatusQuery(isOpen ? currentStatusId : null);
+
+  const isPending = isUpdating || isCancelling || isLoadingNextStatus;
 
   const { register, handleSubmit, reset, control, formState: { errors, isValid } } = useForm<StatusFormValues>({
     resolver: zodResolver(statusSchema),
@@ -69,8 +65,11 @@ export function UpdateOrderStatusDialog({ order, isOpen, onClose }: UpdateOrderS
   const statusStr = order ? (typeof order.status === 'object' ? (order.status as any)?.name : order.status) : '';
   const canCancel = order && typeof order.status === 'object' && (order.status as any)?.can_cancel_order;
   
-  const availableTransitions = [...(statusStr ? (ALLOWED_STATUS_TRANSITIONS[statusStr] || []) : [])];
-  if (canCancel && !availableTransitions.includes('CANCELLED')) {
+  const availableTransitions: string[] = [];
+  if (nextStatus) {
+    availableTransitions.push(nextStatus.name);
+  }
+  if (canCancel) {
     availableTransitions.push('CANCELLED');
   }
 
@@ -98,7 +97,11 @@ export function UpdateOrderStatusDialog({ order, isOpen, onClose }: UpdateOrderS
     if (data.status === 'CANCELLED') {
       cancelOrder({ cancellationReason: data.notes || 'Cancelled via status update' }, { onSuccess });
     } else {
-      updateStatus(data, { onSuccess });
+      updateStatus({
+        status_id: (nextStatus && data.status === nextStatus.name) ? nextStatus.id : undefined,
+        status: data.status,
+        notes: data.notes
+      }, { onSuccess });
     }
   };
 
@@ -134,7 +137,11 @@ export function UpdateOrderStatusDialog({ order, isOpen, onClose }: UpdateOrderS
               </div>
             </div>
 
-            {availableTransitions.length > 0 ? (
+            {isLoadingNextStatus ? (
+              <div className="p-4 text-center text-sm text-slate-500 italic border rounded-md bg-slate-50">
+                Loading next status...
+              </div>
+            ) : availableTransitions.length > 0 ? (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="status" className={errors.status ? "text-red-500" : ""}>
@@ -199,7 +206,7 @@ export function UpdateOrderStatusDialog({ order, isOpen, onClose }: UpdateOrderS
               disabled={isPending || availableTransitions.length === 0 || !isValid}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {isPending ? 'Updating...' : 'Update Status'}
+              {isUpdating || isCancelling ? 'Updating...' : 'Update Status'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </form>

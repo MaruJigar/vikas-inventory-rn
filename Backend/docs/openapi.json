@@ -4249,10 +4249,113 @@
     "/v1/working-day/history": {
       "get": {
         "operationId": "WorkingDayController_getHistory_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Limit",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "SortBy",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "SortOrder",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "StartDate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "EndDate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Status",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "salesman_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by salesman id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/WorkingDay"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
         },
         "security": [
@@ -7602,6 +7705,72 @@
           "longitude"
         ]
       },
+      "WorkingDay": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id"
+          },
+          "salesman_id": {
+            "type": "string",
+            "description": "Salesman id"
+          },
+          "distributor_id": {
+            "type": "string",
+            "description": "Distributor id"
+          },
+          "check_in_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Check in at"
+          },
+          "check_out_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Check out at"
+          },
+          "check_in_location": {
+            "type": "object",
+            "description": "Check in location"
+          },
+          "check_out_location": {
+            "type": "object",
+            "description": "Check out location"
+          },
+          "status": {
+            "type": "string",
+            "description": "Status"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "Device id"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Idempotency key"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Created at"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Updated at"
+          }
+        },
+        "required": [
+          "id",
+          "salesman_id",
+          "distributor_id",
+          "check_in_at",
+          "status",
+          "created_at",
+          "updated_at"
+        ]
+      },
       "StartVisitDto": {
         "type": "object",
         "properties": {
@@ -7693,72 +7862,6 @@
         "required": [
           "visitId",
           "reason"
-        ]
-      },
-      "WorkingDay": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Id"
-          },
-          "salesman_id": {
-            "type": "string",
-            "description": "Salesman id"
-          },
-          "distributor_id": {
-            "type": "string",
-            "description": "Distributor id"
-          },
-          "check_in_at": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Check in at"
-          },
-          "check_out_at": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Check out at"
-          },
-          "check_in_location": {
-            "type": "object",
-            "description": "Check in location"
-          },
-          "check_out_location": {
-            "type": "object",
-            "description": "Check out location"
-          },
-          "status": {
-            "type": "string",
-            "description": "Status"
-          },
-          "device_id": {
-            "type": "string",
-            "description": "Device id"
-          },
-          "idempotency_key": {
-            "type": "string",
-            "description": "Idempotency key"
-          },
-          "created_at": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Created at"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Updated at"
-          }
-        },
-        "required": [
-          "id",
-          "salesman_id",
-          "distributor_id",
-          "check_in_at",
-          "status",
-          "created_at",
-          "updated_at"
         ]
       },
       "ShopVisit": {

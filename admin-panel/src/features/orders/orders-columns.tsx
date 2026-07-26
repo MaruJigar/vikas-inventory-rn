@@ -126,8 +126,12 @@ export const getOrdersColumns = ({
         }
         return false;
       })();
-      const showUpdateStatus = ['SUPER_ADMIN', 'DISTRIBUTOR_ADMIN', 'MANUFACTURER_ADMIN'].includes(userRole || '') && 
+      let showUpdateStatus = ['SUPER_ADMIN', 'DISTRIBUTOR_ADMIN', 'MANUFACTURER_ADMIN'].includes(userRole || '') && 
                                !['DELIVERED', 'CANCELLED'].includes(statusStr);
+                               
+      if (userRole === 'DISTRIBUTOR_ADMIN' && row.original.salesman_id === null) {
+        showUpdateStatus = false;
+      }
 
       return (
         <div className="flex justify-end">

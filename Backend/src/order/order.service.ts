@@ -191,67 +191,39 @@ export class OrderService {
       }
     }
 
-    // 4. Create Draft Distributor -> Manufacturer Order
-    return await this.dataSource.transaction(async (manager) => {
-      let grossOrderAmount = 0;
-      let totalQuantity = 0;
-      const itemsData: Partial<OrderItem>[] = [];
+    // 4. Return Simulated Order Data instead of creating it
+    let grossOrderAmount = 0;
+    let totalQuantity = 0;
+    const itemsData: any[] = [];
 
-      for (const req of requiredQuantities) {
-        const product = await this.productRepo.findOne({ where: { id: req.productId } });
-        if (!product) continue;
+    for (const req of requiredQuantities) {
+      const product = await this.productRepo.findOne({ where: { id: req.productId } });
+      if (!product) continue;
 
-        // Note: mrp is used here for calculation, but often distributor orders use a different price. 
-        // Following existing logic, we'll use mrp or a specific distributor price if available.
-        const lineAmount = Number(product.mrp) * req.requiredQuantity;
-        grossOrderAmount += lineAmount;
-        totalQuantity += req.requiredQuantity;
+      const lineAmount = Number(product.mrp) * req.requiredQuantity;
+      grossOrderAmount += lineAmount;
+      totalQuantity += req.requiredQuantity;
 
-        itemsData.push({
-          product_id: product.id,
-          product_name_snapshot: product.name,
-          sku_snapshot: (product as any).sku || null,
-          manufacturer_name_snapshot: (product as any).manufacturer_name || null,
-          quantity: req.requiredQuantity,
-          mrp: Number(product.mrp),
-          gross_line_amount: lineAmount,
-          net_line_amount: lineAmount,
-          reserved_quantity: 0,
-          backordered_quantity: 0,
-          dispatched_quantity: 0,
-          delivered_quantity: 0,
-          status_id: draftStatus.id,
-        });
-      }
+      itemsData.push({
+        product_id: product.id,
+        product_name_snapshot: product.name,
+        sku_snapshot: (product as any).sku || null,
+        manufacturer_name_snapshot: (product as any).manufacturer_name || null,
+        quantity: req.requiredQuantity,
+        mrp: Number(product.mrp),
+        gross_line_amount: lineAmount,
+        net_line_amount: lineAmount,
+      });
+    }
 
-      // If no replenishment required, still create empty draft
-      const draftOrder = manager.getRepository(Order).create({
-        order_number: this.generateOrderNumber(),
-        distributor_id: distributor.id,
-        status_id: draftStatus.id,
+    return { 
+      data: {
+        items: itemsData,
         gross_order_amount: grossOrderAmount,
-        final_order_amount: grossOrderAmount,
         total_quantity: totalQuantity,
-        total_backordered_quantity: 0,
-        is_offline_created: false,
-        visit_id: null as any,
-        shop_id: null as any,
-        salesman_id: null as any,
-        manufacturer_id: null as any, // to be populated later by distributor
-      });
-
-      const savedDraft = await manager.getRepository(Order).save(draftOrder);
-
-      for (const itemData of itemsData) {
-        itemData.order_id = savedDraft.id;
-        await manager.getRepository(OrderItem).save(itemData);
-      }
-
-      return manager.getRepository(Order).findOne({
-        where: { id: savedDraft.id },
-        relations: { items: true },
-      });
-    });
+      },
+      message: 'Purchase request items calculated successfully'
+    };
   }
 
   // ─── createDistributorManufacturerOrder ──────────────────────────────────
@@ -289,7 +261,7 @@ export class OrderService {
         for (const [mfrId, items] of groupedProducts.entries()) {
           if (mfrId) {
              const manufacturer = await manager.getRepository('Manufacturer').findOne({
-                where: { id: mfrId, isactive: true },
+                where: { id: mfrId, is_active: true },
              });
              if (!manufacturer) {
                 throw new BadRequestException(`Invalid or inactive manufacturer ${mfrId}`);
@@ -574,6 +546,13 @@ export class OrderService {
         throw new ForbiddenException('Not your order');
       if (order.status.name !== 'DRAFT')
         throw new BadRequestException('Distributors can only edit DRAFT orders.');
+    } else if (role === 'MANUFACTURER_ADMIN') {
+      const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
+      if (!mfr) throw new ForbiddenException('Manufacturer not found');
+      if (order.manufacturer_id !== mfr.id)
+        throw new ForbiddenException('Not your order');
+      if (order.status.name !== 'DRAFT')
+        throw new BadRequestException('Manufacturers can only edit DRAFT orders.');
     } else {
       throw new ForbiddenException('Unauthorized role for editing orders');
     }
@@ -945,6 +924,12 @@ export class OrderService {
     // Verify ownership (SUPER_ADMIN, DISTRIBUTOR_ADMIN, MANUFACTURER_ADMIN)
     await this.verifyOrderOwnership(order, role, userId);
 
+    // The person who created the order (buyer) cannot update its status.
+    // For distributor-to-manufacturer orders, the creator is the DISTRIBUTOR_ADMIN.
+    if (role === 'DISTRIBUTOR_ADMIN' && order.salesman_id === null) {
+      throw new ForbiddenException('The creator of the order cannot update its status.');
+    }
+
     let targetStatusId = dto.status_id;
     if (!targetStatusId && dto.status) {
       const statusObj = await this.orderStatusService.getStatusByName(dto.status);
@@ -981,6 +966,35 @@ export class OrderService {
 
       const finalStatus = await this.orderStatusService.getFinalDeliveredStatus();
       const isAlreadyDispatched = order.status.is_dispatch_status || order.status_id === finalStatus.id;
+
+      // 0. Preemptive Inventory Validation for all non-cancel status updates
+      if (!newStatus.is_cancel_status) {
+        const isDistributorToManufacturer = order.salesman_id === null;
+        for (const item of items) {
+          const qty = item.dispatched_quantity > 0 ? item.dispatched_quantity : item.quantity;
+          if (isDistributorToManufacturer) {
+            const mfrInv = await manager.getRepository('ManufacturerInventory').findOne({
+              where: { manufacturer_id: order.manufacturer_id, product_id: item.product_id },
+            });
+            const mfrAvailableQty = mfrInv ? Number((mfrInv as any).available_quantity) : 0;
+            if (mfrAvailableQty < qty) {
+              throw new BadRequestException(
+                `Insufficient manufacturer inventory for product ${item.product_name_snapshot}. Required: ${qty}, Available: ${mfrAvailableQty}. Order remains in current status.`
+              );
+            }
+          } else {
+            const distInv = await manager.getRepository(DistributorInventory).findOne({
+              where: { distributor_id: order.distributor_id, product_id: item.product_id },
+            });
+            const distAvailableQty = distInv ? Number(distInv.available_quantity) : 0;
+            if (distAvailableQty < qty) {
+              throw new BadRequestException(
+                `Insufficient inventory for product ${item.product_name_snapshot}. Required: ${qty}, Available: ${distAvailableQty}. Order remains in current status.`
+              );
+            }
+          }
+        }
+      }
 
       // 1. Pre-Final Status Item Updates (No inventory control)
       if (!newStatus.is_cancel_status && newStatus.id !== finalStatus.id) {

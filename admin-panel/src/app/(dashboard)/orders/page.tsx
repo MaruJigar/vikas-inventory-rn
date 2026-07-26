@@ -17,6 +17,7 @@ import { UpdateOrderStatusDialog } from '@/features/orders/components/update-ord
 import { OrderHistoryDrawer } from '@/features/orders/components/order-history-drawer';
 import { OrderFulfillmentLogsDrawer } from '@/features/orders/components/order-fulfillment-logs-drawer';
 import { useGeneratePurchaseRequestMutation } from '@/hooks/orders/useGeneratePurchaseRequestMutation';
+import { CreatePurchaseOrderDrawer } from '@/features/orders/components/create-purchase-order-drawer';
 import { useState } from 'react';
 import { OrderDto } from '@/types/api/order.types';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ function OrdersPageContent() {
   const [statusUpdatingOrder, setStatusUpdatingOrder] = useState<OrderDto | null>(null);
   const [historyOrder, setHistoryOrder] = useState<OrderDto | null>(null);
   const [fulfillmentOrder, setFulfillmentOrder] = useState<OrderDto | null>(null);
+  const [generatedPRItems, setGeneratedPRItems] = useState<any[] | null>(null);
 
   // ── URL-driven table state (canonical hook) ────────────────────────
   const {
@@ -48,8 +50,8 @@ function OrdersPageContent() {
 
   const handleGeneratePR = () => {
     generatePRMutation.mutate(undefined, {
-      onSuccess: (newDraft) => {
-        setEditingOrder((newDraft as any).data as OrderDto); // Open editor immediately
+      onSuccess: (res) => {
+        setGeneratedPRItems((res as any).data.items);
       }
     });
   };
@@ -154,6 +156,13 @@ function OrdersPageContent() {
           order={fulfillmentOrder}
           isOpen={!!fulfillmentOrder}
           onClose={() => setFulfillmentOrder(null)}
+        />
+
+        {/* Create Purchase Request Cart Drawer */}
+        <CreatePurchaseOrderDrawer
+          isOpen={!!generatedPRItems}
+          initialItems={generatedPRItems || []}
+          onClose={() => setGeneratedPRItems(null)}
         />
       </div>
     </AppLayout>
