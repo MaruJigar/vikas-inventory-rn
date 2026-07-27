@@ -1,107 +1,60 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import Link from 'next/link';
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RoleGuard } from "@/components/auth/RoleGuard";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { DateRangePicker } from '@/features/analytics/components/DateRangePicker';
-import { SalesTable } from '@/features/analytics/components/SalesTable';
-import { InventoryTable } from '@/features/analytics/components/InventoryTable';
-import { analyticsService } from '@/services/analytics.service';
-import { SalesReportItem, InventoryReportItem } from '@/types/api/analytics.types';
-import { useAuthStore } from '@/store/useAuthStore';
-import { hasRole } from '@/lib/auth/guards';
-import { PERMISSIONS } from '@/config/permissions';
+import { BarChart, Boxes, ArrowRight } from "lucide-react";
 
-export default function AnalyticsPage() {
-  const user = useAuthStore((state) => state.user);
-  
-  // Initialize with last 30 days
-  const [startDate, setStartDate] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
-  });
-  
-  const [endDate, setEndDate] = useState<string>(() => {
-    return new Date().toISOString().split('T')[0];
-  });
-
-  const [salesData, setSalesData] = useState<SalesReportItem[]>([]);
-  const [inventoryData, setInventoryData] = useState<InventoryReportItem[]>([]);
-
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('sales');
-
-  useEffect(() => {
-    if (!user || !hasRole(user.role, PERMISSIONS.ANALYTICS_VIEW)) return;
-
-    const fetchReports = async () => {
-      setLoading(true);
-      try {
-        if (activeTab === 'sales') {
-          const res = await analyticsService.getSalesReport({ startDate, endDate });
-          setSalesData(res.data || []);
-        } else if (activeTab === 'inventory') {
-          const res = await analyticsService.getInventoryReport(); // Inventory is current state, no dates
-          setInventoryData(res.data || []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch report data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReports();
-  }, [activeTab, startDate, endDate, user]);
-
+export default function AnalyticsHubPage() {
   return (
     <RoleGuard roles={['MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN']}>
       <AppLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Analytics Reports</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Analytics Hub</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Detailed reporting for your inventory, sales, and taxes.
+              Select a domain below to view related reports.
             </p>
           </div>
 
-          <div className="flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm">
-            <DateRangePicker 
-              startDate={startDate} 
-              endDate={endDate} 
-              onChange={(start, end) => {
-                setStartDate(start);
-                setEndDate(end);
-              }} 
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            <Link href="/analytics/sales" className="group">
+              <div className="p-6 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow h-full flex flex-col">
+                <div className="flex items-center space-x-4 mb-4">
+                  <div className="p-3 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <BarChart className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-gray-900">Sales Reports</h2>
+                </div>
+                <p className="text-sm text-gray-500 flex-1">
+                  Analyze your revenue, product performance, and sales trends.
+                </p>
+                <div className="mt-4 flex items-center text-sm font-medium text-blue-600 group-hover:text-blue-700">
+                  View Reports <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </Link>
+
+            <Link href="/analytics/inventory" className="group">
+              <div className="p-6 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow h-full flex flex-col">
+                <div className="flex items-center space-x-4 mb-4">
+                  <div className="p-3 bg-purple-50 text-purple-600 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                    <Boxes className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-gray-900">Inventory Reports</h2>
+                </div>
+                <p className="text-sm text-gray-500 flex-1">
+                  Track stock levels, valuations, and backordered products.
+                </p>
+                <div className="mt-4 flex items-center text-sm font-medium text-purple-600 group-hover:text-purple-700">
+                  View Reports <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </Link>
+
           </div>
-
-          <Tabs defaultValue="sales" onValueChange={(val) => setActiveTab(val)}>
-            <TabsList>
-              <TabsTrigger value="sales">Sales Report</TabsTrigger>
-              <TabsTrigger value="inventory">Inventory Valuation</TabsTrigger>
-            </TabsList>
-
-            <div className="mt-4">
-              {loading ? (
-                <div className="p-12 text-center text-gray-500">Loading report data...</div>
-              ) : (
-                <>
-                  <TabsContent value="sales">
-                    <SalesTable data={salesData} />
-                  </TabsContent>
-                  <TabsContent value="inventory">
-                    <div className="mb-2 text-sm text-gray-500 bg-gray-50 p-2 rounded">
-                      Note: Inventory Valuation is based on current real-time stock levels, so date filters do not apply here.
-                    </div>
-                    <InventoryTable data={inventoryData} />
-                  </TabsContent>
-                </>
-              )}
-            </div>
-          </Tabs>
         </div>
       </AppLayout>
     </RoleGuard>

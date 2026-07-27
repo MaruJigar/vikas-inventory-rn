@@ -7,19 +7,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { SalesReportItem } from '@/types/api/analytics.types';
+import { SalesReportItem } from '../types';
 
-interface SalesTableProps {
+interface SalesSummaryTableProps {
   data: SalesReportItem[];
 }
 
-export function SalesTable({ data }: SalesTableProps) {
+export function SalesSummaryTable({ data }: SalesSummaryTableProps) {
   if (!data || data.length === 0) {
     return <div className="p-4 text-center text-gray-500">No sales data available for this period.</div>;
   }
 
   return (
-    <div className="rounded-md border bg-white mt-4">
+    <div className="rounded-md border bg-white mt-4 shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>

@@ -7,19 +7,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { InventoryReportItem } from '@/types/api/analytics.types';
+import { InventoryReportItem } from '../types';
 
-interface InventoryTableProps {
+interface InventoryValuationTableProps {
   data: InventoryReportItem[];
 }
 
-export function InventoryTable({ data }: InventoryTableProps) {
+export function InventoryValuationTable({ data }: InventoryValuationTableProps) {
   if (!data || data.length === 0) {
     return <div className="p-4 text-center text-gray-500">No inventory data available.</div>;
   }
 
   return (
-    <div className="rounded-md border bg-white mt-4">
+    <div className="rounded-md border bg-white mt-4 shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>

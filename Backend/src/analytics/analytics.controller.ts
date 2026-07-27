@@ -109,26 +109,4 @@ export class AnalyticsController {
     );
   }
 
-  @Get('reports/sales')
-  @Roles('MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
-  @ApiOperation({ summary: 'Get Sales Report' })
-  @ApiBearerAuth('bearer')
-  async getSalesReport(@Request() req, @Query() query: AnalyticsQueryDto) {
-    return this.analyticsService.getSalesReport(
-      req.user.role,
-      req.user.userId,
-      query,
-    );
-  }
-
-  @Get('reports/inventory')
-  @Roles('MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
-  @ApiOperation({ summary: 'Get Inventory Report' })
-  @ApiBearerAuth('bearer')
-  async getInventoryReport(@Request() req) {
-    return this.analyticsService.getInventoryReport(
-      req.user.role,
-      req.user.userId,
-    );
-  }
 }

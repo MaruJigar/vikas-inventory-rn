@@ -10,6 +10,7 @@ import { WorkingDay } from '../working-day/working-day.entity';
 import { Notification } from '../notification/notification.entity';
 import { InventoryMovement } from '../inventory/inventory-movement.entity';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
+import { applyOwnership } from './shared/utils/report-builder.util';
 
 @Injectable()
 export class AnalyticsService {
@@ -26,54 +27,6 @@ export class AnalyticsService {
     @InjectRepository(InventoryMovement)
     private movementRepo: Repository<InventoryMovement>,
   ) {}
-
-  private applyOwnership(
-    query: any,
-    alias: string,
-    userRole: string,
-    userId: string,
-    field: string,
-  ) {
-    if (userRole === 'DISTRIBUTOR_ADMIN') {
-      if (field === 'requester_user_id') {
-        query.andWhere(`${alias}.${field} = :userId`, { userId });
-      } else {
-        const distSubquery = `SELECT d.id FROM distributors d WHERE d.user_id = :userId`;
-        query.andWhere(`${alias}.${field} IN (${distSubquery})`, { userId });
-      }
-    } else if (userRole === 'SALESMAN') {
-      if (field === 'requester_user_id') {
-        query.andWhere(`${alias}.${field} = :userId`, { userId });
-      } else {
-        const salesSubquery = `SELECT s.id FROM salesmen s WHERE s.user_id = :userId`;
-        query.andWhere(`${alias}.${field} IN (${salesSubquery})`, { userId });
-      }
-    } else if (userRole === 'MANUFACTURER_ADMIN') {
-      if (field === 'distributor_id' || field === 'salesman_id') {
-        // If it's salesman_id, we still map via distributor_id if it's there
-        const qbSubquery = `
-          SELECT md.distributor_id
-          FROM manufacturer_distributors md
-          INNER JOIN manufacturers m ON m.id = md.manufacturer_id
-          WHERE m.user_id = :userId
-        `;
-        query.andWhere(`${alias}.distributor_id IN (${qbSubquery})`, {
-          userId,
-        });
-      } else if (field === 'requester_user_id') {
-        const userSubquery = `
-          SELECT d.user_id
-          FROM distributors d
-          INNER JOIN manufacturer_distributors md ON md.distributor_id = d.id
-          INNER JOIN manufacturers m ON m.id = md.manufacturer_id
-          WHERE m.user_id = :userId
-        `;
-        query.andWhere(`${alias}.requester_user_id IN (${userSubquery})`, {
-          userId,
-        });
-      }
-    }
-  }
 
   async getDashboard(userRole: string, userId: string) {
     const [
@@ -129,7 +82,7 @@ export class AnalyticsService {
       )
       .setParameter('today', today);
 
-    this.applyOwnership(
+    applyOwnership(
       qb,
       'wd',
       userRole,
@@ -163,7 +116,7 @@ export class AnalyticsService {
         'no_order_visits',
       );
 
-    this.applyOwnership(
+    applyOwnership(
       qb,
       'visit',
       userRole,
@@ -193,7 +146,7 @@ export class AnalyticsService {
   ) {
     const qb = this.orderRepo.createQueryBuilder('order');
 
-    this.applyOwnership(
+    applyOwnership(
       qb,
       'order',
       userRole,
@@ -309,7 +262,7 @@ export class AnalyticsService {
         'partial',
       );
 
-    this.applyOwnership(
+    applyOwnership(
       qb,
       'order',
       userRole,
@@ -338,14 +291,14 @@ export class AnalyticsService {
         'backordered_products',
       );
 
-    this.applyOwnership(qb, 'inv', userRole, userId, 'distributor_id');
+    applyOwnership(qb, 'inv', userRole, userId, 'distributor_id');
 
     const result = await qb.getRawOne();
 
     const mQb = this.movementRepo
       .createQueryBuilder('movement')
       .select('COUNT(movement.id)', 'adjustments');
-    this.applyOwnership(mQb, 'movement', userRole, userId, 'distributor_id');
+    applyOwnership(mQb, 'movement', userRole, userId, 'distributor_id');
     const mResult = await mQb.getRawOne();
 
     return {
@@ -371,7 +324,7 @@ export class AnalyticsService {
         'backorder_value',
       ); // dummy value metric if price not joined
 
-    this.applyOwnership(qb, 'b', userRole, userId, 'distributor_id');
+    applyOwnership(qb, 'b', userRole, userId, 'distributor_id');
 
     const result = await qb.getRawOne();
     return {
@@ -430,93 +383,6 @@ export class AnalyticsService {
     };
   }
 
-  async getSalesReport(userRole: string, userId: string, query: AnalyticsQueryDto = {}) {
-    const qb = this.orderRepo.createQueryBuilder('order');
-    qb.innerJoin('order.items', 'items')
-      .innerJoin('items.product', 'product')
-      .leftJoin('product.category', 'category');
 
-    this.applyOwnership(
-      qb,
-      'order',
-      userRole,
-      userId,
-      userRole === 'SALESMAN' ? 'salesman_id' : 'distributor_id',
-    );
-
-    if (userRole === 'MANUFACTURER_ADMIN') {
-      const mSubquery = `SELECT m.id FROM manufacturers m WHERE m.user_id = :userId`;
-      qb.andWhere(`product.manufacturer_id IN (${mSubquery})`, { userId });
-    } else if (userRole === 'DISTRIBUTOR_ADMIN') {
-      const dSubquery = `SELECT d.id FROM distributors d WHERE d.user_id = :userId`;
-      qb.andWhere(`product.distributor_id IN (${dSubquery})`, { userId });
-    }
-
-    if (query.startDate) {
-      qb.andWhere('order.created_at >= :startDate', { startDate: query.startDate });
-    }
-    if (query.endDate) {
-      qb.andWhere('order.created_at <= :endDate', { endDate: query.endDate });
-    }
-
-    qb.select('product.name', 'product_name')
-      .addSelect('product.sku', 'sku')
-      .addSelect('category.name', 'category_name')
-      .addSelect('SUM(items.quantity)', 'quantity_sold')
-      .addSelect('SUM(items.net_line_amount)', 'total_revenue')
-      .groupBy('product.id')
-      .addGroupBy('product.name')
-      .addGroupBy('product.sku')
-      .addGroupBy('category.name')
-      .orderBy('total_revenue', 'DESC');
-
-    const rawData = await qb.getRawMany();
-    return rawData.map(row => ({
-      productName: row.product_name,
-      sku: row.sku,
-      categoryName: row.category_name,
-      quantitySold: Number(row.quantity_sold),
-      totalRevenue: Number(row.total_revenue),
-    }));
-  }
-
-  async getInventoryReport(userRole: string, userId: string) {
-    const qb = this.invRepo.createQueryBuilder('inv');
-    qb.innerJoin('inv.product', 'product')
-      .leftJoin('product.category', 'category');
-
-    this.applyOwnership(qb, 'inv', userRole, userId, 'distributor_id');
-
-    if (userRole === 'MANUFACTURER_ADMIN') {
-      const mSubquery = `SELECT m.id FROM manufacturers m WHERE m.user_id = :userId`;
-      qb.andWhere(`product.manufacturer_id IN (${mSubquery})`, { userId });
-    } else if (userRole === 'DISTRIBUTOR_ADMIN') {
-      const dSubquery = `SELECT d.id FROM distributors d WHERE d.user_id = :userId`;
-      qb.andWhere(`product.distributor_id IN (${dSubquery})`, { userId });
-    }
-
-    qb.select('product.name', 'product_name')
-      .addSelect('product.sku', 'sku')
-      .addSelect('category.name', 'category_name')
-      .addSelect('SUM(inv.available_quantity)', 'available_quantity')
-      .addSelect('SUM(inv.reserved_quantity)', 'reserved_quantity')
-      .addSelect('MAX(product.mrp)', 'mrp')
-      .addSelect('SUM(inv.available_quantity * product.mrp)', 'stock_value')
-      .groupBy('product.id')
-      .addGroupBy('product.name')
-      .addGroupBy('product.sku')
-      .addGroupBy('category.name');
-
-    const rawData = await qb.getRawMany();
-    return rawData.map(row => ({
-      productName: row.product_name,
-      sku: row.sku,
-      categoryName: row.category_name,
-      availableQuantity: Number(row.available_quantity),
-      reservedQuantity: Number(row.reserved_quantity),
-      mrp: Number(row.mrp),
-      stockValue: Number(row.stock_value),
-    }));
-  }
 
 }

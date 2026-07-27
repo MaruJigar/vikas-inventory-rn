@@ -3,13 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-interface DateRangePickerProps {
+interface ReportDateFilterProps {
   startDate: string;
   endDate: string;
   onChange: (start: string, end: string) => void;
 }
 
-export function DateRangePicker({ startDate, endDate, onChange }: DateRangePickerProps) {
+export function ReportDateFilter({ startDate, endDate, onChange }: ReportDateFilterProps) {
   const setPreset = (days: number) => {
     const end = new Date();
     const start = new Date();
@@ -22,7 +22,7 @@ export function DateRangePicker({ startDate, endDate, onChange }: DateRangePicke
   };
 
   return (
-    <div className="flex items-end gap-4 p-4 border rounded-md bg-white shadow-sm">
+    <div className="flex items-end gap-4 p-4 border rounded-md bg-white shadow-sm mb-6">
       <div className="space-y-2">
         <Label htmlFor="startDate">Start Date</Label>
         <Input 

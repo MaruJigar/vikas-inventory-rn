@@ -4548,9 +4548,9 @@
         ]
       }
     },
-    "/v1/analytics/reports/sales": {
+    "/v1/analytics/sales/reports/sales-summary": {
       "get": {
-        "operationId": "AnalyticsController_getSalesReport_v1",
+        "operationId": "SalesReportsController_getSalesSummary_v1",
         "parameters": [
           {
             "name": "startDate",
@@ -4581,15 +4581,15 @@
             "bearer": []
           }
         ],
-        "summary": "Get Sales Report",
+        "summary": "Get Sales Summary Report",
         "tags": [
-          "Analytics"
+          "Analytics - Sales"
         ]
       }
     },
-    "/v1/analytics/reports/inventory": {
+    "/v1/analytics/inventory/reports/inventory-valuation": {
       "get": {
-        "operationId": "AnalyticsController_getInventoryReport_v1",
+        "operationId": "InventoryReportsController_getInventoryValuation_v1",
         "parameters": [],
         "responses": {
           "200": {
@@ -4601,9 +4601,9 @@
             "bearer": []
           }
         ],
-        "summary": "Get Inventory Report",
+        "summary": "Get Inventory Valuation Report",
         "tags": [
-          "Analytics"
+          "Analytics - Inventory"
         ]
       }
     },
