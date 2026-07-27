@@ -3,6 +3,7 @@
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProductQuery } from '@/hooks/products/useProductQuery';
+import { useInventoryQuery } from '@/hooks/inventory/useInventoryQuery';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
   const router = useRouter();
   const { id } = use(params);
   const { data: productData, isLoading, isError } = useProductQuery(id);
+  const { data: inventoryData } = useInventoryQuery({ product_id: id, limit: 1 });
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   if (isLoading) {
@@ -39,7 +41,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  if (isError || !productData?.data) {
+  if (isError || !productData) {
     return (
       <div className="p-6">
         <Button variant="ghost" onClick={() => router.back()} className="mb-4">
@@ -56,7 +58,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  const product = productData.data;
+  const product = productData;
 
   // Extract images safely from legacy comma-separated strings or arrays
   const images: string[] = [];
@@ -181,15 +183,11 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Current Stock</p>
-                <p className="font-medium text-slate-900">{product.stock_quantity ?? '—'}</p>
+                <p className="font-medium text-slate-900">{inventoryData?.data?.[0]?.available_quantity ?? '—'}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Min. Stock</p>
-                <p className="font-medium text-slate-900">{product.minimum_stock_level ?? '—'}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Product Code</p>
-                <p className="font-medium text-slate-900">{product.product_code || '—'}</p>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">SKU</p>
+                <p className="font-medium text-slate-900">{product.sku || '—'}</p>
               </div>
             </CardContent>
           </Card>
