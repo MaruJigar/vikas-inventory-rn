@@ -10,6 +10,8 @@ import {
   ApprovalsResponse,
   AnalyticsQueryParams,
   OrdersAnalyticsDto,
+  SalesReportItem,
+  InventoryReportItem,
 } from '@/types/api/analytics.types';
 
 export const analyticsService = {
@@ -86,5 +88,16 @@ export const analyticsService = {
   getBackorders: () => api.get<ApiResponse<OrdersResponse>>('/analytics/backorders').then(res => res.data),
   getFulfillment: () => api.get<ApiResponse<FulfillmentResponse>>('/analytics/fulfillment').then(res => res.data),
   getApprovals: () => api.get<ApiResponse<ApprovalsResponse>>('/analytics/approvals').then(res => res.data),
-};
 
+  getSalesReport: (params?: AnalyticsQueryParams) =>
+    api.get<unknown>('/analytics/reports/sales', { params }).then((res) => ({
+      success: true,
+      data: res.data,
+    }) as ApiResponse<SalesReportItem[]>),
+
+  getInventoryReport: () =>
+    api.get<unknown>('/analytics/reports/inventory').then((res) => ({
+      success: true,
+      data: res.data,
+    }) as ApiResponse<InventoryReportItem[]>),
+};

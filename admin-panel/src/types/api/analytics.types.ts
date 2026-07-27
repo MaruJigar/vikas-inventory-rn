@@ -111,3 +111,21 @@ export interface OrdersAnalyticsDto {
   topSalesmen: OrdersAnalyticsLeaderboardItem[];
   topDistributors: OrdersAnalyticsLeaderboardItem[];
 }
+
+export interface SalesReportItem {
+  productName: string;
+  sku: string | null;
+  categoryName: string | null;
+  quantitySold: number;
+  totalRevenue: number;
+}
+
+export interface InventoryReportItem {
+  productName: string;
+  sku: string | null;
+  categoryName: string | null;
+  availableQuantity: number;
+  reservedQuantity: number;
+  mrp: number;
+  stockValue: number;
+}
