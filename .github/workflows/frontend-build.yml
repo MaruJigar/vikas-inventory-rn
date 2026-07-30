@@ -145,6 +145,10 @@ jobs:
           npx expo install react-native-web react-dom @expo/metro-runtime -- --legacy-peer-deps
 
       - name: Export Web Build
+        env:
+          # EXPO_PUBLIC_* is inlined into the bundle at export time, so it must
+          # be set here — .env is gitignored and never reaches the runner.
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://api.avchousehold.com/v1' }}
         run: npx expo export --platform web --non-interactive
 
       - name: Determine Output Directory
