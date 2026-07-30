@@ -127,3 +127,86 @@ jobs:
             curl -sf https://app.avchousehold.com > /dev/null \
               && echo "✅ Expo Web: healthy" \
               || (echo "❌ Expo Web: unhealthy" && exit 1)
+
+  # ─────────────────────────────────────────────
+  # JOB 3: Build the Android APK on EAS + notify
+  # ─────────────────────────────────────────────
+  build-apk:
+    name: EAS Android APK
+    needs: typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The APK's api url comes from eas.json (build.preview.env) — this build
+      # runs on EAS servers, so runner env does not apply.
+      - name: Build Android APK on EAS
+        id: eas
+        run: |
+          eas build \
+            --platform android \
+            --profile preview \
+            --non-interactive \
+            --wait \
+            --json > build.json
+
+          echo "url=$(jq -r '.[0].artifacts.applicationArchiveUrl // .[0].artifacts.buildUrl // empty' build.json)" >> "$GITHUB_OUTPUT"
+          echo "id=$(jq -r '.[0].id // empty' build.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Discord
+        if: success()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          APK_URL: ${{ steps.eas.outputs.url }}
+          BUILD_ID: ${{ steps.eas.outputs.id }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          payload=$(jq -n \
+            --arg branch "$BRANCH" \
+            --arg sha "${SHA:0:7}" \
+            --arg actor "$ACTOR" \
+            --arg apk "${APK_URL:-See Expo Dashboard}" \
+            --arg run "$RUN_URL" \
+            '{
+              username: "Vikas CI",
+              embeds: [{
+                title: "✅ Frontend Build Succeeded",
+                color: 3066993,
+                fields: [
+                  {name:"Branch", value:$branch, inline:true},
+                  {name:"Commit", value:$sha, inline:true},
+                  {name:"By", value:$actor, inline:true},
+                  {name:"APK", value:$apk},
+                  {name:"GitHub Run", value:$run}
+                ]
+              }]
+            }')
+
+          curl -H "Content-Type: application/json" \
+               -d "$payload" \
+               "$DISCORD_WEBHOOK"
