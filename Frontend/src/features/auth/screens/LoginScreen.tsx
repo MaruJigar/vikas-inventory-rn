@@ -56,8 +56,8 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
         <Text style={styles.link}>{t('auth.login.forgot')}</Text>
       </Pressable>
 
-      {!login.isError ? (
-        <Text style={styles.error}>{getApiErrorMessage(login.error, t)+"Tst"}</Text>
+      {login.isError ? (
+        <Text style={styles.error}>{getApiErrorMessage(login.error, t)}</Text>
       ) : null}
 
       <Button
