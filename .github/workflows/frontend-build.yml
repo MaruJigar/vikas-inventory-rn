@@ -1,5 +1,4 @@
 name: Frontend Build
-
 on:
   push:
     branches:
