@@ -2,7 +2,7 @@ name: Frontend Web CI/CD Pipeline
 
 on:
   push:
-    branches: [Frontend]
+    branches: [frontend]
     paths:
       # Expo application source
       - "Frontend/**"
@@ -97,9 +97,9 @@ jobs:
             # ── 1. Pull latest code ──────────────────────────────────────
             cd "$REPO"
             git fetch origin
-            git checkout Frontend
+            git checkout frontend
             git fetch origin
-            git reset --hard origin/Frontend
+            git reset --hard origin/frontend
 
             # ── 2. Install deps ─────────────────────────────────────────
             cd "$REPO/Frontend"
