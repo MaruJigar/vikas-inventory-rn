@@ -89,6 +89,11 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
 
+          # Runner env does NOT cross the SSH boundary. Without this the remote
+          # export falls through to the VPS's stale gitignored .env, which still
+          # holds the old api domain.
+          envs: EXPO_PUBLIC_API_URL
+
           script: |
             set -e
 
@@ -106,8 +111,13 @@ jobs:
             npm ci
 
             # ── 3. Clear Metro cache and export ──────────────────────────
+            # --clear is required: EXPO_PUBLIC_* is inlined at Babel transform
+            # time and that cache OUTLIVES `rm -rf .expo`, so without it a
+            # stale cached module keeps the OLD api url forever.
+            export EXPO_PUBLIC_API_URL
+            echo "→ building against: ${EXPO_PUBLIC_API_URL:-<UNSET!>}"
             rm -rf .expo dist
-            npx expo export --platform web
+            npx expo export --platform web --clear
 
             # ── 4. Caddy serves dist/ directly — no restart required ────
             echo "✅ Static files deployed to dist/"
