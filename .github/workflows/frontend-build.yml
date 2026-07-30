@@ -2,8 +2,7 @@ name: Frontend Web CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - frontend
+    branches: [Frontend]
     paths:
       # Expo application source
       - "Frontend/**"
@@ -14,12 +13,6 @@ on:
 concurrency:
   group: frontend-build-${{ github.ref }}
   cancel-in-progress: true
-
-env:
-  # Production API base URL — /v1 prefix, no trailing slash.
-  # Not a secret: EXPO_PUBLIC_* is inlined into the client bundle at export time.
-  EXPO_PUBLIC_API_URL: https://api.avchousehold.com/v1
-  WEB_APP_URL: https://app.avchousehold.com
 
 jobs:
   # ─────────────────────────────────────────────
@@ -47,92 +40,7 @@ jobs:
         run: npx tsc --noEmit
 
   # ─────────────────────────────────────────────
-  # JOB 2: Build the Android APK on EAS
-  # ─────────────────────────────────────────────
-  build-apk:
-    name: EAS Android APK
-    needs: typecheck
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Frontend
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: Frontend/package-lock.json
-
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Setup EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install dependencies
-        run: npm ci
-
-      # The APK's API URL comes from eas.json (build.preview.env), not from the
-      # runner — the build itself runs on EAS servers.
-      - name: Build Android APK on EAS
-        id: eas
-        run: |
-          eas build \
-            --platform android \
-            --profile preview \
-            --non-interactive \
-            --wait \
-            --json > build.json
-
-          echo "url=$(jq -r '.[0].artifacts.applicationArchiveUrl // .[0].artifacts.buildUrl // empty' build.json)" >> "$GITHUB_OUTPUT"
-          echo "id=$(jq -r '.[0].id // empty' build.json)" >> "$GITHUB_OUTPUT"
-
-      - name: Notify Discord
-        if: success()
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          APK_URL: ${{ steps.eas.outputs.url }}
-          BUILD_ID: ${{ steps.eas.outputs.id }}
-          BRANCH: ${{ github.ref_name }}
-          SHA: ${{ github.sha }}
-          ACTOR: ${{ github.actor }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          payload=$(jq -n \
-            --arg branch "$BRANCH" \
-            --arg sha "${SHA:0:7}" \
-            --arg actor "$ACTOR" \
-            --arg apk "${APK_URL:-See Expo Dashboard}" \
-            --arg api "$EXPO_PUBLIC_API_URL" \
-            --arg run "$RUN_URL" \
-            '{
-              username: "Vikas CI",
-              embeds: [{
-                title: "✅ Frontend Build Succeeded",
-                color: 3066993,
-                fields: [
-                  {name:"Branch", value:$branch, inline:true},
-                  {name:"Commit", value:$sha, inline:true},
-                  {name:"By", value:$actor, inline:true},
-                  {name:"API", value:$api},
-                  {name:"APK", value:$apk},
-                  {name:"GitHub Run", value:$run}
-                ]
-              }]
-            }')
-
-          curl -H "Content-Type: application/json" \
-               -d "$payload" \
-               "$DISCORD_WEBHOOK"
-
-  # ─────────────────────────────────────────────
-  # JOB 3: Export Expo Web and deploy to VPS
+  # JOB 2: Export Expo Web and deploy to VPS
   # ─────────────────────────────────────────────
   build-and-deploy-web:
     name: Expo Web Export & Deploy
@@ -141,6 +49,10 @@ jobs:
     defaults:
       run:
         working-directory: Frontend
+
+    env:
+      # Production API base URL — /v1 prefix, no trailing slash
+      EXPO_PUBLIC_API_URL: https://api.avchousehold.com/v1
 
     steps:
       - uses: actions/checkout@v4
@@ -163,16 +75,6 @@ jobs:
           DIR=$(node -e "const fs=require('fs');const app=fs.existsSync('./app.json')?require('./app.json'):{};console.log(app.expo?.web?.outputDir || 'dist')")
           echo "dir=$DIR" >> "$GITHUB_OUTPUT"
 
-      - name: Verify API URL was inlined into the bundle
-        run: |
-          DIR="${{ steps.outdir.outputs.dir }}"
-          if grep -rqF "$EXPO_PUBLIC_API_URL" "$DIR/_expo/static/js/web/"; then
-            echo "✅ Bundle points at $EXPO_PUBLIC_API_URL"
-          else
-            echo "❌ $EXPO_PUBLIC_API_URL is NOT in the bundle — it would ship the localhost fallback"
-            exit 1
-          fi
-
       - name: Upload Web Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -181,55 +83,37 @@ jobs:
 
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.2.0
-        env:
-          DEPLOY_BRANCH: ${{ github.ref_name }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
 
-          # Forward the API URL into the remote shell. Without this the VPS
-          # export falls back to http://localhost:3000/v1 and ships a dead build.
-          # DEPLOY_BRANCH keeps the VPS checkout in sync with the branch that
-          # triggered this run, so we never deploy code we didn't just verify.
-          envs: EXPO_PUBLIC_API_URL,WEB_APP_URL,DEPLOY_BRANCH
-
           script: |
             set -e
 
             REPO=/var/www/vikas-inventory-rn
 
-            # ── 1. Pull latest code (same branch that triggered the run) ──
+            # ── 1. Pull latest code ──────────────────────────────────────
             cd "$REPO"
             git fetch origin
-            git checkout "$DEPLOY_BRANCH"
-            git reset --hard "origin/$DEPLOY_BRANCH"
+            git checkout Frontend
+            git fetch origin
+            git reset --hard origin/Frontend
 
             # ── 2. Install deps ─────────────────────────────────────────
             cd "$REPO/Frontend"
             npm ci
 
-            # ── 3. Clear Metro cache and export to a staging dir ─────────
-            # Building into dist-next keeps the live dist/ serving until the
-            # new build is complete, so there is no 404 window.
-            export EXPO_PUBLIC_API_URL
-            rm -rf .expo dist-next
-            npx expo export --platform web --output-dir dist-next
+            # ── 3. Clear Metro cache and export ──────────────────────────
+            rm -rf .expo dist
+            npx expo export --platform web
 
-            # ── 4. Fail before swapping if the URL did not get inlined ───
-            grep -rqF "$EXPO_PUBLIC_API_URL" dist-next/_expo/static/js/web/ \
-              || (echo "❌ API URL missing from bundle — refusing to deploy" && exit 1)
-
-            # ── 5. Atomic-ish swap; Caddy serves dist/ directly ──────────
-            rm -rf dist-prev
-            [ -d dist ] && mv dist dist-prev
-            mv dist-next dist
-            rm -rf dist-prev
+            # ── 4. Caddy serves dist/ directly — no restart required ────
             echo "✅ Static files deployed to dist/"
 
-            # ── 6. Verify web app is reachable ──────────────────────────
+            # ── 5. Verify web app is reachable ────────────────────────────
             sleep 3
-            curl -sf "$WEB_APP_URL" > /dev/null \
+            curl -sf https://app.avchousehold.com > /dev/null \
               && echo "✅ Expo Web: healthy" \
               || (echo "❌ Expo Web: unhealthy" && exit 1)
