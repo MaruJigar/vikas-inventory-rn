@@ -158,6 +158,170 @@ export function Select({
   );
 }
 
+interface MultiSelectProps {
+  label?: string;
+  placeholder?: string;
+  values: string[];
+  options: SelectOption[];
+  onChange: (values: string[]) => void;
+  error?: string;
+  loading?: boolean;
+  disabled?: boolean;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  /** Label for the button that closes the sheet (selection applies as you tap). */
+  doneLabel?: string;
+}
+
+/**
+ * Multi-select sibling of {@link Select}: tapping an option toggles it and the
+ * sheet stays open, so several can be picked in one pass. Shares the same
+ * field/modal styling.
+ */
+export function MultiSelect({
+  label,
+  placeholder,
+  values,
+  options,
+  onChange,
+  error,
+  loading,
+  disabled,
+  searchable,
+  searchPlaceholder,
+  emptyText,
+  doneLabel,
+}: MultiSelectProps) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!searchable || !q) return options;
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }, [options, query, searchable]);
+
+  // Read back in the order the options are listed, not the order tapped, so the
+  // summary text is stable.
+  const summary = useMemo(
+    () =>
+      options
+        .filter((o) => values.includes(o.value))
+        .map((o) => o.label)
+        .join(', '),
+    [options, values],
+  );
+
+  const close = () => {
+    setOpen(false);
+    setQuery('');
+  };
+
+  const toggle = (value: string) =>
+    onChange(
+      values.includes(value)
+        ? values.filter((v) => v !== value)
+        : [...values, value],
+    );
+
+  const locked = disabled || loading;
+
+  return (
+    <View style={styles.wrap}>
+      {label ? <Text style={styles.label}>{label}</Text> : null}
+      <Pressable
+        onPress={() => !locked && setOpen(true)}
+        style={[
+          styles.field,
+          !!error && styles.fieldError,
+          locked && styles.fieldDisabled,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: !!locked, expanded: open }}
+      >
+        <Text
+          style={[styles.value, !summary && styles.placeholder]}
+          numberOfLines={1}
+        >
+          {summary || placeholder || ''}
+        </Text>
+        {loading ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
+        )}
+      </Pressable>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <Modal
+        visible={open}
+        transparent
+        animationType="fade"
+        onRequestClose={close}
+      >
+        <Pressable style={styles.backdrop} onPress={close}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            {label ? <Text style={styles.sheetTitle}>{label}</Text> : null}
+            {searchable ? (
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder={searchPlaceholder}
+                placeholderTextColor={colors.textMuted}
+                style={styles.search}
+                autoCapitalize="none"
+                autoFocus
+              />
+            ) : null}
+            <FlatList
+              data={filtered}
+              keyExtractor={(o) => o.value}
+              keyboardShouldPersistTaps="handled"
+              style={styles.list}
+              renderItem={({ item }) => {
+                const active = values.includes(item.value);
+                return (
+                  <Pressable
+                    style={styles.option}
+                    onPress={() => toggle(item.value)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: active }}
+                  >
+                    <Text
+                      style={[styles.optionText, active && styles.optionActive]}
+                      numberOfLines={1}
+                    >
+                      {item.label}
+                    </Text>
+                    <Ionicons
+                      name={active ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color={active ? colors.primary : colors.textMuted}
+                    />
+                  </Pressable>
+                );
+              }}
+              ListEmptyComponent={
+                <Text style={styles.empty}>
+                  {emptyText ?? t('common.noResults')}
+                </Text>
+              }
+            />
+            <Pressable style={styles.done} onPress={close}>
+              <Text style={styles.doneText}>
+                {doneLabel ?? t('common.done')}
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   wrap: { marginBottom: spacing.md },
   label: { ...typography.label, marginBottom: spacing.xs },
@@ -226,4 +390,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: spacing.lg,
   },
+  done: { alignSelf: 'flex-end', paddingTop: spacing.md, paddingHorizontal: spacing.sm },
+  doneText: { ...typography.body, color: colors.primary, fontWeight: '700' },
 });

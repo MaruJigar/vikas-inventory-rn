@@ -27,6 +27,7 @@ import {
   nextStatus,
   statusColor,
   statusLabel,
+  statusNameLabel,
   toNum,
   type StatusMeta,
 } from '@/features/orders/constants';
@@ -154,9 +155,7 @@ export function OrderDetailScreen({
 
   const onAdvance = () => {
     if (!next) return;
-    const targetLabel = t(`orders.status.${next.name}`, {
-      defaultValue: next.name,
-    });
+    const targetLabel = statusNameLabel(t, next.name);
     confirmAction({
       title: t('orders.actions.confirmTitle'),
       message: t('orders.actions.confirmMessage', { status: targetLabel }),

@@ -30,3 +30,38 @@ export interface LoginPayload {
   password: string;
 }
 
+/**
+ * POST /v1/auth/register/distributor (public — no token required).
+ * Backend creates the user (role DISTRIBUTOR_ADMIN, approval_status
+ * PENDING_APPROVAL), the `distributors` row, the manufacturer link and a
+ * DISTRIBUTOR_APPROVAL request, all in one transaction.
+ */
+export interface RegisterDistributorPayload {
+  full_name: string;
+  email: string;
+  phone: string;
+  password: string;
+  business_name: string;
+  gst_number?: string;
+  city?: string;
+  /**
+   * The DTO takes exactly one manufacturer, so this carries the first pick and
+   * is the only one the current backend links.
+   */
+  manufacturer_id: string;
+  /**
+   * Every manufacturer the applicant selected. The DTO doesn't declare this
+   * yet, and the global ValidationPipe runs `whitelist: true` *without*
+   * `forbidNonWhitelisted`, so today the backend silently strips it rather than
+   * erroring — sending it now means multi-manufacturer signup starts working
+   * the moment the DTO accepts it, with no app release.
+   */
+  manufacturer_ids?: string[];
+}
+
+/** Registration returns NO tokens — the account starts pending approval. */
+export interface RegisterDistributorResponse {
+  message: string;
+  userId: string;
+}
+

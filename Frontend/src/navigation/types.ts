@@ -10,6 +10,7 @@ import type { Product } from '@/types/product';
  */
 export type AuthStackParamList = {
   Login: undefined;
+  RegisterDistributor: undefined;
   ForgotPassword: undefined;
 };
 

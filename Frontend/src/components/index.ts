@@ -1,7 +1,7 @@
 export { Screen } from '@/components/Screen';
 export { Button } from '@/components/Button';
 export { Input } from '@/components/Input';
-export { Select, type SelectOption } from '@/components/Select';
+export { Select, MultiSelect, type SelectOption } from '@/components/Select';
 export { Card } from '@/components/Card';
 export { Section } from '@/components/Section';
 export { ActionTile } from '@/components/ActionTile';

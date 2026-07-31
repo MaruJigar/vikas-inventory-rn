@@ -65,6 +65,15 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
         onPress={handleSubmit(onSubmit)}
         loading={login.isPending}
       />
+
+      <View style={styles.footer}>
+        <Text style={typography.body}>{t('auth.login.noAccount')} </Text>
+        <Pressable onPress={() => navigation.navigate('RegisterDistributor')}>
+          <Text style={[styles.link, styles.linkStrong]}>
+            {t('auth.login.register')}
+          </Text>
+        </Pressable>
+      </View>
     </Screen>
   );
 }

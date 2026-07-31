@@ -1,9 +1,21 @@
 import { apiClient } from '@/api/client';
-import type { AuthTokens, LoginPayload, User } from '@/types/auth';
+import type {
+  AuthTokens,
+  LoginPayload,
+  RegisterDistributorPayload,
+  RegisterDistributorResponse,
+  User,
+} from '@/types/auth';
 
 export const authApi = {
   login: (payload: LoginPayload) =>
     apiClient.post<AuthTokens>('/auth/login', payload).then((r) => r.data),
+
+  // Public route. Rejects a duplicate email/phone with 400.
+  registerDistributor: (payload: RegisterDistributorPayload) =>
+    apiClient
+      .post<RegisterDistributorResponse>('/auth/register/distributor', payload)
+      .then((r) => r.data),
 
   me: () => apiClient.get<User>('/auth/me').then((r) => r.data),
 

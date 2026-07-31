@@ -42,9 +42,32 @@ export function indexStatuses(
 }
 
 /**
+ * Admin-defined status names arrive as backend constants (`DRAFT`,
+ * `OUT_FOR_DELIVERY`). With no translation for one, render it as words instead
+ * of shouting caps. A name an admin already cased deliberately ("On hold") is
+ * left alone.
+ */
+function humanizeStatus(name: string): string {
+  if (name !== name.toUpperCase()) return name;
+  return name
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Translate an admin-defined status name, falling back to a humanized form.
+ * The single place status names become display text.
+ */
+export function statusNameLabel(t: TFunction, name: string): string {
+  return t(`orders.status.${name}`, { defaultValue: humanizeStatus(name) });
+}
+
+/**
  * Resolve a `status_id` to a display label via the index. Status names are
- * admin-defined, so translate known ones and fall back to the raw name; if the
- * id isn't in the catalogue yet, render an em-dash rather than a raw uuid.
+ * admin-defined, so translate known ones and fall back to a humanized name; if
+ * the id isn't in the catalogue yet, render an em-dash rather than a raw uuid.
  */
 export function statusLabel(
   t: TFunction,
@@ -54,7 +77,7 @@ export function statusLabel(
   if (!statusId) return '—';
   const meta = index.get(statusId);
   if (!meta) return '—';
-  return t(`orders.status.${meta.name}`, { defaultValue: meta.name });
+  return statusNameLabel(t, meta.name);
 }
 
 /**
@@ -102,7 +125,7 @@ export function advanceActionLabel(t: TFunction, targetName: string): string {
   const key = `orders.actions.${targetName}`;
   return t(key, {
     defaultValue: t('orders.actions.markAs', {
-      status: t(`orders.status.${targetName}`, { defaultValue: targetName }),
+      status: statusNameLabel(t, targetName),
     }),
   });
 }

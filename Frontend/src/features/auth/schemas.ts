@@ -11,6 +11,31 @@ export const loginSchema = z.object({
 });
 export type LoginForm = z.infer<typeof loginSchema>;
 
+const phoneRegex = /^(\+91|0)?[6-9]\d{9}$/;
+const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+/**
+ * Distributor self-signup. Mirrors `RegisterDistributorDto`; `manufacturer_id`
+ * is not a form field — it comes from build config (see `@/config`).
+ */
+export const registerDistributorSchema = z.object({
+  full_name: z.string().trim().min(1, 'validation.required'),
+  email: z.string().trim().toLowerCase().email('validation.email'),
+  phone: z.string().trim().regex(phoneRegex, 'validation.phone'),
+  password: z.string().min(6, 'validation.passwordMin'),
+  business_name: z.string().trim().min(1, 'validation.required'),
+  manufacturer_ids: z.array(z.string()).min(1, 'validation.required'),
+  gst_number: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(gstRegex, 'validation.gst')
+    .optional()
+    .or(z.literal('')),
+  city: z.string().trim().optional(),
+});
+export type RegisterDistributorForm = z.infer<typeof registerDistributorSchema>;
+
 // Backend resets by EMAIL (sends a reset link), so this flow needs an email.
 export const forgotSchema = z.object({
   email: z.string().trim().toLowerCase().min(1, 'validation.required').email('validation.email'),

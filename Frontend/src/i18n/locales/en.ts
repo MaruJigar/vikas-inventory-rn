@@ -9,6 +9,7 @@ export const en = {
     loading: 'Loading…',
     retry: 'Retry',
     noResults: 'No results',
+    done: 'Done',
     cancel: 'Cancel',
     submit: 'Submit',
     continue: 'Continue',
@@ -44,6 +45,14 @@ export const en = {
     register: {
       salesmanTitle: 'Salesman registration',
       distributorTitle: 'Distributor registration',
+      subtitle: 'Create your distributor account — an admin approves it before you can order',
+      city: 'City',
+      manufacturers: 'Manufacturers',
+      selectManufacturers: 'Select one or more manufacturers',
+      searchManufacturers: 'Search manufacturers',
+      noManufacturers: 'No manufacturers available.',
+      manufacturersError:
+        'Could not load manufacturers, so sign-up is unavailable right now. Please try again later or contact support.',
       fullName: 'Full name',
       email: 'Email',
       phone: 'Phone',
@@ -230,6 +239,7 @@ export const en = {
     // Status names are admin-defined (dynamic); these are best-effort labels —
     // any unmapped name falls back to the raw backend value.
     status: {
+      DRAFT: 'Draft',
       PENDING: 'Pending',
       CREATED: 'Created',
       ORDERED: 'Ordered',

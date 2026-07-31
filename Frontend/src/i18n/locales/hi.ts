@@ -6,6 +6,7 @@ export const hi: TranslationResources = {
     loading: 'लोड हो रहा है…',
     retry: 'पुनः प्रयास करें',
     noResults: 'कोई परिणाम नहीं',
+    done: 'पूर्ण',
     cancel: 'रद्द करें',
     submit: 'जमा करें',
     continue: 'आगे बढ़ें',
@@ -41,6 +42,15 @@ export const hi: TranslationResources = {
     register: {
       salesmanTitle: 'सेल्समैन पंजीकरण',
       distributorTitle: 'वितरक पंजीकरण',
+      subtitle:
+        'अपना वितरक खाता बनाएं — ऑर्डर करने से पहले एडमिन इसे मंज़ूरी देगा',
+      city: 'शहर',
+      manufacturers: 'निर्माता',
+      selectManufacturers: 'एक या अधिक निर्माता चुनें',
+      searchManufacturers: 'निर्माता खोजें',
+      noManufacturers: 'कोई निर्माता उपलब्ध नहीं।',
+      manufacturersError:
+        'निर्माता लोड नहीं हो सके, इसलिए अभी साइन-अप उपलब्ध नहीं है। कृपया बाद में प्रयास करें या सहायता से संपर्क करें।',
       fullName: 'पूरा नाम',
       email: 'ईमेल',
       phone: 'फ़ोन',
@@ -226,6 +236,7 @@ export const hi: TranslationResources = {
     // Status names are admin-defined (dynamic); these are best-effort labels —
     // any unmapped name falls back to the raw backend value.
     status: {
+      DRAFT: 'ड्राफ़्ट',
       PENDING: 'लंबित',
       CREATED: 'बनाया गया',
       ORDERED: 'ऑर्डर किया गया',
