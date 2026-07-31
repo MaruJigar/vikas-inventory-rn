@@ -86,5 +86,5 @@ export const analyticsService = {
   getBackorders: () => api.get<ApiResponse<OrdersResponse>>('/analytics/backorders').then(res => res.data),
   getFulfillment: () => api.get<ApiResponse<FulfillmentResponse>>('/analytics/fulfillment').then(res => res.data),
   getApprovals: () => api.get<ApiResponse<ApprovalsResponse>>('/analytics/approvals').then(res => res.data),
-};
 
+};

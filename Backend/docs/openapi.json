@@ -4548,6 +4548,65 @@
         ]
       }
     },
+    "/v1/analytics/sales/reports/sales-summary": {
+      "get": {
+        "operationId": "SalesReportsController_getSalesSummary_v1",
+        "parameters": [
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "Start date in ISO format",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "End date in ISO format",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get Sales Summary Report",
+        "tags": [
+          "Analytics - Sales"
+        ]
+      }
+    },
+    "/v1/analytics/inventory/reports/inventory-valuation": {
+      "get": {
+        "operationId": "InventoryReportsController_getInventoryValuation_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get Inventory Valuation Report",
+        "tags": [
+          "Analytics - Inventory"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "HealthController_checkStatus",

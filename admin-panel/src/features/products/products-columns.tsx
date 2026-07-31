@@ -11,6 +11,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuGroup,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -106,26 +108,28 @@ export function getProductColumns({ onEdit, onDelete }: ProductsColumnsProps): C
               <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href={`/products/${row.original.id}`} className="cursor-pointer flex items-center">
-                  <Eye className="mr-2 h-4 w-4" />
-                  View
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <Link href={`/products/${row.original.id}`}>
+                  <DropdownMenuItem className="cursor-pointer flex items-center">
+                    <Eye className="mr-2 h-4 w-4" />
+                    View
+                  </DropdownMenuItem>
                 </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit(row.original)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Product
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => onDelete(row.original)}
-                className="text-red-600 focus:text-red-600"
-              >
-                <Trash className="mr-2 h-4 w-4" />
-                Delete Product
-              </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEdit(row.original)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Product
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => onDelete(row.original)}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete Product
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
