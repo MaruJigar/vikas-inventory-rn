@@ -43,12 +43,7 @@ const navItems: NavItem[] = [
   { title: 'Orders', href: ROUTES.ORDERS, icon: ShoppingCart, roles: PERMISSIONS.ORDERS_VIEW },
   { title: 'Attendance', href: ROUTES.WORKING_DAYS, icon: CalendarDays, roles: PERMISSIONS.WORKING_DAYS_VIEW },
   { title: 'Inventory', href: ROUTES.INVENTORY, icon: Boxes, roles: PERMISSIONS.INVENTORY_VIEW },
-  { title: 'Backorders', href: ROUTES.BACKORDERS, icon: RotateCcw, roles: PERMISSIONS.BACKORDERS_VIEW },
-  { title: 'Fulfillment', href: ROUTES.FULFILLMENT, icon: PackageCheck, roles: PERMISSIONS.FULFILLMENT_VIEW },
   { title: 'Analytics', href: ROUTES.ANALYTICS, icon: BarChart, roles: PERMISSIONS.ANALYTICS_VIEW },
-  { title: 'Notifications', href: ROUTES.NOTIFICATIONS, icon: Bell, roles: PERMISSIONS.NOTIFICATIONS_VIEW },
-  { title: 'Audit Logs', href: ROUTES.AUDIT_LOGS, icon: ShieldAlert, roles: PERMISSIONS.AUDIT_LOGS_VIEW },
-  { title: 'Settings', href: ROUTES.SETTINGS, icon: Settings, roles: PERMISSIONS.SETTINGS_VIEW },
 ];
 
 export function Sidebar() {
