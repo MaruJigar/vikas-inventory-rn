@@ -5,7 +5,7 @@
  */
 export const en = {
   common: {
-    appName: 'Qera',
+    appName: 'VM',
     loading: 'Loading…',
     retry: 'Retry',
     noResults: 'No results',

@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { colors } from '@/theme';
 import type { ApprovalRequest, ApprovalStatus } from '@/features/approvals/types';

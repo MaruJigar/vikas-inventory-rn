@@ -1,13 +1,16 @@
 {
   "expo": {
-    "name": "Vikas Marketing",
+    "name": "VM",
     "slug": "vikas-inventory",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "runtimeVersion": "1.0.0",
+    "icon": "./assets/icon.png",
     "splash": {
-      "backgroundColor": "#FFFFFF"
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
     },
     "platforms": [
       "ios",
@@ -18,7 +21,8 @@
       "edgeToEdgeEnabled": true,
       "package": "com.vikas.inventory",
       "adaptiveIcon": {
-        "backgroundColor": "#111111"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
       },
       "permissions": [
         "android.permission.INTERNET",
@@ -31,7 +35,8 @@
       ]
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
@@ -53,6 +58,16 @@
         {
           "cameraPermission": "Vikas Marketing uses the camera to capture a shop's visiting card.",
           "photosPermission": "Vikas Marketing accesses your photos to attach a shop's visiting card."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-keep class com.facebook.jni.** { *; }\n-keep class com.facebook.hermes.** { *; }\n-keep @com.facebook.proguard.annotations.DoNotStrip class *\n-keepclassmembers class * { @com.facebook.proguard.annotations.DoNotStrip *; }\n-keepclassmembers class * { @com.facebook.react.bridge.ReactMethod <methods>; }\n-keep class * extends com.facebook.react.bridge.NativeModule { *; }\n-keep class expo.modules.** { *; }"
+          }
         }
       ]
     ]

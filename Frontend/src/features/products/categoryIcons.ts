@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 /** Map a category name to a relevant Ionicon, with a neutral fallback. */
 const CATEGORY_ICONS: { match: RegExp; icon: keyof typeof Ionicons.glyphMap }[] =

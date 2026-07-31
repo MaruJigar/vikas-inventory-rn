@@ -2,7 +2,7 @@ import type { TranslationResources } from '@/i18n/locales/en';
 
 export const hi: TranslationResources = {
   common: {
-    appName: 'Qera',
+    appName: 'VM',
     loading: 'लोड हो रहा है…',
     retry: 'पुनः प्रयास करें',
     noResults: 'कोई परिणाम नहीं',
