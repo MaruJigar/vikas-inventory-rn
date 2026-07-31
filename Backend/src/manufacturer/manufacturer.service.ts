@@ -163,6 +163,11 @@ export class ManufacturerService {
         phone: dto.phone,
         email: dto.email,
         address: dto.address,
+        city: dto.city,
+        state: dto.state,
+        country: dto.country,
+        pincode: dto.pincode,
+        gst_number: dto.gst_number,
         is_active: true,
       });
       await queryRunner.manager.save(manufacturer);
