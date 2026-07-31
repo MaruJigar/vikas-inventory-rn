@@ -949,6 +949,21 @@
         ]
       }
     },
+    "/v1/manufacturers/lookup": {
+      "get": {
+        "operationId": "ManufacturerController_getLookup_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get Manufacturer Lookup for Signup",
+        "tags": [
+          "Manufacturer"
+        ]
+      }
+    },
     "/v1/manufacturers/{id}": {
       "get": {
         "operationId": "ManufacturerController_getManufacturerById_v1",
@@ -5324,10 +5339,15 @@
             "type": "boolean",
             "description": "Is internal distributor"
           },
-          "manufacturer_id": {
-            "type": "string",
-            "description": "Manufacturer ID",
-            "example": "123e4567-e89b-12d3-a456-426614174000"
+          "manufacturer_ids": {
+            "description": "Manufacturer IDs",
+            "example": [
+              "123e4567-e89b-12d3-a456-426614174000"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -5336,7 +5356,7 @@
           "phone",
           "password",
           "business_name",
-          "manufacturer_id"
+          "manufacturer_ids"
         ]
       },
       "RegisterSalesmanDto": {
