@@ -26,7 +26,7 @@ export class DistributorService {
     private manufacturerDistributorRepo: Repository<ManufacturerDistributor>,
     private dataSource: DataSource,
     private auditLogService: AuditLogService,
-  ) {}
+  ) { }
 
   async getProfile(userId: string) {
     const profile = await this.distributorRepo.findOne({
@@ -149,7 +149,7 @@ export class DistributorService {
     const links = await this.manufacturerDistributorRepo.find({
       where: { distributor_id: id },
     });
-    
+
     return {
       ...distributor,
       manufacturer_ids: links.map(link => link.manufacturer_id),
@@ -202,14 +202,12 @@ export class DistributorService {
       await queryRunner.manager.save(distributor);
 
       // Resolve Linkage
-      let manufacturerIds: string[] = [];
-      if (role === 'MANUFACTURER_ADMIN') {
+      let manufacturerIds: string[] = dto.manufacturer_ids || [];
+      if (role === 'MANUFACTURER_ADMIN' && manufacturerIds.length === 0) {
         const mfr = await queryRunner.manager.findOne('Manufacturer', {
           where: { user_id: actorUserId },
         });
         if (mfr) manufacturerIds = [(mfr as any).id];
-      } else if (role === 'SUPER_ADMIN' && dto.manufacturer_ids && dto.manufacturer_ids.length > 0) {
-        manufacturerIds = dto.manufacturer_ids;
       }
 
       for (const mfrId of manufacturerIds) {
@@ -261,14 +259,16 @@ export class DistributorService {
     try {
       // We can use the existing getDistributorById for validation, but we need it inside the transaction scope ideally
       // or we just fetch it, verify ownership, then do transaction
-      const distributor = await this.getDistributorById(actorUserId, role, id);
+      await this.getDistributorById(actorUserId, role, id);
+      const distributor = await queryRunner.manager.findOne(Distributor, { where: { id } });
+      if (!distributor) throw new NotFoundException('Distributor not found');
       const oldValues = { ...distributor };
-      
+
       const { manufacturer_ids, ...updateData } = dto;
       Object.assign(distributor, updateData);
       const updated = await queryRunner.manager.save(distributor);
 
-      if (role === 'SUPER_ADMIN' && manufacturer_ids) {
+      if (manufacturer_ids) {
         await queryRunner.manager.delete(ManufacturerDistributor, { distributor_id: id });
         for (const mfrId of manufacturer_ids) {
           const link = queryRunner.manager.create(ManufacturerDistributor, {

@@ -5,6 +5,7 @@ import {
   MinLength,
   IsOptional,
   IsBoolean,
+  IsArray,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -56,10 +57,11 @@ export class RegisterDistributorDto {
   is_internal_distributor?: boolean;
 
   @ApiProperty({
-    description: 'Manufacturer ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Manufacturer IDs',
+    example: ['123e4567-e89b-12d3-a456-426614174000'],
   })
   @IsNotEmpty()
-  @IsString()
-  manufacturer_id: string;
+  @IsArray()
+  @IsString({ each: true })
+  manufacturer_ids: string[];
 }

@@ -119,6 +119,17 @@ export class ManufacturerService {
     };
   }
 
+  async getLookup() {
+    return this.manufacturerRepo.find({
+      select: {
+        id: true,
+        company_name: true,
+      },
+      where: { is_active: true },
+      order: { company_name: 'ASC' },
+    });
+  }
+
   async getManufacturerById(id: string) {
     const manufacturer = await this.manufacturerRepo.findOne({ where: { id } });
     if (!manufacturer) throw new NotFoundException('Manufacturer not found');

@@ -297,48 +297,17 @@ export function CreateProductDrawer({ open, onOpenChange }: CreateProductDrawerP
           {errors.mrp && <p className="text-xs text-destructive">{errors.mrp.message}</p>}
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          {/* GST % */}
-          <div className="space-y-1">
-            <Label htmlFor="gst_percent">GST %</Label>
-            <Input
-              id="gst_percent"
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              {...register('gst_percent')}
-              placeholder="18"
-            />
-          </div>
-
-          {/* Dist. Discount % */}
-          <div className="space-y-1">
-            <Label htmlFor="distributor_discount_percent">Dist. Disc. %</Label>
-            <Input
-              id="distributor_discount_percent"
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              {...register('distributor_discount_percent')}
-              placeholder="0"
-            />
-          </div>
-
-          {/* Special Discount % */}
-          <div className="space-y-1">
-            <Label htmlFor="special_discount_percent">Special Disc. %</Label>
-            <Input
-              id="special_discount_percent"
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              {...register('special_discount_percent')}
-              placeholder="0"
-            />
-          </div>
+        <div className="space-y-1">
+          <Label htmlFor="gst_percent">GST %</Label>
+          <Input
+            id="gst_percent"
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            {...register('gst_percent')}
+            placeholder="18"
+          />
         </div>
 
         {/* Description */}

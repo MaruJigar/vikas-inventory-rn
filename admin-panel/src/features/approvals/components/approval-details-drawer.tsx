@@ -168,7 +168,7 @@ export function ApprovalDetailsDrawer({ approvalId, isOpen, onClose }: ApprovalD
             </Card>
           )}
 
-          {data.request.status === 'PENDING_APPROVAL' && (userRole === 'SUPER_ADMIN' || userRole === 'MANUFACTURER_ADMIN') && (
+          {data.request.status === 'PENDING_APPROVAL' && (userRole === 'SUPER_ADMIN' || userRole === 'MANUFACTURER_ADMIN' || userRole === 'DISTRIBUTOR_ADMIN') && (
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t flex justify-end gap-3 z-10 shadow-lg" style={{ left: 'auto', width: '100%', maxWidth: '32rem' }}>
               {isRejecting ? (
                 <div className="flex flex-col w-full gap-3">

@@ -124,7 +124,7 @@ export class ApprovalService {
       });
       await queryRunner.manager.save(log);
 
-      if (request.requester_user_id) {
+      if (request.requester_user_id && request.request_type !== 'DISTRIBUTOR_APPROVAL') {
         const user = await queryRunner.manager.findOne(User, {
           where: { id: request.requester_user_id },
         });
@@ -154,16 +154,44 @@ export class ApprovalService {
         request.distributor_id &&
         request.request_type === 'DISTRIBUTOR_APPROVAL'
       ) {
+        if (request.manufacturer_id) {
+          await queryRunner.manager.update('manufacturer_distributors', {
+            distributor_id: request.distributor_id,
+            manufacturer_id: request.manufacturer_id
+          }, {
+            status
+          });
+        }
+
+        const allLinks = await queryRunner.manager.find('manufacturer_distributors', {
+          where: { distributor_id: request.distributor_id }
+        }) as any[];
+        
+        const hasApproved = allLinks.some(link => link.status === 'APPROVED');
+        const allRejected = allLinks.length > 0 && allLinks.every(link => link.status === 'REJECTED');
+        
+        const computedStatus = hasApproved ? 'APPROVED' : (allRejected ? 'REJECTED' : 'PENDING_APPROVAL');
+
         const distributor = await queryRunner.manager.findOne(Distributor, {
           where: { id: request.distributor_id },
         });
         if (distributor) {
-          distributor.approval_status = status;
-          distributor.is_active = status === 'APPROVED';
+          distributor.approval_status = computedStatus;
+          distributor.is_active = computedStatus === 'APPROVED';
           distributor.approved_by_user_id = currentUser.userId;
           distributor.approved_at = new Date();
-          if (reason) distributor.rejected_reason = reason;
+          if (reason && computedStatus === 'REJECTED') distributor.rejected_reason = reason;
           await queryRunner.manager.save(distributor);
+          
+          if (distributor.user_id) {
+            const user = await queryRunner.manager.findOne(User, {
+              where: { id: distributor.user_id },
+            });
+            if (user) {
+              user.approval_status = computedStatus;
+              await queryRunner.manager.save(user);
+            }
+          }
         }
       }
 

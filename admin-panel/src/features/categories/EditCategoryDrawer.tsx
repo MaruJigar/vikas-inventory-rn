@@ -8,7 +8,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -24,7 +23,6 @@ import { CategoryDto } from '@/types/api/product.types';
 
 const categorySchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  description: z.string().optional(),
   parent_id: z.string().uuid().optional().or(z.literal('')),
 });
 
@@ -51,7 +49,6 @@ export function EditCategoryDrawer({ open, onOpenChange, category }: Props) {
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: '',
-      description: '',
       parent_id: '',
     },
   });
@@ -60,7 +57,6 @@ export function EditCategoryDrawer({ open, onOpenChange, category }: Props) {
     if (category) {
       reset({
         name: category.name,
-        description: category.description ?? '',
         parent_id: category.parent_id ?? '',
       });
     }
@@ -120,13 +116,6 @@ export function EditCategoryDrawer({ open, onOpenChange, category }: Props) {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-description">Description</Label>
-            <Textarea id="edit-description" {...register('description')} />
-            {errors.description && (
-              <p className="text-sm text-red-500">{errors.description.message}</p>
-            )}
-          </div>
 
           <div className="flex justify-end pt-4">
             <Button type="submit" disabled={mutation.isPending}>

@@ -91,19 +91,21 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const payload: UpdateSalesmanInput = {
+    const payload: UpdateSalesmanInput & { city?: string | null; city_id?: string | null; state?: string } = {
       full_name: data.full_name,
       email: data.email || undefined,
       phone: data.phone || undefined,
       state_id: data.state_id || undefined,
-      city_id: data.city_id || undefined,
+      city_id: data.city_id === 'none' ? null : (data.city_id || undefined),
     };
 
     if (data.state_id) {
       payload.state = states?.find(s => s.id === data.state_id)?.name || '';
     }
-    if (data.city_id) {
+    if (data.city_id && data.city_id !== 'none') {
       payload.city = cities?.find(c => c.id === data.city_id)?.name || '';
+    } else if (data.city_id === 'none') {
+      payload.city = null;
     }
 
     try {
@@ -228,11 +230,12 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
                       <SelectValue>
                         {isLoadingCities
                           ? "Loading cities..."
-                          : (cities?.find((c) => c.id === field.value)?.name || "Select City")
+                          : (field.value === 'none' ? "None" : cities?.find((c) => c.id === field.value)?.name || "Select City")
                         }
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">None (Remove City)</SelectItem>
                       {cities?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}

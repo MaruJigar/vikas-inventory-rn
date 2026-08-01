@@ -26,7 +26,7 @@ interface EditProductDrawerProps {
 }
 
 export function EditProductDrawer({ open, onOpenChange, product }: EditProductDrawerProps) {
-  const updateMutation = useUpdateProductMutation(product?.id ?? '');
+  const updateMutation = useUpdateProductMutation();
   const { data: categoriesResponse, isLoading: isCategoriesLoading } = useGetCategories({ limit: 1000 });
   const categories = categoriesResponse?.data ?? [];
 
@@ -74,9 +74,10 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
   useEffect(() => {
     if (!open) {
       reset();
-      setImagePreviews([]);
+      setImagePreviews(prev => prev.length ? [] : prev);
+      updateMutation.reset();
     }
-  }, [open, reset]);
+  }, [open, reset, updateMutation.reset]);
 
   // Auto-close on success
   useEffect(() => {
@@ -86,7 +87,7 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
   }, [updateMutation.isSuccess, onOpenChange]);
 
   const onSubmit = (values: UpdateProductFormValues) => {
-    updateMutation.mutate(values);
+    updateMutation.mutate({ id: product?.id ?? '', data: values });
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,19 +225,9 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
           {errors.mrp && <p className="text-xs text-destructive">{errors.mrp.message}</p>}
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="edit-gst">GST %</Label>
-            <Input id="edit-gst" type="number" step="0.01" {...register('gst_percent')} />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="edit-dist-disc">Dist. Disc. %</Label>
-            <Input id="edit-dist-disc" type="number" step="0.01" {...register('distributor_discount_percent')} />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="edit-sp-disc">Special Disc. %</Label>
-            <Input id="edit-sp-disc" type="number" step="0.01" {...register('special_discount_percent')} />
-          </div>
+        <div className="space-y-1">
+          <Label htmlFor="edit-gst">GST %</Label>
+          <Input id="edit-gst" type="number" step="0.01" {...register('gst_percent')} />
         </div>
 
         {/* Description */}

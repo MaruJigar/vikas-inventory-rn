@@ -10,16 +10,16 @@ import { getCategoryColumns } from '@/features/categories/categories-columns';
 import { CreateCategoryDrawer } from '@/features/categories/CreateCategoryDrawer';
 import { EditCategoryDrawer } from '@/features/categories/EditCategoryDrawer';
 import { Button } from '@/components/ui/button';
-import { Plus, Search } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Plus } from 'lucide-react';
+import { DataTableSearch } from '@/components/data-table/DataTableSearch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 function ProductCategoriesContent() {
   const user = useAuthStore((s) => s.user);
   const canManage = ['SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN'].includes(user?.role || '');
 
-  const { queryState, setPage, setLimit, setSearch } = useDataTable();
-  const { data: categoriesResponse, isLoading } = useGetCategories(queryState);
+  const { queryState, setPage, setLimit, setSearch, setSort } = useDataTable();
+  const { data: categoriesResponse, isLoading, isError, error } = useGetCategories(queryState);
   const deleteMutation = useDeleteCategoryMutation();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -35,6 +35,8 @@ function ProductCategoriesContent() {
     onEdit: setSelectedCategory,
     onDelete: handleDelete,
     canManage,
+    queryState,
+    setSort,
   });
 
   return (
@@ -56,20 +58,18 @@ function ProductCategoriesContent() {
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search categories..."
-                className="pl-8"
-                value={queryState.search || ''}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
+            <DataTableSearch
+              placeholder="Search categories..."
+              initialValue={queryState.search || ''}
+              onSearch={setSearch}
+            />
           </div>
           <DataTable
             columns={columns}
             data={categoriesResponse}
             isLoading={isLoading}
+            isError={isError}
+            error={error}
             onPageChange={setPage}
             onLimitChange={setLimit}
           />

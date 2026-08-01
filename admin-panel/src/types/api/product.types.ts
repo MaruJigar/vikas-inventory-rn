@@ -19,7 +19,6 @@ export interface ProductDto {
 export interface CategoryDto {
   id: string;
   name: string;
-  description?: string;
   parent_id?: string;
   created_at: string;
   updated_at: string;
@@ -28,7 +27,6 @@ export interface CategoryDto {
 
 export interface CreateCategoryDto {
   name: string;
-  description?: string;
   parent_id?: string;
 }
 
@@ -53,18 +51,6 @@ export interface CreateProductDto {
 
 export type UpdateProductDto = Partial<CreateProductDto>;
 
-export interface CategoryDto {
-  id: string;
-  name: string;
-  parent_id?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateCategoryDto {
-  name: string;
-  parent_id?: string;
-}
 
 export interface PricingHistoryDto {
   id: string;

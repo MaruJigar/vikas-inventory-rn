@@ -132,7 +132,7 @@ export class ProductService {
 
       const manufacturerDistributors = await this.productRepo.manager.find(
         ManufacturerDistributor,
-        { where: { distributor_id: profile.id } },
+        { where: { distributor_id: profile.id, status: 'APPROVED' } },
       );
       const mfrIds = manufacturerDistributors.map(md => md.manufacturer_id);
 
@@ -153,7 +153,7 @@ export class ProductService {
 
       const manufacturerDistributors = await this.productRepo.manager.find(
         ManufacturerDistributor,
-        { where: { distributor_id: profile.distributor_id } },
+        { where: { distributor_id: profile.distributor_id, status: 'APPROVED' } },
       );
       const mfrIds = manufacturerDistributors.map(md => md.manufacturer_id);
 
@@ -235,7 +235,7 @@ export class ProductService {
       if (!profile) throw new ForbiddenException('Distributor profile not found');
 
       const mds = await this.productRepo.manager.find(ManufacturerDistributor, {
-        where: { distributor_id: profile.id },
+        where: { distributor_id: profile.id, status: 'APPROVED' },
       });
       const mfrIds = mds.map((md) => md.manufacturer_id);
 
@@ -248,7 +248,7 @@ export class ProductService {
       if (!profile) throw new ForbiddenException('Salesman profile not found');
 
       const mds = await this.productRepo.manager.find(ManufacturerDistributor, {
-        where: { distributor_id: profile.distributor_id },
+        where: { distributor_id: profile.distributor_id, status: 'APPROVED' },
       });
       const mfrIds = mds.map((md) => md.manufacturer_id);
 
