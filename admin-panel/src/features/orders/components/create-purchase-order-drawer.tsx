@@ -279,10 +279,24 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
                 <span>Gross Amount</span>
                 <span>₹{Number(grossAmount).toFixed(2)}</span>
               </div>
-              {totalDiscount > 0 && (
+              {standardDiscountAmount > 0 && (
+                <>
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Standard Discount</span>
+                    <span className="text-red-500">- ₹{Number(standardDiscountAmount).toFixed(2)}</span>
+                  </div>
+                  {specialDiscountAmount > 0 && (
+                    <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                      <span>Amount after Standard Discount</span>
+                      <span>₹{Number(afterStdDisc).toFixed(2)}</span>
+                    </div>
+                  )}
+                </>
+              )}
+              {specialDiscountAmount > 0 && (
                 <div className="flex justify-between items-center text-slate-600">
-                  <span>Order Level Discounts</span>
-                  <span className="text-red-500">- ₹{Number(totalDiscount).toFixed(2)}</span>
+                  <span>Special Discount</span>
+                  <span className="text-red-500">- ₹{Number(specialDiscountAmount).toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between items-center text-slate-600">

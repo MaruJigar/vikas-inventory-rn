@@ -10,6 +10,7 @@ import { useOrderQuery } from '@/hooks/orders/useOrderQuery';
 import { useUpdateOrderMutation } from '@/hooks/orders/useUpdateOrderMutation';
 import { useManufacturersQuery } from '@/hooks/manufacturers/useManufacturersQuery';
 import { useProductsQuery } from '@/hooks/products/useProductsQuery';
+import { useDistributorProfileQuery } from '@/hooks/distributors/useDistributorProfileQuery';
 import { UpdateOrderDto } from '@/types/api/order.types';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Trash2, PlusCircle } from 'lucide-react';
@@ -45,6 +46,11 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
 
   const user = useAuthStore((state) => state.user);
   const isManufacturerAdmin = user?.role === 'MANUFACTURER_ADMIN';
+  const isDistributorAdmin = user?.role === 'DISTRIBUTOR_ADMIN';
+
+  const { data: distProfileResp } = useDistributorProfileQuery(isDistributorAdmin);
+  const distProfile = distProfileResp?.data || distProfileResp;
+  const isInternalDistributor = isDistributorAdmin && distProfile?.is_internal_distributor;
 
   const { data: mfrResponse, isLoading: mfrLoading } = useManufacturersQuery({ limit: 100 });
   const { data: prodResponse, isLoading: prodLoading } = useProductsQuery({ limit: 100 });
@@ -302,7 +308,7 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                 <Label htmlFor="stdDisc">Standard Discount (%)</Label>
                 <Input id="stdDisc" type="number" min="0" max="100" step="0.01" {...register('standardDiscountPercent')} className="mt-1" />
               </div>
-              {isManufacturerAdmin && (
+              {(isManufacturerAdmin || isInternalDistributor) && (
                 <div>
                   <Label htmlFor="specDisc">Special Discount (%)</Label>
                   <Input id="specDisc" type="number" min="0" max="100" step="0.01" {...register('specialDiscountPercent')} className="mt-1" />
@@ -318,10 +324,24 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                   <span>Gross Amount</span>
                   <span>₹{Number(grossAmount).toFixed(2)}</span>
                 </div>
-                {totalDiscount > 0 && (
+                {standardDiscountAmount > 0 && (
+                  <>
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Standard Discount</span>
+                      <span className="text-red-500">- ₹{Number(standardDiscountAmount).toFixed(2)}</span>
+                    </div>
+                    {specialDiscountAmount > 0 && (
+                      <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                        <span>Amount after Standard Discount</span>
+                        <span>₹{Number(afterStdDisc).toFixed(2)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                {specialDiscountAmount > 0 && (
                   <div className="flex justify-between items-center text-slate-600">
-                    <span>Order Level Discounts</span>
-                    <span className="text-red-500">- ₹{Number(totalDiscount).toFixed(2)}</span>
+                    <span>Special Discount</span>
+                    <span className="text-red-500">- ₹{Number(specialDiscountAmount).toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center text-slate-600">

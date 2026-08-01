@@ -157,7 +157,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
             <CardHeader className="pb-3 border-b border-slate-100">
               <CardTitle className="text-sm font-medium text-slate-700">Pricing & Inventory Information</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6">
+            <CardContent className="grid grid-cols-2 gap-4 p-6">
               <div className="space-y-1">
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Selling Price</p>
                 <p className="text-lg font-semibold text-slate-900">₹{Number(product.mrp).toFixed(2)}</p>
@@ -166,16 +166,8 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">GST</p>
                 <p className="text-lg font-semibold text-slate-900">{product.gst_percent ?? 0}%</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Dist. Discount</p>
-                <p className="text-lg font-semibold text-slate-900">{product.distributor_discount_percent ?? 0}%</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Special Discount</p>
-                <p className="text-lg font-semibold text-slate-900">{product.special_discount_percent ?? 0}%</p>
-              </div>
               
-              <div className="col-span-2 md:col-span-4 border-t border-slate-100 my-2" />
+              <div className="col-span-2 border-t border-slate-100 my-2" />
               
               <div className="space-y-1">
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Unit</p>
