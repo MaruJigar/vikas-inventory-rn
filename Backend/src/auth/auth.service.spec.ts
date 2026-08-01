@@ -5,6 +5,7 @@ import { User } from '../user/user.entity';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UnauthorizedException } from '@nestjs/common';
+import { EmailService } from '../email/email.service';
 
 jest.mock('bcrypt');
 
@@ -27,7 +28,7 @@ describe('AuthService', () => {
           manager: {
             create: jest.fn().mockReturnValue({ id: 'user123' }),
             save: jest.fn(),
-            insert: jest.fn(),
+            insert: jest.fn().mockResolvedValue({ identifiers: [{ id: 'dist123' }] }),
           },
         }),
       },
@@ -37,6 +38,10 @@ describe('AuthService', () => {
   const mockJwtService = {
     sign: jest.fn().mockReturnValue('mock_token'),
     verify: jest.fn(),
+  };
+
+  const mockEmailService = {
+    sendPasswordResetEmail: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -50,6 +55,10 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: mockJwtService,
+        },
+        {
+          provide: EmailService,
+          useValue: mockEmailService,
         },
       ],
     }).compile();
@@ -67,7 +76,7 @@ describe('AuthService', () => {
 
   describe('validateUser', () => {
     it('should validate and return user if credentials match', async () => {
-      const mockUser = { id: '1', password_hash: 'hashed', is_active: true };
+      const mockUser = { id: '1', password_hash: 'hashed', is_active: true, approval_status: 'APPROVED' };
       mockUserRepo.findOne.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
@@ -115,6 +124,7 @@ describe('AuthService', () => {
         phone: '123',
         password: 'pass',
         business_name: 'Biz',
+        manufacturer_ids: ['manufacturer-id'],
       };
 
       const result = await service.registerDistributor(dto);

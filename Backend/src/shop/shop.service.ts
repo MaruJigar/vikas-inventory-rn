@@ -83,9 +83,7 @@ export class ShopService {
         city_id: dto.city_id,
         state_id: dto.state_id,
         verification_photo_url: dto.verification_photo_url || null,
-        verification_status: dto.verification_photo_url
-          ? 'VERIFIED'
-          : 'PENDING',
+        verification_status: 'PENDING',
       });
 
       const savedShop = await queryRunner.manager.save(shop);

@@ -111,21 +111,25 @@ export class AuthService {
       const insertResult = await queryRunner.manager.insert('distributors', distributorData);
       const distId = insertResult.identifiers[0].id;
 
-      // Link to manufacturer
-      await queryRunner.manager.insert('manufacturer_distributors', {
-        manufacturer_id: dto.manufacturer_id,
-        distributor_id: distId,
-        status: 'PENDING_APPROVAL',
-      });
+      // Link to manufacturers
+      if (dto.manufacturer_ids && dto.manufacturer_ids.length > 0) {
+        const mfrDistLinks = dto.manufacturer_ids.map(id => ({
+          manufacturer_id: id,
+          distributor_id: distId,
+          status: 'PENDING_APPROVAL',
+        }));
+        await queryRunner.manager.insert('manufacturer_distributors', mfrDistLinks);
 
-      // Create Approval Request
-      await queryRunner.manager.insert('approval_requests', {
-        request_type: 'DISTRIBUTOR_APPROVAL',
-        requester_user_id: user.id,
-        distributor_id: distId,
-        manufacturer_id: dto.manufacturer_id,
-        status: 'PENDING_APPROVAL',
-      });
+        // Create Approval Requests
+        const approvalRequests = dto.manufacturer_ids.map(id => ({
+          request_type: 'DISTRIBUTOR_APPROVAL',
+          requester_user_id: user.id,
+          distributor_id: distId,
+          manufacturer_id: id,
+          status: 'PENDING_APPROVAL',
+        }));
+        await queryRunner.manager.insert('approval_requests', approvalRequests);
+      }
 
       await queryRunner.commitTransaction();
 

@@ -15,6 +15,7 @@ import { ManufacturerService } from './manufacturer.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
+import { Public } from '../auth/public.decorator';
 import { CreateManufacturerDto } from './dto/create-manufacturer.dto';
 import { UpdateManufacturerDto } from './dto/update-manufacturer.dto';
 import { CreateManufacturerAdminDto } from './dto/create-manufacturer-admin.dto';
@@ -72,6 +73,13 @@ export class ManufacturerController {
   @ApiPaginatedResponse(Manufacturer)
   getManufacturers(@Query() query: ListQueryDto) {
     return this.manufacturerService.getManufacturers(query);
+  }
+
+  @Public()
+  @Get('lookup')
+  @ApiOperation({ summary: 'Get Manufacturer Lookup for Signup' })
+  getLookup() {
+    return this.manufacturerService.getLookup();
   }
 
   @Roles('SUPER_ADMIN')

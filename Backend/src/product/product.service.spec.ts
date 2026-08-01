@@ -6,6 +6,7 @@ import { Distributor } from '../distributor/distributor.entity';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
 import { ProductPricingService } from '../product-pricing/product-pricing.service';
 import { ForbiddenException, BadRequestException } from '@nestjs/common';
+import { UploadedFile } from '../shop-image/uploaded-file.entity';
 
 describe('ProductService', () => {
   let service: ProductService;
@@ -29,6 +30,11 @@ describe('ProductService', () => {
     logPriceChange: jest.fn(),
   };
 
+  const mockFileRepo = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -41,6 +47,10 @@ describe('ProductService', () => {
         {
           provide: getRepositoryToken(Manufacturer),
           useValue: mockManufacturerRepo,
+        },
+        {
+          provide: getRepositoryToken(UploadedFile),
+          useValue: mockFileRepo,
         },
         { provide: ProductPricingService, useValue: mockPricingService },
       ],
@@ -55,14 +65,14 @@ describe('ProductService', () => {
 
   describe('createProduct', () => {
     it('should throw ForbiddenException if manufacturer tries to create for another manufacturer', async () => {
-      mockManufacturerRepo.findOne.mockResolvedValue({ id: 'real-man-id' });
+      mockManufacturerRepo.findOne.mockResolvedValue(null);
       await expect(
-        service.createProduct('user-id', {
+        service.createProduct('user-id', 'MANUFACTURER_ADMIN', {
           product_source: 'MANUFACTURER_CREATED',
           manufacturer_id: 'fake-id',
           name: 'Test',
           mrp: 100,
-        }),
+        } as any),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -71,24 +81,24 @@ describe('ProductService', () => {
       mockProductRepo.create.mockReturnValue({ id: 'prod1' });
       mockProductRepo.save.mockResolvedValue({ id: 'prod1' });
 
-      const result = await service.createProduct('user-id', {
+      const result = await service.createProduct('user-id', 'MANUFACTURER_ADMIN', {
         product_source: 'MANUFACTURER_CREATED',
         manufacturer_id: 'real-man-id',
         name: 'Test',
         mrp: 100,
-      });
+      } as any);
       expect(result.id).toBe('prod1');
     });
 
     it('should throw BadRequestException if distributor creates without external_manufacturer_name', async () => {
       mockDistributorRepo.findOne.mockResolvedValue({ id: 'dist-id' });
       await expect(
-        service.createProduct('user-id', {
+        service.createProduct('user-id', 'DISTRIBUTOR_ADMIN', {
           product_source: 'DISTRIBUTOR_CREATED',
           distributor_id: 'dist-id',
           name: 'Test',
           mrp: 100,
-        }),
+        } as any),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -100,11 +110,12 @@ describe('ProductService', () => {
         product_source: 'MANUFACTURER_CREATED',
         manufacturer_id: 'man1',
         mrp: 100,
+        created_by_user_id: 'user1',
       });
       mockManufacturerRepo.findOne.mockResolvedValue({ id: 'man1' });
       mockProductRepo.save.mockResolvedValue({ id: 'prod1', mrp: 150 });
 
-      await service.updateProduct('user1', 'prod1', { mrp: 150 });
+      await service.updateProduct('user1', 'MANUFACTURER_ADMIN', 'prod1', { mrp: 150 });
       expect(mockPricingService.logPriceChange).toHaveBeenCalledWith(
         'prod1',
         expect.anything(),

@@ -25,7 +25,7 @@ export class ShopImageController {
   constructor(
     private uploadService: UploadService,
     @InjectRepository(Shop) private shopRepository: Repository<Shop>,
-  ) {}
+  ) { }
 
   @Post(':shopId/upload')
   @UseInterceptors(
@@ -72,7 +72,6 @@ export class ShopImageController {
     );
 
     shop.verification_photo_url = uploadedFile.file_url;
-    shop.verification_status = 'VERIFIED';
     await this.shopRepository.save(shop);
 
     return uploadedFile;

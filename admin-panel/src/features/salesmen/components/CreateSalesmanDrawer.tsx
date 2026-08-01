@@ -81,18 +81,12 @@ export function CreateSalesmanDrawer({ isOpen, onClose }: CreateSalesmanDrawerPr
       const stateName = states?.find(s => s.id === data.state_id)?.name;
       const cityName = cities?.find(c => c.id === data.city_id)?.name;
       
-      const payload: CreateSalesmanInput & { city?: string; city_id?: string; state: string } = {
+      const payload: CreateSalesmanInput & { city?: string | null; city_id?: string | null; state: string } = {
         ...data,
         state: stateName || '',
+        city_id: data.city_id === 'none' ? null : (data.city_id || undefined),
+        city: data.city_id === 'none' ? null : (cityName || undefined),
       };
-
-      if (cityName && data.city_id) {
-        payload.city = cityName;
-        payload.city_id = data.city_id;
-      } else {
-        delete payload.city_id;
-        delete payload.city;
-      }
 
       if (!payload.distributor_id) {
         delete payload.distributor_id;
@@ -253,11 +247,12 @@ export function CreateSalesmanDrawer({ isOpen, onClose }: CreateSalesmanDrawerPr
                       <SelectValue>
                         {isLoadingCities
                           ? "Loading cities..."
-                          : (cities?.find((c) => c.id === field.value)?.name || "Select City")
+                          : (field.value === 'none' ? "None" : cities?.find((c) => c.id === field.value)?.name || "Select City")
                         }
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">None (Remove City)</SelectItem>
                       {cities?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
