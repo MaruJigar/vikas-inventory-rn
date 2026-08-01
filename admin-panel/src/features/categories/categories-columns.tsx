@@ -1,7 +1,8 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { CategoryDto } from '@/types/api/product.types';
+import { QueryParams } from '@/types/api/common.types';
 import { formatDate } from '@/lib/utils';
-import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -18,16 +19,40 @@ interface CategoryColumnsProps {
   onEdit: (category: CategoryDto) => void;
   onDelete: (id: string) => void;
   canManage: boolean;
+  queryState: QueryParams;
+  setSort: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
 }
+
+const renderSortHeader = (title: string, columnKey: string, queryState: QueryParams, setSort: (sortBy: string, sortOrder: 'asc' | 'desc') => void) => {
+  const isSorted = queryState.sortBy === columnKey;
+  const isAsc = isSorted && queryState.sortOrder?.toLowerCase() === 'asc';
+  
+  return (
+    <Button
+      variant="ghost"
+      onClick={() => setSort(columnKey, isAsc ? 'desc' : 'asc')}
+      className="-ml-4 h-8 data-[state=open]:bg-accent"
+    >
+      <span>{title}</span>
+      {isSorted ? (
+        isAsc ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+      ) : (
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      )}
+    </Button>
+  );
+};
 
 export const getCategoryColumns = ({
   onEdit,
   onDelete,
   canManage,
+  queryState,
+  setSort,
 }: CategoryColumnsProps): ColumnDef<CategoryDto>[] => [
   {
     accessorKey: 'name',
-    header: 'Name',
+    header: () => renderSortHeader('Name', 'name', queryState, setSort),
   },
   {
     id: 'parent',
@@ -38,17 +63,14 @@ export const getCategoryColumns = ({
     },
   },
   {
-    accessorKey: 'description',
-    header: 'Description',
-    cell: ({ row }) => {
-      const desc = row.getValue('description') as string;
-      return <span className="text-muted-foreground">{desc || '—'}</span>;
-    },
+    accessorKey: 'created_at',
+    header: () => renderSortHeader('Created Date', 'created_at', queryState, setSort),
+    cell: ({ row }) => formatDate(row.getValue('created_at')),
   },
   {
-    accessorKey: 'created_at',
-    header: 'Created Date',
-    cell: ({ row }) => formatDate(row.getValue('created_at')),
+    accessorKey: 'updated_at',
+    header: () => renderSortHeader('Updated Date', 'updated_at', queryState, setSort),
+    cell: ({ row }) => formatDate(row.getValue('updated_at')),
   },
   {
     id: 'actions',

@@ -8,7 +8,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -23,7 +22,6 @@ import { useCreateCategoryMutation, useGetCategories } from '@/hooks/categories/
 
 const categorySchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  description: z.string().optional(),
   parent_id: z.string().uuid().optional().or(z.literal('')),
 });
 
@@ -47,7 +45,6 @@ export function CreateCategoryDrawer({ open, onOpenChange }: Props) {
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: '',
-      description: '',
       parent_id: '',
     },
   });
@@ -102,13 +99,6 @@ export function CreateCategoryDrawer({ open, onOpenChange }: Props) {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea id="description" {...register('description')} />
-            {errors.description && (
-              <p className="text-sm text-red-500">{errors.description.message}</p>
-            )}
-          </div>
 
           <div className="flex justify-end pt-4">
             <Button type="submit" disabled={mutation.isPending}>
