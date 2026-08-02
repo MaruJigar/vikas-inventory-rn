@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 
@@ -10,6 +10,16 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useForgotPassword } from '@/features/auth/hooks';
 import type { Role } from '@/types/auth';
 import type { AccountScreenProps } from '@/navigation/types';
+
+/**
+ * Footer credit. Tapping a name dials it, so `phone` must be a real number in
+ * dialable form (digits, optional leading +, no spaces). A name with an empty
+ * phone renders as plain text rather than a tap that goes nowhere.
+ */
+const DEVELOPERS: { name: string; phone: string }[] = [
+  { name: 'Param Buddh', phone: '+918141155884' },
+  { name: 'Jigar Maru', phone: '+918141155884' },
+];
 
 const ROLE_LABELS: Record<Role, string> = {
   SALESMAN: 'Salesman',
@@ -263,8 +273,43 @@ export function AccountScreen({
         </Group>
       </View>
 
-      <Text style={styles.appName}>VM</Text>
+      <Credits />
     </Screen>
+  );
+}
+
+/** "Powered by <name> · <name>", each name dialling its owner. */
+function Credits() {
+  const { t } = useTranslation();
+
+  const call = (phone: string) => {
+    void Linking.openURL(`tel:${phone}`).catch(() =>
+      notify(t('account.callFailed')),
+    );
+  };
+
+  return (
+    <Text style={styles.credits}>
+      {t('account.poweredBy')}{' '}
+      {DEVELOPERS.map((dev, i) => (
+        <Text key={dev.name}>
+          {i > 0 ? ' · ' : ''}
+          {dev.phone ? (
+            <Text
+              style={styles.creditLink}
+              onPress={() => call(dev.phone)}
+              suppressHighlighting
+              accessibilityRole="link"
+              accessibilityLabel={`${t('account.call')} ${dev.name}`}
+            >
+              {dev.name}
+            </Text>
+          ) : (
+            dev.name
+          )}
+        </Text>
+      ))}
+    </Text>
   );
 }
 
@@ -363,10 +408,12 @@ const styles = StyleSheet.create({
   chipDanger: { backgroundColor: 'rgba(185,28,28,0.10)' },
 
   logoutWrap: { marginTop: spacing.sm },
-  appName: {
+  credits: {
     ...typography.caption,
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
   },
+  creditLink: { color: colors.primary, fontWeight: '600' },
 });

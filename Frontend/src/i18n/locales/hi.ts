@@ -358,6 +358,9 @@ export const hi: TranslationResources = {
     activity: 'गतिविधि',
     logout: 'लॉग आउट',
     logoutConfirmTitle: 'अपने खाते से लॉग आउट करें?',
+    poweredBy: 'द्वारा संचालित',
+    call: 'कॉल करें',
+    callFailed: 'इस डिवाइस पर डायलर नहीं खुल सका।',
     profile: {
       title: 'प्रोफ़ाइल संपादित करें',
       edit: 'प्रोफ़ाइल संपादित करें',
@@ -630,6 +633,7 @@ export const hi: TranslationResources = {
     percent: 'एक मान्य प्रतिशत दर्ज करें',
   },
   errors: {
+    offline: 'इंटरनेट कनेक्शन नहीं है। अपना नेटवर्क जांचें और पुनः प्रयास करें।',
     network: 'नेटवर्क त्रुटि। सर्वर तक नहीं पहुँच सकते।',
     timeout: 'कनेक्शन का समय समाप्त। अपना इंटरनेट जांचें और पुनः प्रयास करें।',
     invalidCredentials: 'अमान्य ईमेल/फ़ोन या पासवर्ड।',

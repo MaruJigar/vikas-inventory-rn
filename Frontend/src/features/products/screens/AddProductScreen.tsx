@@ -346,7 +346,9 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
           <Pressable onPress={choosePhoto} style={styles.photoTile}>
             <Card style={styles.photoPlaceholder}>
               <Ionicons name="camera-outline" size={22} color={colors.textMuted} />
-              <Text style={styles.muted}>{t('shops.form.addPhoto')}</Text>
+              <Text style={styles.photoPlaceholderText}>
+                {t('shops.form.addPhoto')}
+              </Text>
             </Card>
           </Pressable>
         ) : null}
@@ -402,12 +404,19 @@ const styles = StyleSheet.create({
   },
   changePhoto: { alignSelf: 'center', marginTop: spacing.sm },
   changePhotoText: { ...typography.label, color: colors.primary },
+  // Card's own padding (spacing.lg all round) left only ~66pt of the 100pt
+  // tile, so the label wrapped and sat off-centre under the icon.
   photoPlaceholder: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    paddingVertical: 0,
+    padding: spacing.xs,
+  },
+  photoPlaceholderText: {
+    ...typography.caption,
+    color: colors.textMuted,
+    textAlign: 'center',
   },
   muted: { ...typography.body, color: colors.textMuted },
   submit: { marginTop: spacing.xl },

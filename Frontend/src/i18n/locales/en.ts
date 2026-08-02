@@ -364,6 +364,9 @@ export const en = {
     activity: 'Activity',
     logout: 'Log out',
     logoutConfirmTitle: 'Log out of your account?',
+    poweredBy: 'Powered by',
+    call: 'Call',
+    callFailed: 'Could not open the dialer on this device.',
     profile: {
       title: 'Edit profile',
       edit: 'Edit profile',
@@ -637,6 +640,7 @@ export const en = {
     percent: 'Enter a valid percentage',
   },
   errors: {
+    offline: 'No internet connection. Check your network and try again.',
     network: 'Network error. Cannot reach the server.',
     timeout: 'Connection timed out. Check your internet and retry.',
     invalidCredentials: 'Invalid email/phone or password.',
