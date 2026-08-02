@@ -5,23 +5,20 @@ import { manufacturersApi } from '@/features/manufacturers/api';
 import type { SelectOption } from '@/components';
 
 /**
- * Manufacturers as dropdown options, for the distributor signup form.
- *
- * NOTE: `GET /manufacturers` sits behind `JwtAuthGuard`, so this 401s for a
- * signed-out applicant — the screen surfaces that as a load error. It works
- * once the backend exposes the list publicly; nothing else has to change.
+ * Manufacturers as dropdown options for the distributor signup form, from the
+ * public `/manufacturers/lookup` route (the guarded list 401s when signed out).
+ * Already sorted by name server-side, so no client ordering.
  */
 export function useManufacturerOptions() {
   const query = useQuery({
-    queryKey: ['manufacturers', 'options'],
-    queryFn: () => manufacturersApi.list(),
+    queryKey: ['manufacturers', 'lookup'],
+    queryFn: () => manufacturersApi.lookup(),
     staleTime: 60 * 60 * 1000,
-    retry: false,
   });
 
   const options = useMemo<SelectOption[]>(
     () =>
-      (query.data?.data ?? []).flatMap((mf) => {
+      (query.data ?? []).flatMap((mf) => {
         const label = mf.company_name ?? mf.business_name ?? mf.name;
         return mf.id && label ? [{ label, value: mf.id }] : [];
       }),

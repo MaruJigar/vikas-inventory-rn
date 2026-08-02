@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 
@@ -7,12 +7,14 @@ import { Screen, Card, Button, Input, Spinner, EmptyState } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { notify } from '@/lib/dialog';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { resolveFirstMediaUrl } from '@/lib/media';
 import {
   useOrder,
   useEditOrder,
   useStatusIndex,
 } from '@/features/orders/hooks';
 import { formatINR, isPreDispatch, toNum } from '@/features/orders/constants';
+import { TransportModeField } from '@/features/orders/components/TransportModeField';
 import type { OrdersScreenProps } from '@/navigation/types';
 
 /** A line in the editor — seeded from an order item's snapshot fields. */
@@ -21,6 +23,22 @@ interface EditLine {
   name: string;
   mrp: number;
   qty: number;
+  /**
+   * Live product image from the detail endpoint's `items.product` join. Name
+   * and price above are order-time snapshots; there is no image snapshot.
+   */
+  imageUrl?: string | null;
+}
+
+/** Line-item thumbnail, with a placeholder so rows stay aligned. */
+function LineThumb({ url }: { url?: string | null }) {
+  const thumb = resolveFirstMediaUrl(url);
+  if (thumb) return <Image source={{ uri: thumb }} style={styles.lineThumb} />;
+  return (
+    <View style={[styles.lineThumb, styles.lineThumbEmpty]}>
+      <Ionicons name="cube-outline" size={18} color={colors.textMuted} />
+    </View>
+  );
 }
 
 /** Order-level standard + special discount percentages and transport mode. */
@@ -63,11 +81,9 @@ function OrderExtras({
           />
         </View>
       </View>
-      <Text style={styles.fieldLabel}>{t('cart.transportMode')}</Text>
-      <Input
+      <TransportModeField
         value={transportMode}
-        onChangeText={(v) => onChange({ transportMode: v })}
-        placeholder={t('cart.transportModePlaceholder')}
+        onChange={(v) => onChange({ transportMode: v })}
       />
     </Card>
   );
@@ -100,6 +116,7 @@ export function EditOrderScreen({
           name: it.product_name_snapshot,
           mrp: toNum(it.mrp),
           qty: toNum(it.quantity),
+          imageUrl: it.product?.product_image_url ?? null,
         };
       }
       setLines(seeded);
@@ -201,35 +218,43 @@ export function EditOrderScreen({
       ) : (
         list.map((l) => (
           <Card key={l.productId} style={styles.line}>
-            <View style={styles.lineTop}>
-              <Text style={styles.lineName} numberOfLines={2}>
-                {l.name}
-              </Text>
-              <Pressable
-                onPress={() => removeLine(l.productId)}
-                hitSlop={8}
-                accessibilityLabel={t('orders.edit.remove')}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.danger} />
-              </Pressable>
-            </View>
-            <View style={styles.lineBottom}>
-              <View style={styles.stepper}>
+            <LineThumb url={l.imageUrl} />
+
+            <View style={styles.lineBody}>
+              <View style={styles.lineTop}>
+                <Text style={styles.lineName} numberOfLines={2}>
+                  {l.name}
+                </Text>
                 <Pressable
-                  style={styles.stepBtn}
-                  onPress={() => decrement(l.productId)}
+                  onPress={() => removeLine(l.productId)}
+                  hitSlop={8}
+                  accessibilityLabel={t('orders.edit.remove')}
                 >
-                  <Ionicons name="remove" size={16} color={colors.text} />
-                </Pressable>
-                <Text style={styles.qty}>{l.qty}</Text>
-                <Pressable
-                  style={styles.stepBtn}
-                  onPress={() => increment(l.productId)}
-                >
-                  <Ionicons name="add" size={16} color={colors.text} />
+                  <Ionicons
+                    name="trash-outline"
+                    size={18}
+                    color={colors.danger}
+                  />
                 </Pressable>
               </View>
-              <Text style={styles.lineTotal}>{formatINR(l.mrp * l.qty)}</Text>
+              <View style={styles.lineBottom}>
+                <View style={styles.stepper}>
+                  <Pressable
+                    style={styles.stepBtn}
+                    onPress={() => decrement(l.productId)}
+                  >
+                    <Ionicons name="remove" size={16} color={colors.text} />
+                  </Pressable>
+                  <Text style={styles.qty}>{l.qty}</Text>
+                  <Pressable
+                    style={styles.stepBtn}
+                    onPress={() => increment(l.productId)}
+                  >
+                    <Ionicons name="add" size={16} color={colors.text} />
+                  </Pressable>
+                </View>
+                <Text style={styles.lineTotal}>{formatINR(l.mrp * l.qty)}</Text>
+              </View>
             </View>
           </Card>
         ))
@@ -278,7 +303,6 @@ export function EditOrderScreen({
           </View>
         ) : null}
       </Card>
-      <Text style={styles.previewNote}>{t('orders.edit.previewNote')}</Text>
 
       <Input
         label={t('orders.edit.reasonLabel')}
@@ -310,7 +334,20 @@ const styles = StyleSheet.create({
   emptyWrap: { flex: 1, justifyContent: 'center' },
   emptyCard: { alignItems: 'center' },
   muted: { ...typography.caption, color: colors.textMuted },
-  line: { marginBottom: spacing.md, gap: spacing.md },
+  line: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  lineBody: { flex: 1, gap: spacing.md },
+  lineThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+  },
+  lineThumbEmpty: { alignItems: 'center', justifyContent: 'center' },
   lineTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -344,11 +381,6 @@ const styles = StyleSheet.create({
   summaryLabel: { ...typography.body, color: colors.textMuted },
   summaryValue: { ...typography.title },
   negative: { color: colors.success },
-  previewNote: {
-    ...typography.caption,
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
   reason: { marginTop: spacing.lg },
   cancel: { marginTop: spacing.md },
 });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -9,6 +9,7 @@ import { colors, radius, spacing, typography } from '@/theme';
 import { confirmAction, notify } from '@/lib/dialog';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatDateTime } from '@/lib/date';
+import { resolveFirstMediaUrl } from '@/lib/media';
 import { useManufacturerNames } from '@/features/manufacturers/hooks';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
@@ -55,6 +56,21 @@ function buildShareText(
     `${t('orders.detail.total')}: ${formatINR(toNum(order.final_order_amount))}`,
   ];
   return lines.filter((l) => l !== '').join('\n');
+}
+
+/**
+ * Line-item thumbnail. `GET /orders/:id` joins `items.product`, so the live
+ * product image is available here — the name/price on the row are snapshots,
+ * but there is no image snapshot to fall back on.
+ */
+function ItemThumb({ url }: { url?: string | null }) {
+  const thumb = resolveFirstMediaUrl(url);
+  if (thumb) return <Image source={{ uri: thumb }} style={styles.itemThumb} />;
+  return (
+    <View style={[styles.itemThumb, styles.itemThumbEmpty]}>
+      <Ionicons name="cube-outline" size={18} color={colors.textMuted} />
+    </View>
+  );
 }
 
 function Row({
@@ -348,6 +364,7 @@ export function OrderDetailScreen({
               key={it.id}
               style={[styles.item, idx > 0 && styles.itemDivider]}
             >
+              <ItemThumb url={it.product?.product_image_url} />
               <View style={styles.itemInfo}>
                 <Text style={typography.body} numberOfLines={2}>
                   {it.product_name_snapshot}
@@ -527,7 +544,19 @@ const styles = StyleSheet.create({
   shopCard: { marginTop: spacing.lg, gap: spacing.xs },
   muted: { ...typography.caption, color: colors.textMuted },
   itemsCard: { gap: spacing.sm },
-  item: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  itemThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+  },
+  itemThumbEmpty: { alignItems: 'center', justifyContent: 'center' },
   itemDivider: {
     borderTopWidth: 1,
     borderTopColor: colors.border,

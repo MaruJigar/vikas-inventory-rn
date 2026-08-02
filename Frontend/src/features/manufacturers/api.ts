@@ -11,4 +11,14 @@ export const manufacturersApi = {
         params: { page: 1, limit: 1000 },
       })
       .then((r) => r.data),
+
+  /**
+   * GET /v1/manufacturers/lookup — public (`@Public()`), for the signup form.
+   * Returns a PLAIN ARRAY of `{id, company_name}` for active manufacturers
+   * sorted by name — not the `{data, meta}` envelope the guarded list uses.
+   */
+  lookup: () =>
+    apiClient
+      .get<Manufacturer[]>('/manufacturers/lookup')
+      .then((r) => r.data),
 };

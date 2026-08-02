@@ -205,6 +205,7 @@ export const hi: TranslationResources = {
       photoPermission: 'कैमरा/फ़ोटो की अनुमति आवश्यक है।',
       submit: 'दुकान सहेजें',
       createError: 'दुकान नहीं बनाई जा सकी। कृपया पुनः प्रयास करें।',
+      createdPending: 'दुकान जोड़ी गई — मंज़ूरी की प्रतीक्षा है।',
     },
     duplicate: {
       title: 'संभावित डुप्लिकेट',
@@ -301,7 +302,6 @@ export const hi: TranslationResources = {
       noItems: 'इस ऑर्डर पर कोई वस्तु नहीं।',
       remove: 'वस्तु हटाएं',
       needItem: 'ऑर्डर में कम से कम एक वस्तु होनी चाहिए।',
-      previewNote: 'सहेजने पर अंतिम मूल्य सर्वर द्वारा पुनर्गणना किया जाता है।',
       reasonLabel: 'कारण (वैकल्पिक)',
       reasonPlaceholder: 'आप यह ऑर्डर क्यों बदल रहे हैं?',
       save: 'परिवर्तन सहेजें',
@@ -432,6 +432,7 @@ export const hi: TranslationResources = {
     noResults: 'आपकी खोज से कोई श्रेणी मेल नहीं खाती',
   },
   products: {
+    quantity: 'मात्रा',
     title: 'उत्पाद',
     searchPlaceholder: 'उत्पाद खोजें',
     myProducts: 'मेरे उत्पाद',
@@ -467,7 +468,12 @@ export const hi: TranslationResources = {
       tagName: 'नए टैग का नाम',
       addTagSubmit: 'जोड़ें',
       tagError: 'टैग नहीं जोड़ा जा सका।',
+      created: 'उत्पाद जोड़ा गया।',
+      updated: 'उत्पाद अपडेट हुआ।',
+      notAllowedTitle: 'उपलब्ध नहीं',
+      notAllowed: 'केवल वितरक ही उत्पाद जोड़ या संपादित कर सकते हैं।',
       photo: 'उत्पाद फ़ोटो',
+      photos: 'उत्पाद फ़ोटो ({{max}} तक)',
       submit: 'उत्पाद सहेजें',
       save: 'परिवर्तन सहेजें',
       createError: 'उत्पाद सहेजा नहीं जा सका। कृपया पुनः प्रयास करें।',
@@ -505,11 +511,16 @@ export const hi: TranslationResources = {
     standardDiscount: 'मानक छूट (%)',
     specialDiscount: 'विशेष छूट (%)',
     transportMode: 'परिवहन माध्यम',
-    transportModePlaceholder: 'जैसे सड़क, कूरियर (वैकल्पिक)',
+    transportModeCustom: 'अन्य परिवहन माध्यम लिखें',
+    transport: {
+      'By Air': 'हवाई मार्ग',
+      'By Road': 'सड़क मार्ग',
+      'By Train': 'रेल मार्ग',
+      Other: 'अन्य',
+    },
+    transportModePlaceholder: 'परिवहन माध्यम चुनें',
     gst: 'जीएसटी',
     finalPayable: 'अंतिम देय राशि',
-    previewNote:
-      'यह एक अनुमान है। ऑर्डर देने पर अंतिम राशि बैकएंड द्वारा पुष्टि की जाती है।',
     placeOrder: 'ऑर्डर दें',
     placeOrderComingSoon: 'ऑर्डर देना अगले चरण में आएगा।',
     clear: 'कार्ट खाली करें',
@@ -521,11 +532,6 @@ export const hi: TranslationResources = {
     noProducts: 'ऑर्डर करने के लिए कोई निर्माता उत्पाद उपलब्ध नहीं है।',
     unknownManufacturer: 'अज्ञात निर्माता',
     submitError: 'खरीद ऑर्डर नहीं बना सका। कृपया पुनः प्रयास करें।',
-    suggest: {
-      action: 'पुनःऑर्डर सुझाव',
-      none: 'पुनःऑर्डर के लिए कुछ नहीं — इन्वेंट्री मौजूदा मांग को पूरा करती है।',
-      error: 'पुनःऑर्डर सुझाव नहीं बना सका।',
-    },
     cart: {
       title: 'खरीद ऑर्डर',
       empty: 'कोई उत्पाद चयनित नहीं',
@@ -534,8 +540,6 @@ export const hi: TranslationResources = {
       subtotal: 'उप-योग (MRP)',
       splitNote:
         'इन वस्तुओं को {{count}} ऑर्डर में विभाजित किया जाएगा — प्रति निर्माता एक।',
-      previewNote:
-        'यह एक अनुमान है। अंतिम मूल्य बैकएंड द्वारा पुष्टि किया जाता है। ऑर्डर निर्माता की समीक्षा के लिए ड्राफ्ट के रूप में बनाए जाते हैं।',
       submit: 'खरीद ऑर्डर बनाएं',
       confirmTitle: 'खरीद ऑर्डर बनाएं?',
       confirmMessage:

@@ -207,6 +207,7 @@ export const en = {
       photoPermission: 'Camera/photo permission is required.',
       submit: 'Save shop',
       createError: 'Could not create the shop. Please try again.',
+      createdPending: 'Shop added — waiting for approval.',
     },
     duplicate: {
       title: 'Possible duplicate',
@@ -307,7 +308,6 @@ export const en = {
       noItems: 'No items on this order.',
       remove: 'Remove item',
       needItem: 'An order must have at least one item.',
-      previewNote: 'Final pricing is recalculated by the server on save.',
       reasonLabel: 'Reason (optional)',
       reasonPlaceholder: 'Why are you changing this order?',
       save: 'Save changes',
@@ -439,6 +439,7 @@ export const en = {
     noResults: 'No categories match your search',
   },
   products: {
+    quantity: 'Quantity',
     title: 'Products',
     searchPlaceholder: 'Search products',
     myProducts: 'My products',
@@ -474,7 +475,12 @@ export const en = {
       tagName: 'New tag name',
       addTagSubmit: 'Add',
       tagError: 'Could not add the tag.',
+      created: 'Product added.',
+      updated: 'Product updated.',
+      notAllowedTitle: 'Not available',
+      notAllowed: 'Only distributors can add or edit products.',
       photo: 'Product photo',
+      photos: 'Product photos (up to {{max}})',
       submit: 'Save product',
       save: 'Save changes',
       createError: 'Could not save the product. Please try again.',
@@ -512,11 +518,16 @@ export const en = {
     standardDiscount: 'Standard discount (%)',
     specialDiscount: 'Special discount (%)',
     transportMode: 'Transport mode',
-    transportModePlaceholder: 'e.g. Road, Courier (optional)',
+    transportModePlaceholder: 'Select transport mode',
+    transportModeCustom: 'Enter custom transport mode',
+    transport: {
+      'By Air': 'By Air',
+      'By Road': 'By Road',
+      'By Train': 'By Train',
+      Other: 'Other',
+    },
     gst: 'GST',
     finalPayable: 'Final payable',
-    previewNote:
-      'This is an estimate. The final amount is confirmed by the backend when you place the order.',
     placeOrder: 'Place order',
     placeOrderComingSoon: 'Order placement arrives in the next phase.',
     clear: 'Clear cart',
@@ -528,11 +539,6 @@ export const en = {
     noProducts: 'No manufacturer products available to order.',
     unknownManufacturer: 'Unknown manufacturer',
     submitError: 'Could not create the purchase order. Please try again.',
-    suggest: {
-      action: 'Suggest reorder',
-      none: 'Nothing to reorder — inventory covers current demand.',
-      error: 'Could not build a reorder suggestion.',
-    },
     cart: {
       title: 'Purchase order',
       empty: 'No products selected',
@@ -541,8 +547,6 @@ export const en = {
       subtotal: 'Subtotal (MRP)',
       splitNote:
         'These items will be split into {{count}} orders — one per manufacturer.',
-      previewNote:
-        'This is an estimate. Final pricing is confirmed by the backend. Orders are created as drafts for the manufacturer to review.',
       submit: 'Create purchase order',
       confirmTitle: 'Create purchase order?',
       confirmMessage:

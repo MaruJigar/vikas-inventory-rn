@@ -1,35 +1,64 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 
-import { Card } from '@/components';
+import { Card, ImageCarousel, QuantityStepper } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
-import { resolveMediaUrl } from '@/lib/media';
+import { resolveMediaUrls } from '@/lib/media';
+import { useIsWide } from '@/lib/useIsWide';
 import { usePOCartStore } from '@/store/usePOCartStore';
 import { formatINR, manufacturerName, toNum } from '@/features/products/pricing';
 import type { Product } from '@/types/product';
+
+/** Thumbnail edge; also the carousel's page width. */
+const IMAGE_SIZE = 96;
 
 /** Product row for the purchase-order catalog. Bound to the PO cart store and
  * priced at MRP (the backend computes the order gross from MRP × qty). */
 export function POProductCard({ product }: { product: Product }) {
   const { t } = useTranslation();
+  const isWide = useIsWide();
   const qty = usePOCartStore((s) => s.items[product.id]?.qty ?? 0);
   const add = usePOCartStore((s) => s.add);
-  const increment = usePOCartStore((s) => s.increment);
-  const decrement = usePOCartStore((s) => s.decrement);
+  const setQty = usePOCartStore((s) => s.setQty);
 
   const mrp = toNum(product.mrp);
-  const imageUrl = resolveMediaUrl(product.product_image_url);
+  const imageUrls = resolveMediaUrls(product.product_image_url);
   const manufacturer = manufacturerName(product);
+
+  // Tablet/desktop widths have room to sit the control beside the price; on a
+  // phone it goes full-width under the card body instead.
+  const inlineControl = isWide;
+
+  const control =
+    qty === 0 ? (
+      <Pressable
+        style={[styles.addBtn, !inlineControl && styles.addBtnFull]}
+        onPress={() => add(product)}
+        accessibilityRole="button"
+        accessibilityLabel={t('products.addToCart')}
+      >
+        <Ionicons name="add" size={18} color="#FFFFFF" />
+        <Text style={styles.addLabel}>{t('products.add')}</Text>
+      </Pressable>
+    ) : (
+      <QuantityStepper
+        qty={qty}
+        fullWidth={!inlineControl}
+        onChange={(next) => setQty(product, next)}
+      />
+    );
 
   return (
     <Card style={styles.card}>
       <View style={styles.imageWrap}>
-        {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.image} />
+        {imageUrls.length > 0 ? (
+          <ImageCarousel urls={imageUrls} size={IMAGE_SIZE} />
         ) : (
-          <Ionicons name="cube-outline" size={28} color={colors.textMuted} />
+          <View style={styles.imagePlaceholder}>
+            <Ionicons name="cube-outline" size={28} color={colors.textMuted} />
+          </View>
         )}
       </View>
 
@@ -43,37 +72,21 @@ export function POProductCard({ product }: { product: Product }) {
           </Text>
         ) : null}
 
-        <Text style={styles.price}>{formatINR(mrp)}</Text>
-
-        {qty === 0 ? (
-          <Pressable
-            style={styles.addBtn}
-            onPress={() => add(product)}
-            accessibilityRole="button"
-            accessibilityLabel={t('products.addToCart')}
-          >
-            <Ionicons name="add" size={18} color="#FFFFFF" />
-            <Text style={styles.addLabel}>{t('products.add')}</Text>
-          </Pressable>
-        ) : (
-          <View style={styles.stepper}>
-            <Pressable
-              style={styles.stepBtn}
-              onPress={() => decrement(product.id)}
-              accessibilityLabel={t('products.decrease')}
-            >
-              <Ionicons name="remove" size={18} color={colors.text} />
-            </Pressable>
-            <Text style={styles.qty}>{qty}</Text>
-            <Pressable
-              style={styles.stepBtn}
-              onPress={() => increment(product.id)}
-              accessibilityLabel={t('products.increase')}
-            >
-              <Ionicons name="add" size={18} color={colors.text} />
-            </Pressable>
+        {/* Price and the add control share one row: price left, action right. */}
+        <View style={styles.priceRow}>
+          <View style={styles.priceGroup}>
+            <Text style={styles.price}>{formatINR(mrp)}</Text>
+            {product.unit ? (
+              <Text style={styles.unit}>/ {product.unit}</Text>
+            ) : null}
           </View>
-        )}
+
+          {inlineControl ? control : null}
+        </View>
+
+        {!inlineControl ? (
+          <View style={styles.controlBar}>{control}</View>
+        ) : null}
       </View>
     </Card>
   );
@@ -81,48 +94,54 @@ export function POProductCard({ product }: { product: Product }) {
 
 const styles = StyleSheet.create({
   card: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
-  imageWrap: {
-    width: 64,
-    height: 64,
+  imageWrap: { width: IMAGE_SIZE },
+  imagePlaceholder: {
+    width: IMAGE_SIZE,
+    height: IMAGE_SIZE,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
-  image: { width: '100%', height: '100%' },
+
   body: { flex: 1, gap: spacing.xs },
   titleText: { flex: 1 },
   muted: { ...typography.caption, color: colors.textMuted },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  // Price + unit stay baseline-aligned to each other.
+  priceGroup: {
+    flexShrink: 1,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.sm,
+  },
   price: { ...typography.title, color: colors.text },
+  unit: { ...typography.caption, color: colors.textMuted },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    alignSelf: 'flex-start',
+    flexShrink: 0,
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.md,
-    marginTop: spacing.xs,
   },
-  addLabel: { ...typography.label, color: '#FFFFFF' },
-  stepper: {
+  addBtnFull: { flex: 1 },
+  controlBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: spacing.md,
     marginTop: spacing.xs,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
-  stepBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qty: { ...typography.title, minWidth: 20, textAlign: 'center' },
+  addLabel: { ...typography.label, color: '#FFFFFF' },
 });

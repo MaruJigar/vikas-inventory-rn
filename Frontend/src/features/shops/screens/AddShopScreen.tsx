@@ -10,6 +10,7 @@ import { Screen, Button, Card, ControlledInput, Select } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { confirmAction, notify } from '@/lib/dialog';
+import { toast } from '@/store/useToastStore';
 import { addShopSchema, type AddShopForm } from '@/features/shops/schemas';
 import { useCheckDuplicate, useCreateShop } from '@/features/shops/hooks';
 import { useCities, useStates } from '@/features/region/hooks';
@@ -128,9 +129,15 @@ export function AddShopScreen({ navigation }: ShopsScreenProps<'AddShop'>) {
     createShop.mutate(
       { payload, image: image ?? undefined },
       {
-        onSuccess: () => navigation.goBack(),
+        onSuccess: () => {
+          // Shops now always land as PENDING (backend dropped the
+          // photo-implies-VERIFIED shortcut), so say so instead of letting the
+          // user assume the shop is immediately usable.
+          toast.success(t('shops.form.createdPending'));
+          navigation.goBack();
+        },
         onError: (err) =>
-          notify(getApiErrorMessage(err, t) || t('shops.form.createError')),
+          toast.error(getApiErrorMessage(err, t) || t('shops.form.createError')),
       },
     );
   };

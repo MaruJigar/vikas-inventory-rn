@@ -14,40 +14,11 @@ import { Screen, Input, EmptyState, Spinner } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 import { usePullToRefresh } from '@/lib/usePullToRefresh';
-import { getApiErrorMessage } from '@/lib/apiError';
-import { notify } from '@/lib/dialog';
 import { useProducts } from '@/features/products/hooks';
-import { usePurchaseRequestSuggestion } from '@/features/purchaseOrders/hooks';
 import { POProductCard } from '@/features/purchaseOrders/components/POProductCard';
 import { usePOCartStore } from '@/store/usePOCartStore';
-import { computeCartTotals, formatINR, toNum } from '@/features/products/pricing';
-import type { PurchaseRequestItem } from '@/features/purchaseOrders/types';
-import type { Product } from '@/types/product';
+import { computeCartTotals, formatINR } from '@/features/products/pricing';
 import type { HomeScreenProps } from '@/navigation/types';
-
-/** Build a minimal Product from a reorder-suggestion line so it can seed the PO
- * cart (the cart only needs id/name/mrp/manufacturer for display + submit). */
-function suggestionToProduct(item: PurchaseRequestItem): Product {
-  return {
-    id: item.product_id,
-    product_source: 'MANUFACTURER_CREATED',
-    name: item.product_name_snapshot,
-    sku: item.sku_snapshot,
-    unit: null,
-    description: null,
-    product_image_url: null,
-    mrp: item.mrp,
-    gst_percent: 0,
-    distributor_discount_percent: 0,
-    special_discount_percent: 0,
-    external_manufacturer_name: item.manufacturer_name_snapshot,
-    is_active: true,
-    category: null,
-    manufacturer: item.manufacturer_name_snapshot
-      ? { id: '', company_name: item.manufacturer_name_snapshot }
-      : null,
-  };
-}
 
 export function POProductsScreen({
   navigation,
@@ -81,27 +52,16 @@ export function POProductsScreen({
   );
 
   const items = usePOCartStore((s) => s.items);
-  const setQty = usePOCartStore((s) => s.setQty);
-  const totals = useMemo(() => computeCartTotals(Object.values(items)), [items]);
-
-  const suggest = usePurchaseRequestSuggestion();
-  const onSuggest = () => {
-    suggest.mutate(undefined, {
-      onSuccess: (s) => {
-        const list = s.items ?? [];
-        if (list.length === 0) {
-          notify(t('purchaseOrders.suggest.none'));
-          return;
-        }
-        for (const it of list) {
-          setQty(suggestionToProduct(it), toNum(it.quantity));
-        }
-        navigation.navigate('PurchaseOrderCart');
-      },
-      onError: (e) =>
-        notify(getApiErrorMessage(e, t) || t('purchaseOrders.suggest.error')),
-    });
-  };
+  const totals = useMemo(
+    // Same GST rule as the PO cart, so the bottom bar matches the cart total.
+    () =>
+      computeCartTotals(Object.values(items), {
+        standardPercent: 0,
+        specialPercent: 0,
+        includeGst: true,
+      }),
+    [items],
+  );
 
   return (
     <Screen scroll={false} edges={[]}>
@@ -112,20 +72,6 @@ export function POProductsScreen({
         autoCapitalize="none"
         returnKeyType="search"
       />
-
-      <Pressable
-        style={styles.suggestBtn}
-        onPress={onSuggest}
-        disabled={suggest.isPending}
-        accessibilityRole="button"
-      >
-        {suggest.isPending ? (
-          <ActivityIndicator size="small" color={colors.primary} />
-        ) : (
-          <Ionicons name="sparkles-outline" size={16} color={colors.primary} />
-        )}
-        <Text style={styles.suggestText}>{t('purchaseOrders.suggest.action')}</Text>
-      </Pressable>
 
       {isLoading ? (
         <Spinner />
@@ -193,18 +139,6 @@ export function POProductsScreen({
 const styles = StyleSheet.create({
   listContent: { paddingBottom: spacing.xxl * 2.5, flexGrow: 1 },
   footer: { paddingVertical: spacing.lg },
-  suggestBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  suggestText: { ...typography.label, color: colors.primary },
   cartBar: {
     position: 'absolute',
     left: spacing.lg,

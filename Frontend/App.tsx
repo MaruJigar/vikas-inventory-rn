@@ -6,7 +6,7 @@ import { NavigationContainer } from '@react-navigation/native';
 
 import '@/i18n'; // initialise i18next (side effect)
 import { queryClient } from '@/lib/queryClient';
-import { ErrorBoundary } from '@/components';
+import { ErrorBoundary, ToastHost } from '@/components';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
@@ -30,6 +30,8 @@ export default function App() {
           <NavigationContainer>
             <StatusBar style="dark" />
             <RootNavigator />
+            {/* Outside the navigator so toasts survive screen transitions. */}
+            <ToastHost />
           </NavigationContainer>
         </QueryClientProvider>
       </SafeAreaProvider>

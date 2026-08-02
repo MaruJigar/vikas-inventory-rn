@@ -11,6 +11,7 @@ import type {
   UpdateProductPayload,
 } from '@/types/product';
 import type { PickedImage } from '@/types/shop';
+import { joinMediaUrls } from '@/lib/media';
 
 const PAGE_SIZE = 20;
 
@@ -45,17 +46,29 @@ export function useProducts(search: string, ownOnly = false) {
  * Create a distributor product. If an image was picked, it's uploaded first and
  * its URL is attached to the create payload.
  */
+/** Upload picked images one at a time (the endpoint accepts a single file). */
+async function uploadAll(images: PickedImage[] | undefined): Promise<string[]> {
+  if (!images?.length) return [];
+  const urls: string[] = [];
+  for (const image of images) {
+    urls.push(await productsApi.uploadImage(image));
+  }
+  return urls;
+}
+
 export function useCreateProduct() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
       payload: CreateProductPayload;
-      image?: PickedImage;
+      images?: PickedImage[];
     }) => {
-      let product_image_url = input.payload.product_image_url;
-      if (input.image) {
-        product_image_url = await productsApi.uploadImage(input.image);
-      }
+      // The upload endpoint takes ONE file per call, and the column stores a
+      // comma-separated list — so upload sequentially and join.
+      const uploaded = await uploadAll(input.images);
+      const product_image_url = uploaded.length
+        ? joinMediaUrls(uploaded)
+        : input.payload.product_image_url;
       return productsApi.create({ ...input.payload, product_image_url });
     },
     onSuccess: () => {
@@ -69,12 +82,18 @@ export function useUpdateProduct(id: string) {
   return useMutation({
     mutationFn: async (input: {
       payload: UpdateProductPayload;
-      image?: PickedImage;
+      images?: PickedImage[];
+      /** Existing image paths the user kept, in display order. */
+      keptUrls?: string[];
     }) => {
-      let product_image_url = input.payload.product_image_url;
-      if (input.image) {
-        product_image_url = await productsApi.uploadImage(input.image);
-      }
+      const uploaded = await uploadAll(input.images);
+      const combined = [...(input.keptUrls ?? []), ...uploaded];
+      // `undefined` leaves the column untouched; '' clears it. Only send a
+      // value when the user actually changed the photo set.
+      const product_image_url =
+        input.images?.length || input.keptUrls
+          ? joinMediaUrls(combined)
+          : input.payload.product_image_url;
       return productsApi.update(id, { ...input.payload, product_image_url });
     },
     onSuccess: () => {

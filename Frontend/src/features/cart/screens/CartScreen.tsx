@@ -1,15 +1,18 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 
-import { Screen, Card, Button, Input, EmptyState } from '@/components';
+import { Screen, Card, Button, Input, EmptyState, QuantityStepper } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
+import { resolveFirstMediaUrl } from '@/lib/media';
 import { confirmAction, notify } from '@/lib/dialog';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { toast } from '@/store/useToastStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useVisitStore } from '@/store/useVisitStore';
 import { useCreateOrder } from '@/features/orders/hooks';
+import { TransportModeField } from '@/features/orders/components/TransportModeField';
 import { useEndVisit } from '@/features/visit/hooks';
 import {
   computeCartTotals,
@@ -17,6 +20,9 @@ import {
   toNum,
 } from '@/features/products/pricing';
 import type { CartLine } from '@/features/products/pricing';
+
+/** Cart-line thumbnail edge. */
+const THUMB_SIZE = 56;
 import type { HomeScreenProps } from '@/navigation/types';
 
 /** Order-level extras: standard + special discount percentages and an optional
@@ -53,12 +59,7 @@ function OrderExtras() {
           />
         </View>
       </View>
-      <Text style={styles.fieldLabel}>{t('cart.transportMode')}</Text>
-      <Input
-        value={transportMode}
-        onChangeText={setTransport}
-        placeholder={t('cart.transportModePlaceholder')}
-      />
+      <TransportModeField value={transportMode} onChange={setTransport} />
     </Card>
   );
 }
@@ -96,8 +97,7 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
   const standardDiscountPercent = useCartStore((s) => s.standardDiscountPercent);
   const specialDiscountPercent = useCartStore((s) => s.specialDiscountPercent);
   const transportMode = useCartStore((s) => s.transportMode);
-  const increment = useCartStore((s) => s.increment);
-  const decrement = useCartStore((s) => s.decrement);
+  const setQty = useCartStore((s) => s.setQty);
   const remove = useCartStore((s) => s.remove);
   const clear = useCartStore((s) => s.clear);
 
@@ -147,7 +147,7 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
           });
         },
         onError: (e) =>
-          notify(getApiErrorMessage(e, t) || t('cart.placeError')),
+          toast.error(getApiErrorMessage(e, t) || t('cart.placeError')),
       },
     );
   };
@@ -169,38 +169,39 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
 
   const renderLine = (line: CartLine) => {
     const { product, qty } = line;
+    const thumb = resolveFirstMediaUrl(product.product_image_url);
     const unit = toNum(product.mrp);
     return (
       <Card key={product.id} style={styles.line}>
-        <View style={styles.lineTop}>
-          <Text style={styles.lineName} numberOfLines={2}>
-            {product.name}
-          </Text>
-          <Pressable
-            onPress={() => remove(product.id)}
-            hitSlop={8}
-            accessibilityLabel={t('cart.remove')}
-          >
-            <Ionicons name="trash-outline" size={18} color={colors.danger} />
-          </Pressable>
-        </View>
-        <View style={styles.lineBottom}>
-          <View style={styles.stepper}>
+        {thumb ? (
+          <Image source={{ uri: thumb }} style={styles.thumb} />
+        ) : (
+          <View style={[styles.thumb, styles.thumbEmpty]}>
+            <Ionicons name="cube-outline" size={22} color={colors.textMuted} />
+          </View>
+        )}
+
+        <View style={styles.lineBody}>
+          <View style={styles.lineTop}>
+            <Text style={styles.lineName} numberOfLines={2}>
+              {product.name}
+            </Text>
             <Pressable
-              style={styles.stepBtn}
-              onPress={() => decrement(product.id)}
+              onPress={() => remove(product.id)}
+              hitSlop={8}
+              accessibilityLabel={t('cart.remove')}
             >
-              <Ionicons name="remove" size={16} color={colors.text} />
-            </Pressable>
-            <Text style={styles.qty}>{qty}</Text>
-            <Pressable
-              style={styles.stepBtn}
-              onPress={() => increment(product.id)}
-            >
-              <Ionicons name="add" size={16} color={colors.text} />
+              <Ionicons name="trash-outline" size={18} color={colors.danger} />
             </Pressable>
           </View>
-          <Text style={styles.lineTotal}>{formatINR(unit * qty)}</Text>
+          <View style={styles.lineBottom}>
+            <QuantityStepper
+              size="sm"
+              qty={qty}
+              onChange={(next) => setQty(product, next)}
+            />
+            <Text style={styles.lineTotal}>{formatINR(unit * qty)}</Text>
+          </View>
         </View>
       </Card>
     );
@@ -238,8 +239,6 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
         />
       </Card>
 
-      <Text style={styles.previewNote}>{t('cart.previewNote')}</Text>
-
       {activeVisit ? (
         <Text style={styles.visitNote}>
           {t('cart.placingFor', { shop: activeVisit.shopName })}
@@ -273,7 +272,20 @@ export function CartScreen({ navigation }: HomeScreenProps<'Cart'>) {
 const styles = StyleSheet.create({
   title: { marginTop: spacing.sm, marginBottom: spacing.lg },
   emptyWrap: { flex: 1, justifyContent: 'center' },
-  line: { marginBottom: spacing.md, gap: spacing.md },
+  line: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  lineBody: { flex: 1, gap: spacing.md },
+  thumb: {
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
   lineTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -285,17 +297,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  stepBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qty: { ...typography.title, minWidth: 20, textAlign: 'center' },
   lineTotal: { ...typography.title },
   discountCard: { marginTop: spacing.sm, gap: spacing.sm },
   discountTitle: { ...typography.title },
@@ -312,11 +313,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginVertical: spacing.xs,
-  },
-  previewNote: {
-    ...typography.caption,
-    marginTop: spacing.md,
-    textAlign: 'center',
   },
   visitNote: {
     ...typography.caption,

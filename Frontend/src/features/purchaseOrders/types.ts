@@ -22,21 +22,3 @@ export interface CreatePurchaseOrderPayload {
 
 /** The endpoint returns the array of created (DRAFT) orders. */
 export type CreatePurchaseOrderResult = Order[];
-
-/** One suggested reorder line from POST /orders/purchase-request/generate. */
-export interface PurchaseRequestItem {
-  product_id: string;
-  product_name_snapshot: string;
-  sku_snapshot: string | null;
-  manufacturer_name_snapshot: string | null;
-  quantity: Num;
-  mrp: Num;
-  gross_line_amount: Num;
-}
-
-/** POST /orders/purchase-request/generate response (read-only suggestion). */
-export interface PurchaseRequestSuggestion {
-  items: PurchaseRequestItem[];
-  gross_order_amount: Num;
-  total_quantity: Num;
-}

@@ -14,6 +14,8 @@ interface CartState {
   transportMode: string;
 
   add: (product: Product) => void;
+  /** Set an explicit quantity (typed into the stepper); qty ≤ 0 removes the line. */
+  setQty: (product: Product, qty: number) => void;
   increment: (productId: string) => void;
   decrement: (productId: string) => void;
   remove: (productId: string) => void;
@@ -43,6 +45,17 @@ export const useCartStore = create<CartState>((set, get) => ({
           },
         },
       };
+    }),
+
+  setQty: (product, qty) =>
+    set((state) => {
+      const next = { ...state.items };
+      if (qty <= 0) {
+        delete next[product.id];
+      } else {
+        next[product.id] = { product, qty: Math.floor(qty) };
+      }
+      return { items: next };
     }),
 
   increment: (productId) =>

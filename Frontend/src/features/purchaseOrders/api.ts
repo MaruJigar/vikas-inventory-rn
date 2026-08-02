@@ -2,7 +2,6 @@ import { apiClient } from '@/api/client';
 import type {
   CreatePurchaseOrderPayload,
   CreatePurchaseOrderResult,
-  PurchaseRequestSuggestion,
 } from '@/features/purchaseOrders/types';
 
 /** Distributor→Manufacturer ordering. Both routes live under the order
@@ -16,13 +15,4 @@ export const purchaseOrdersApi = {
         payload,
       )
       .then((r) => r.data),
-
-  /** Read-only reorder suggestion (unfulfilled demand − on-hand inventory).
-   * The endpoint wraps the payload in `{ data, message }`. */
-  generateSuggestion: () =>
-    apiClient
-      .post<{ data: PurchaseRequestSuggestion; message: string }>(
-        '/orders/purchase-request/generate',
-      )
-      .then((r) => r.data.data),
 };

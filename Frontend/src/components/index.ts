@@ -8,5 +8,8 @@ export { ActionTile } from '@/components/ActionTile';
 export { EmptyState } from '@/components/EmptyState';
 export { Spinner } from '@/components/Spinner';
 export { ErrorBoundary } from '@/components/ErrorBoundary';
+export { ToastHost } from '@/components/ToastHost';
+export { ImageCarousel } from '@/components/ImageCarousel';
+export { QuantityStepper } from '@/components/QuantityStepper';
 export { LanguageToggle } from '@/components/LanguageToggle';
 export { ControlledInput } from '@/components/ControlledInput';

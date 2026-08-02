@@ -15,8 +15,8 @@ const phoneRegex = /^(\+91|0)?[6-9]\d{9}$/;
 const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
 /**
- * Distributor self-signup. Mirrors `RegisterDistributorDto`; `manufacturer_id`
- * is not a form field — it comes from build config (see `@/config`).
+ * Distributor self-signup. Mirrors `RegisterDistributorDto`, whose
+ * `manufacturer_ids` is a required array — at least one must be picked.
  */
 export const registerDistributorSchema = z.object({
   full_name: z.string().trim().min(1, 'validation.required'),

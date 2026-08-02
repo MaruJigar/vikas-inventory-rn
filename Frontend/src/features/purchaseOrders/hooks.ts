@@ -17,9 +17,3 @@ export function useCreatePurchaseOrder() {
   });
 }
 
-/** Fetch the read-only "what to reorder" suggestion on demand (button press). */
-export function usePurchaseRequestSuggestion() {
-  return useMutation({
-    mutationFn: () => purchaseOrdersApi.generateSuggestion(),
-  });
-}

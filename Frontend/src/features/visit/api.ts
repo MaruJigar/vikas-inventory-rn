@@ -15,9 +15,15 @@ export const visitApi = {
       .post<WorkingDay>('/working-day/check-in', payload)
       .then((r) => r.data),
 
-  /** Working-day history (plain array, newest first). */
+  /**
+   * Working-day history, newest first. The endpoint is PAGINATED
+   * (`@ApiPaginatedResponse`) and returns a `{ data, meta }` envelope — reading
+   * `r.data` alone yields the envelope, not the array.
+   */
   history: () =>
-    apiClient.get<WorkingDay[]>('/working-day/history').then((r) => r.data),
+    apiClient
+      .get<Paginated<WorkingDay>>('/working-day/history')
+      .then((r) => r.data.data),
 
   /** The salesman's current ACTIVE visit, if any. */
   activeVisit: () =>

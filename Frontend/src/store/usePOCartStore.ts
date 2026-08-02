@@ -20,7 +20,7 @@ interface POCartState {
 
   add: (product: Product) => void;
   /** Set a line to an exact quantity (used to prefill from a reorder
-   * suggestion); qty ≤ 0 removes the line. */
+   * an explicit quantity); qty ≤ 0 removes the line. */
   setQty: (product: Product, qty: number) => void;
   increment: (productId: string) => void;
   decrement: (productId: string) => void;

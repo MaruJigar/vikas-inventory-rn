@@ -47,6 +47,11 @@ export function distributorUnitPrice(product: Product): number {
 export interface OrderDiscount {
   standardPercent: number;
   specialPercent: number;
+  /**
+   * Add GST into `finalPayable`. Only the distributor→manufacturer purchase
+   * order charges it; salesman shop orders leave it out.
+   */
+  includeGst?: boolean;
 }
 
 export interface CartLine {
@@ -58,17 +63,33 @@ export interface CartTotals {
   subtotal: number;
   standardDiscount: number;
   specialDiscount: number;
+  gst: number;
   finalPayable: number;
   itemCount: number;
 }
 
 /**
- * Cart total preview, mirroring the backend `createOrder` pricing
+ * Cart total preview, mirroring the backend pricing
  * (Backend/src/order/order.service.ts): gross = Σ(MRP × qty), then the
  * order-level standard discount is taken off the gross, and the special
- * discount is taken off what remains (sequential, NOT both on gross). No GST
- * is added on order creation. This is a client-side PREVIEW — the authoritative
- * total is computed by the backend at order placement.
+ * discount is taken off what remains (sequential, NOT both on gross).
+ *
+ * `gst` is only surfaced in the distributor→manufacturer purchase-order flow;
+ * salesman shop orders don't show it, and only that flow passes `includeGst`
+ * to fold it into `finalPayable`.
+ *
+ * GST follows the backend's per-item proration (order.service.ts revision
+ * path): the order-level discount is spread across lines by their share of the
+ * gross, and each line's rate applies to what's left — not to raw MRP, so a
+ * discount reduces the tax too.
+ *
+ * KNOWN MISMATCH: the backend's order-CREATE paths compute
+ * `final = gross − standardDiscount − specialDiscount` with NO GST term, while
+ * its update/revision path does add GST. Until create is fixed, a purchase
+ * order will be stored without the GST shown here and jump on first edit.
+ *
+ * This is a client-side PREVIEW — the authoritative total comes from the
+ * backend at order placement.
  */
 export function computeCartTotals(
   lines: CartLine[],
@@ -89,12 +110,23 @@ export function computeCartTotals(
   const standardDiscount = (standardPercent / 100) * subtotal;
   const afterStandard = subtotal - standardDiscount;
   const specialDiscount = (specialPercent / 100) * afterStandard;
-  const finalPayable = subtotal - standardDiscount - specialDiscount;
+  const totalDiscount = standardDiscount + specialDiscount;
+
+  let gst = 0;
+  for (const { product, qty } of lines) {
+    const lineAmount = toNum(product.mrp) * qty;
+    const share = subtotal > 0 ? lineAmount / subtotal : 0;
+    const taxable = lineAmount - share * totalDiscount;
+    gst += taxable * (toNum(product.gst_percent) / 100);
+  }
+
+  const finalPayable = subtotal - totalDiscount + (discount?.includeGst ? gst : 0);
 
   return {
     subtotal,
     standardDiscount,
     specialDiscount,
+    gst,
     finalPayable,
     itemCount,
   };

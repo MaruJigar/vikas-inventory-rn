@@ -15,10 +15,15 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { Screen, Button, Card, ControlledInput, Input, Spinner, EmptyState } from '@/components';
+import { useAuthStore } from '@/store/useAuthStore';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { notify } from '@/lib/dialog';
-import { resolveMediaUrl } from '@/lib/media';
+import { toast } from '@/store/useToastStore';
+import { resolveMediaUrl, splitMediaPaths } from '@/lib/media';
+
+/** Backend packs all photos into one comma-separated column. */
+const MAX_PRODUCT_PHOTOS = 3;
 import { useDistributorProfile } from '@/features/distributor/hooks';
 import { addProductSchema, type AddProductForm } from '@/features/products/schemas';
 import {
@@ -33,6 +38,7 @@ import type { HomeScreenProps } from '@/navigation/types';
 
 export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProduct'>) {
   const { t } = useTranslation();
+  const role = useAuthStore((s) => s.user?.role);
   const editing = route.params?.product;
   const isEdit = !!editing;
 
@@ -43,8 +49,14 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
   const updateProduct = useUpdateProduct(editing?.id ?? '');
   const createCategory = useCreateCategory();
 
-  const [image, setImage] = useState<PickedImage | null>(null);
-  const [imageRemoved, setImageRemoved] = useState(false);
+  // The backend keeps every photo in one comma-separated `product_image_url`,
+  // so we track kept existing paths and freshly picked files separately and
+  // rejoin them on save.
+  const [images, setImages] = useState<PickedImage[]>([]);
+  const [keptUrls, setKeptUrls] = useState<string[]>(
+    splitMediaPaths(editing?.product_image_url),
+  );
+  const [photosTouched, setPhotosTouched] = useState(false);
   const [categoryIds, setCategoryIds] = useState<string[]>(
     editing?.category ? [editing.category.id] : [],
   );
@@ -70,16 +82,37 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
   });
 
   const busy = createProduct.isPending || updateProduct.isPending;
-  const existingImage = isEdit ? resolveMediaUrl(editing?.product_image_url) : undefined;
+
+  const totalPhotos = keptUrls.length + images.length;
+  const canAddPhoto = totalPhotos < MAX_PRODUCT_PHOTOS;
 
   const pickImage = (picked: PickedImage) => {
-    setImage(picked);
-    setImageRemoved(false);
+    setPhotosTouched(true);
+    setImages((prev) => [...prev, picked].slice(0, MAX_PRODUCT_PHOTOS));
   };
-  const removeImage = () => {
-    setImage(null);
-    setImageRemoved(true);
+  const removeKept = (url: string) => {
+    setPhotosTouched(true);
+    setKeptUrls((prev) => prev.filter((u) => u !== url));
   };
+  const removePicked = (uri: string) => {
+    setPhotosTouched(true);
+    setImages((prev) => prev.filter((i) => i.uri !== uri));
+  };
+
+  // Backend already restricts POST/PUT /products to SUPER_ADMIN,
+  // MANUFACTURER_ADMIN and DISTRIBUTOR_ADMIN. Guard the screen too so a
+  // salesman reaching this route by any path gets a clear message instead of a
+  // form that 403s on submit.
+  if (role === 'SALESMAN') {
+    return (
+      <Screen edges={[]}>
+        <EmptyState
+          title={t('products.form.notAllowedTitle')}
+          message={t('products.form.notAllowed')}
+        />
+      </Screen>
+    );
+  }
 
   if (!isEdit && isLoading) return <Spinner />;
   if (!isEdit && (isError || !distributor)) {
@@ -135,7 +168,7 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
         setAddingTag(false);
         setTagName('');
       },
-      onError: (e) => notify(getApiErrorMessage(e, t) || t('products.form.tagError')),
+      onError: (e) => toast.error(getApiErrorMessage(e, t) || t('products.form.tagError')),
     });
   };
 
@@ -155,15 +188,19 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
             description: values.description || undefined,
             category_id: categoryIds[0] ?? undefined,
             category_ids: categoryIds.length ? categoryIds : undefined,
-            // '' clears the image on the backend; undefined keeps the existing one.
-            product_image_url: imageRemoved && !image ? '' : undefined,
           },
-          image: image ?? undefined,
+          images,
+          // Only send the photo set when the user actually changed it, so an
+          // untouched edit leaves the column alone.
+          keptUrls: photosTouched ? keptUrls : undefined,
         },
         {
-          onSuccess: () => navigation.goBack(),
+          onSuccess: () => {
+            toast.success(t('products.form.updated'));
+            navigation.goBack();
+          },
           onError: (e) =>
-            notify(getApiErrorMessage(e, t) || t('products.form.createError')),
+            toast.error(getApiErrorMessage(e, t) || t('products.form.createError')),
         },
       );
       return;
@@ -184,18 +221,20 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
           category_id: categoryIds[0] ?? undefined,
           category_ids: categoryIds.length ? categoryIds : undefined,
         },
-        image: image ?? undefined,
+        images,
       },
       {
-        onSuccess: () => navigation.goBack(),
+        onSuccess: () => {
+          toast.success(t('products.form.created'));
+          navigation.goBack();
+        },
         onError: (e) =>
-          notify(getApiErrorMessage(e, t) || t('products.form.createError')),
+          toast.error(getApiErrorMessage(e, t) || t('products.form.createError')),
       },
     );
   };
 
   const opt = (label: string) => `${label} (${t('shops.form.optional')})`;
-  const previewUri = image?.uri ?? (imageRemoved ? undefined : existingImage);
 
   return (
     <Screen edges={[]}>
@@ -273,25 +312,45 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
         </View>
       ) : null}
 
-      <Text style={styles.sectionLabel}>{opt(t('products.form.photo'))}</Text>
-      {previewUri ? (
-        <View>
-          <Image source={{ uri: previewUri }} style={styles.preview} />
-          <Pressable style={styles.removePhoto} onPress={removeImage} hitSlop={8}>
-            <Ionicons name="close" size={18} color="#FFFFFF" />
+      <Text style={styles.sectionLabel}>
+        {opt(t('products.form.photos', { max: MAX_PRODUCT_PHOTOS }))}
+      </Text>
+      <View style={styles.photoGrid}>
+        {keptUrls.map((url) => (
+          <View key={url} style={styles.photoTile}>
+            <Image source={{ uri: resolveMediaUrl(url) }} style={styles.photo} />
+            <Pressable
+              style={styles.removePhoto}
+              onPress={() => removeKept(url)}
+              hitSlop={8}
+              accessibilityLabel={t('shops.form.removePhoto')}
+            >
+              <Ionicons name="close" size={14} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        ))}
+        {images.map((img) => (
+          <View key={img.uri} style={styles.photoTile}>
+            <Image source={{ uri: img.uri }} style={styles.photo} />
+            <Pressable
+              style={styles.removePhoto}
+              onPress={() => removePicked(img.uri)}
+              hitSlop={8}
+              accessibilityLabel={t('shops.form.removePhoto')}
+            >
+              <Ionicons name="close" size={14} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        ))}
+        {canAddPhoto ? (
+          <Pressable onPress={choosePhoto} style={styles.photoTile}>
+            <Card style={styles.photoPlaceholder}>
+              <Ionicons name="camera-outline" size={22} color={colors.textMuted} />
+              <Text style={styles.muted}>{t('shops.form.addPhoto')}</Text>
+            </Card>
           </Pressable>
-          <Pressable onPress={choosePhoto} style={styles.changePhoto}>
-            <Text style={styles.changePhotoText}>{t('shops.form.changePhoto')}</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <Pressable onPress={choosePhoto}>
-          <Card style={styles.photoPlaceholder}>
-            <Ionicons name="camera-outline" size={24} color={colors.textMuted} />
-            <Text style={styles.muted}>{t('shops.form.addPhoto')}</Text>
-          </Card>
-        </Pressable>
-      )}
+        ) : null}
+      </View>
 
       <Button
         label={isEdit ? t('products.form.save') : t('products.form.submit')}
@@ -322,18 +381,20 @@ const styles = StyleSheet.create({
   chipAddText: { ...typography.label, color: colors.primary },
   addTagRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: spacing.sm },
   addTagBtn: { paddingHorizontal: spacing.md },
-  preview: {
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  photoTile: { width: 100, height: 100 },
+  photo: {
     width: '100%',
-    height: 180,
+    height: '100%',
     borderRadius: radius.md,
     backgroundColor: colors.surface,
   },
   removePhoto: {
     position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 30,
-    height: 30,
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
     borderRadius: radius.pill,
     backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
@@ -342,10 +403,11 @@ const styles = StyleSheet.create({
   changePhoto: { alignSelf: 'center', marginTop: spacing.sm },
   changePhotoText: { ...typography.label, color: colors.primary },
   photoPlaceholder: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xl,
+    gap: spacing.xs,
+    paddingVertical: 0,
   },
   muted: { ...typography.body, color: colors.textMuted },
   submit: { marginTop: spacing.xl },

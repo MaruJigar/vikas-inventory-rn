@@ -1,10 +1,11 @@
 import React, { useMemo, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 
-import { Screen, Card, Button, Input, EmptyState } from '@/components';
+import { Screen, Card, Button, Input, EmptyState, QuantityStepper } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
+import { resolveFirstMediaUrl } from '@/lib/media';
 import { confirmAction, notify } from '@/lib/dialog';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { usePOCartStore } from '@/store/usePOCartStore';
@@ -16,6 +17,9 @@ import {
   toNum,
 } from '@/features/products/pricing';
 import type { CartLine } from '@/features/products/pricing';
+
+/** Cart-line thumbnail edge. */
+const THUMB_SIZE = 56;
 import type { HomeScreenProps } from '@/navigation/types';
 
 /** Lines grouped by manufacturer — mirrors how the backend splits the payload
@@ -52,8 +56,7 @@ export function POCartScreen({
   const setStandard = usePOCartStore((s) => s.setStandardDiscount);
   const setSpecial = usePOCartStore((s) => s.setSpecialDiscount);
   const setTransport = usePOCartStore((s) => s.setTransportMode);
-  const increment = usePOCartStore((s) => s.increment);
-  const decrement = usePOCartStore((s) => s.decrement);
+  const setQty = usePOCartStore((s) => s.setQty);
   const remove = usePOCartStore((s) => s.remove);
   const clear = usePOCartStore((s) => s.clear);
 
@@ -73,6 +76,8 @@ export function POCartScreen({
       computeCartTotals(lines, {
         standardPercent: standardDiscountPercent,
         specialPercent: specialDiscountPercent,
+        // Purchase orders to a manufacturer are taxed; shop orders aren't.
+        includeGst: true,
       }),
     [lines, standardDiscountPercent, specialDiscountPercent],
   );
@@ -120,33 +125,40 @@ export function POCartScreen({
 
   const renderLine = (line: CartLine) => {
     const { product, qty } = line;
+    const thumb = resolveFirstMediaUrl(product.product_image_url);
     return (
       <View key={product.id} style={styles.line}>
-        <View style={styles.lineTop}>
-          <Text style={styles.lineName} numberOfLines={2}>
-            {product.name}
-          </Text>
-          <Pressable
-            onPress={() => remove(product.id)}
-            hitSlop={8}
-            accessibilityLabel={t('cart.remove')}
-          >
-            <Ionicons name="trash-outline" size={18} color={colors.danger} />
-          </Pressable>
-        </View>
-        <View style={styles.lineBottom}>
-          <View style={styles.stepper}>
-            <Pressable style={styles.stepBtn} onPress={() => decrement(product.id)}>
-              <Ionicons name="remove" size={16} color={colors.text} />
-            </Pressable>
-            <Text style={styles.qty}>{qty}</Text>
-            <Pressable style={styles.stepBtn} onPress={() => increment(product.id)}>
-              <Ionicons name="add" size={16} color={colors.text} />
+        {thumb ? (
+          <Image source={{ uri: thumb }} style={styles.thumb} />
+        ) : (
+          <View style={[styles.thumb, styles.thumbEmpty]}>
+            <Ionicons name="cube-outline" size={22} color={colors.textMuted} />
+          </View>
+        )}
+
+        <View style={styles.lineBody}>
+          <View style={styles.lineTop}>
+            <Text style={styles.lineName} numberOfLines={2}>
+              {product.name}
+            </Text>
+            <Pressable
+              onPress={() => remove(product.id)}
+              hitSlop={8}
+              accessibilityLabel={t('cart.remove')}
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.danger} />
             </Pressable>
           </View>
-          <Text style={styles.lineTotal}>
-            {formatINR(toNum(product.mrp) * qty)}
-          </Text>
+          <View style={styles.lineBottom}>
+            <QuantityStepper
+              size="sm"
+              qty={qty}
+              onChange={(next) => setQty(product, next)}
+            />
+            <Text style={styles.lineTotal}>
+              {formatINR(toNum(product.mrp) * qty)}
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -231,14 +243,18 @@ export function POCartScreen({
             </Text>
           </View>
         ) : null}
+        {totals.gst > 0 ? (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>{t('cart.gst')}</Text>
+            <Text style={styles.summaryValue}>{formatINR(totals.gst)}</Text>
+          </View>
+        ) : null}
         <View style={styles.divider} />
         <View style={styles.summaryRow}>
           <Text style={styles.strong}>{t('cart.finalPayable')}</Text>
           <Text style={styles.strong}>{formatINR(totals.finalPayable)}</Text>
         </View>
       </Card>
-
-      <Text style={styles.previewNote}>{t('purchaseOrders.cart.previewNote')}</Text>
 
       <Button
         label={t('purchaseOrders.cart.submit')}
@@ -281,7 +297,15 @@ const styles = StyleSheet.create({
   group: { marginBottom: spacing.md, gap: spacing.md },
   groupHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   groupName: { ...typography.title, flex: 1 },
-  line: { gap: spacing.sm },
+  line: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  lineBody: { flex: 1, gap: spacing.sm },
+  thumb: {
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
   lineTop: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
   lineName: { ...typography.body, flex: 1 },
   lineBottom: {
@@ -289,17 +313,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  stepBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qty: { ...typography.title, minWidth: 20, textAlign: 'center' },
   lineTotal: { ...typography.title },
   groupFooter: {
     flexDirection: 'row',
@@ -321,7 +334,6 @@ const styles = StyleSheet.create({
   negative: { color: colors.success },
   strong: { ...typography.title, color: colors.text },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
-  previewNote: { ...typography.caption, marginTop: spacing.md, textAlign: 'center' },
   submit: { marginTop: spacing.lg },
   clear: { marginTop: spacing.md },
 });

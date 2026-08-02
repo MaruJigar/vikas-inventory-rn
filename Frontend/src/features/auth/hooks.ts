@@ -49,7 +49,6 @@ export function useRegisterDistributor() {
         // but empty strings would be stored verbatim.
         ...(form.gst_number ? { gst_number: form.gst_number } : {}),
         ...(form.city ? { city: form.city } : {}),
-        manufacturer_id: form.manufacturer_ids[0],
         manufacturer_ids: form.manufacturer_ids,
       });
 

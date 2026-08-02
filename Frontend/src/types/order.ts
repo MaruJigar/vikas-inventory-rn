@@ -33,6 +33,11 @@ export interface OrderItem {
   gst_percent_snapshot?: Num;
   gst_amount?: Num;
   status_id: string | null;
+  /**
+   * `GET /orders/:id` joins `items.product`, so the detail response carries the
+   * live product. Absent on the list endpoint — always optional-chain it.
+   */
+  product?: { id: string; product_image_url?: string | null } | null;
 }
 
 export interface OrderShopRef {
