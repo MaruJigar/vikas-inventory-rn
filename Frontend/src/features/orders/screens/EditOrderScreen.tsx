@@ -3,7 +3,15 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 
-import { Screen, Card, Button, Input, Spinner, EmptyState } from '@/components';
+import {
+  Screen,
+  Card,
+  Button,
+  Input,
+  Spinner,
+  EmptyState,
+  QuantityStepper,
+} from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { notify } from '@/lib/dialog';
 import { getApiErrorMessage } from '@/lib/apiError';
@@ -166,14 +174,10 @@ export function EditOrderScreen({
     (clampPct(specialPercent) / 100) * (grossPreview - standardPreview);
   const finalPreview = grossPreview - standardPreview - specialPreview;
 
-  const increment = (pid: string) =>
-    setLines((s) => ({ ...s, [pid]: { ...s![pid], qty: s![pid].qty + 1 } }));
-  const decrement = (pid: string) =>
-    setLines((s) => {
-      const line = s![pid];
-      if (line.qty <= 1) return s;
-      return { ...s, [pid]: { ...line, qty: line.qty - 1 } };
-    });
+  // A line always keeps at least 1 — emptying the field or stepping below 1
+  // is not a removal; the trash button is.
+  const setQty = (pid: string, qty: number) =>
+    setLines((s) => ({ ...s, [pid]: { ...s![pid], qty: Math.max(1, qty) } }));
   const removeLine = (pid: string) =>
     setLines((s) => {
       const next = { ...s };
@@ -238,21 +242,10 @@ export function EditOrderScreen({
                 </Pressable>
               </View>
               <View style={styles.lineBottom}>
-                <View style={styles.stepper}>
-                  <Pressable
-                    style={styles.stepBtn}
-                    onPress={() => decrement(l.productId)}
-                  >
-                    <Ionicons name="remove" size={16} color={colors.text} />
-                  </Pressable>
-                  <Text style={styles.qty}>{l.qty}</Text>
-                  <Pressable
-                    style={styles.stepBtn}
-                    onPress={() => increment(l.productId)}
-                  >
-                    <Ionicons name="add" size={16} color={colors.text} />
-                  </Pressable>
-                </View>
+                <QuantityStepper
+                  qty={l.qty}
+                  onChange={(q) => setQty(l.productId, q)}
+                />
                 <Text style={styles.lineTotal}>{formatINR(l.mrp * l.qty)}</Text>
               </View>
             </View>
@@ -304,15 +297,18 @@ export function EditOrderScreen({
         ) : null}
       </Card>
 
-      <Input
-        label={t('orders.edit.reasonLabel')}
-        value={reason}
-        onChangeText={setReason}
-        placeholder={t('orders.edit.reasonPlaceholder')}
-        multiline
-        maxLength={200}
-        style={styles.reason}
-      />
+      {/* Spacing lives on a wrapper: `style` reaches the inner TextInput, so a
+          margin there would sit inside the field's border. */}
+      <View style={styles.reason}>
+        <Input
+          label={t('orders.edit.reasonLabel')}
+          value={reason}
+          onChangeText={setReason}
+          placeholder={t('orders.edit.reasonPlaceholder')}
+          multiline
+          maxLength={200}
+        />
+      </View>
 
       <Button
         label={t('orders.edit.save')}
@@ -359,17 +355,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  stepBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qty: { ...typography.title, minWidth: 20, textAlign: 'center' },
   lineTotal: { ...typography.title },
   discountCard: { marginTop: spacing.sm, gap: spacing.sm },
   discountTitle: { ...typography.title },

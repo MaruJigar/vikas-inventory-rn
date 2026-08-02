@@ -30,6 +30,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
     label,
     error,
     style,
+    multiline,
     secureTextEntry,
     rightIcon,
     onRightIconPress,
@@ -52,6 +53,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
       <View
         style={[
           styles.field,
+          multiline && styles.fieldMultiline,
           focused && styles.fieldFocused,
           !!error && styles.fieldError,
         ]}
@@ -62,7 +64,13 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           secureTextEntry={isPassword && !visible}
           // Remove the browser's default focus outline on web — focus is shown
           // on the rounded field border instead (which respects borderRadius).
-          style={[styles.input, style, Platform.OS === 'web' && webNoOutline]}
+          multiline={multiline}
+          style={[
+            styles.input,
+            multiline && styles.inputMultiline,
+            style,
+            Platform.OS === 'web' && webNoOutline,
+          ]}
           onFocus={(e) => {
             setFocused(true);
             onFocus?.(e);
@@ -128,6 +136,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     backgroundColor: colors.surface,
   },
+  // Multiline needs room to grow and text pinned to the top — the single-line
+  // field is a fixed-height, vertically-centred row.
+  fieldMultiline: {
+    height: undefined,
+    minHeight: 96,
+    alignItems: 'flex-start',
+    paddingVertical: spacing.sm,
+  },
   fieldFocused: { borderColor: colors.primary },
   fieldError: { borderColor: colors.danger },
   input: {
@@ -135,6 +151,13 @@ const styles = StyleSheet.create({
     height: '100%',
     color: colors.text,
     fontSize: 15,
+  },
+  inputMultiline: {
+    height: undefined,
+    minHeight: 80,
+    alignSelf: 'stretch',
+    textAlignVertical: 'top',
+    lineHeight: 20,
   },
   eye: { paddingLeft: spacing.sm },
   error: { ...typography.caption, color: colors.danger, marginTop: spacing.xs },
