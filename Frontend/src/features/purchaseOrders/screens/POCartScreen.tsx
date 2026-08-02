@@ -20,6 +20,9 @@ import type { CartLine } from '@/features/products/pricing';
 
 /** Cart-line thumbnail edge. */
 const THUMB_SIZE = 56;
+
+/** Width an amount claims before it wraps onto its own line (see CartScreen). */
+const AMOUNT_MIN_WIDTH = 140;
 import type { HomeScreenProps } from '@/navigation/types';
 
 /** Lines grouped by manufacturer — mirrors how the backend splits the payload
@@ -308,12 +311,20 @@ const styles = StyleSheet.create({
   thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
   lineTop: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
   lineName: { ...typography.body, flex: 1 },
+  // Wraps so a long amount drops under the stepper rather than being clipped.
   lineBottom: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  lineTotal: { ...typography.title },
+  lineTotal: {
+    ...typography.title,
+    flexGrow: 1,
+    minWidth: AMOUNT_MIN_WIDTH,
+    textAlign: 'right',
+  },
   groupFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -328,9 +339,19 @@ const styles = StyleSheet.create({
   discountField: { flex: 1, gap: spacing.xs },
   fieldLabel: { ...typography.label, color: colors.textMuted },
   summary: { marginTop: spacing.sm, gap: spacing.sm },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  summaryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   summaryLabel: { ...typography.body, color: colors.textMuted },
-  summaryValue: { ...typography.body },
+  summaryValue: {
+    ...typography.body,
+    flexGrow: 1,
+    minWidth: AMOUNT_MIN_WIDTH,
+    textAlign: 'right',
+  },
   negative: { color: colors.success },
   strong: { ...typography.title, color: colors.text },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },

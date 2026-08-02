@@ -149,16 +149,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     flexDirection: 'row',
+    // Wraps to a second line for large orders rather than clipping the total.
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
+    rowGap: spacing.xs,
+    columnGap: spacing.md,
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
   },
-  cartBarText: { ...typography.title, color: '#FFFFFF' },
-  cartBarRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  cartBarTotal: { ...typography.title, color: '#FFFFFF' },
-  cartBarCta: { ...typography.label, color: '#FFFFFF' },
+  // Count and total sit side by side while they fit; a large order pushes the
+  // total + CTA onto a second line instead of clipping them off the pill.
+  cartBarText: { ...typography.title, color: '#FFFFFF', flexShrink: 1 },
+  cartBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing.md,
+    flexGrow: 1,
+    minWidth: 176,
+  },
+  cartBarTotal: { ...typography.title, color: '#FFFFFF', flexShrink: 1 },
+  cartBarCta: { ...typography.label, color: '#FFFFFF', flexShrink: 0 },
 });

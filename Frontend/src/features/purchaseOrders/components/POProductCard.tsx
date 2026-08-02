@@ -27,19 +27,25 @@ export function POProductCard({ product }: { product: Product }) {
   const imageUrls = resolveMediaUrls(product.product_image_url);
   const manufacturer = manufacturerName(product);
 
-  // Tablet/desktop widths have room to sit the control beside the price; on a
-  // phone it goes full-width under the card body instead.
+  // Phone: the control gets its own row under the body — compact "Add" pill on
+  // the right, full-width stepper once added. Inline beside the price on wide
+  // screens (matches ProductCard).
   const inlineControl = isWide;
 
   const control =
     qty === 0 ? (
       <Pressable
-        style={[styles.addBtn, !inlineControl && styles.addBtnFull]}
+        style={({ pressed }) => [
+          styles.addBtn,
+          isWide && styles.addBtnWide,
+          pressed && styles.addBtnPressed,
+        ]}
         onPress={() => add(product)}
+        hitSlop={6}
         accessibilityRole="button"
         accessibilityLabel={t('products.addToCart')}
       >
-        <Ionicons name="add" size={18} color="#FFFFFF" />
+        <Ionicons name="add" size={isWide ? 18 : 16} color="#FFFFFF" />
         <Text style={styles.addLabel}>{t('products.add')}</Text>
       </Pressable>
     ) : (
@@ -118,26 +124,33 @@ const styles = StyleSheet.create({
   priceGroup: {
     flexShrink: 1,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'baseline',
     gap: spacing.sm,
   },
   price: { ...typography.title, color: colors.text },
   unit: { ...typography.caption, color: colors.textMuted },
+  // Sized to its label so the price keeps the rest of the row.
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
+    flexGrow: 0,
     flexShrink: 0,
-    backgroundColor: colors.primary,
+    height: 34,
+    minWidth: 88,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
   },
-  addBtnFull: { flex: 1 },
+  addBtnWide: { height: 40, minWidth: 104, paddingHorizontal: spacing.lg },
+  addBtnPressed: { opacity: 0.85 },
+  // Phone-only row under the body: pill right-aligned, stepper stretches.
   controlBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
     marginTop: spacing.xs,
     paddingTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,

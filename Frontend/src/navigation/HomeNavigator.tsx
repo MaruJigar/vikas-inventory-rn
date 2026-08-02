@@ -9,6 +9,7 @@ import { SalesmanDashboardScreen } from '@/features/dashboard/screens/SalesmanDa
 import { DistributorDashboardScreen } from '@/features/dashboard/screens/DistributorDashboardScreen';
 import { ProductsScreen } from '@/features/products/screens/ProductsScreen';
 import { CategoriesScreen } from '@/features/products/screens/CategoriesScreen';
+import { ProductDetailScreen } from '@/features/products/screens/ProductDetailScreen';
 import { AddProductScreen } from '@/features/products/screens/AddProductScreen';
 import { CartScreen } from '@/features/cart/screens/CartScreen';
 import { SelectShopScreen } from '@/features/visit/screens/SelectShopScreen';
@@ -58,6 +59,14 @@ export function HomeNavigator() {
         name="Products"
         component={ProductsScreen}
         options={{ title: t('products.title'), headerBackTitle: t('common.back') }}
+      />
+      <Stack.Screen
+        name="ProductDetail"
+        component={ProductDetailScreen}
+        options={{
+          title: t('products.details.title'),
+          headerBackTitle: t('common.back'),
+        }}
       />
       <Stack.Screen
         name="AddProduct"

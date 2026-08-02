@@ -23,6 +23,14 @@ import type { CartLine } from '@/features/products/pricing';
 
 /** Cart-line thumbnail edge. */
 const THUMB_SIZE = 56;
+
+/**
+ * Width an amount reserves before it wraps onto its own line. Amounts are
+ * unbounded, so this is only the point at which sharing the row stops being
+ * worth it: below this the value takes the next line to itself, where it has
+ * the full width and, if it is longer still, keeps wrapping. Nothing clips.
+ */
+const AMOUNT_MIN_WIDTH = 140;
 import type { HomeScreenProps } from '@/navigation/types';
 
 /** Order-level extras: standard + special discount percentages and an optional
@@ -81,6 +89,7 @@ function SummaryRow({
       <Text
         style={[
           styles.summaryValue,
+          styles.summaryValueRight,
           strong && styles.strong,
           negative && styles.negative,
         ]}
@@ -292,21 +301,41 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   lineName: { ...typography.title, flex: 1 },
+  // Wraps: a long amount drops onto its own line under the stepper instead of
+  // being squeezed or clipped. `minWidth` is what forces the break — without it
+  // the text would shrink into a narrow column and wrap mid-number.
   lineBottom: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  lineTotal: { ...typography.title },
+  lineTotal: {
+    ...typography.title,
+    flexGrow: 1,
+    minWidth: AMOUNT_MIN_WIDTH,
+    textAlign: 'right',
+  },
   discountCard: { marginTop: spacing.sm, gap: spacing.sm },
   discountTitle: { ...typography.title },
   discountRow: { flexDirection: 'row', gap: spacing.md },
   discountField: { flex: 1, gap: spacing.xs },
   fieldLabel: { ...typography.label, color: colors.textMuted },
   summary: { marginTop: spacing.sm, gap: spacing.sm },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  summaryLabel: { ...typography.body, color: colors.textMuted },
+  summaryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  summaryLabel: { ...typography.body, color: colors.textMuted, flexShrink: 1 },
   summaryValue: { ...typography.body },
+  summaryValueRight: {
+    flexGrow: 1,
+    minWidth: AMOUNT_MIN_WIDTH,
+    textAlign: 'right',
+  },
   negative: { color: colors.success },
   strong: { ...typography.title, color: colors.text },
   divider: {

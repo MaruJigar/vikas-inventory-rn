@@ -38,6 +38,8 @@ export type HomeStackParamList = {
   Categories: undefined;
   /** Optional category scopes the list to one category (client-side filter). */
   Products: { categoryId?: string; categoryName?: string } | undefined;
+  /** Read-only full record; the list already carries it, so it travels here. */
+  ProductDetail: { product: Product };
   AddProduct: { product?: Product } | undefined;
   Cart: undefined;
   OrderSuccess: { orderNumber: string };

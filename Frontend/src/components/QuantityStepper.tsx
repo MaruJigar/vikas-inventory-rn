@@ -4,11 +4,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 
 import { colors, radius, spacing, typography } from '@/theme';
+import { MAX_SAFE_QUANTITY } from '@/features/products/pricing';
 
 interface Props {
   qty: number;
   onChange: (qty: number) => void;
-  /** Upper bound (e.g. available stock). Undefined = no cap. */
+  /** Upper bound (e.g. available stock). Undefined = no business limit. */
   max?: number;
   /** Called instead of clamping silently, so the screen can explain the cap. */
   onExceedMax?: (max: number) => void;
@@ -28,7 +29,7 @@ interface Props {
 export function QuantityStepper({
   qty,
   onChange,
-  max,
+  max: maxProp,
   onExceedMax,
   size = 'md',
   fullWidth = false,
@@ -37,20 +38,26 @@ export function QuantityStepper({
   const [draft, setDraft] = useState(String(qty));
   const [editing, setEditing] = useState(false);
 
+  // Only a caller-supplied cap (stock) limits the quantity. MAX_SAFE_QUANTITY
+  // is not a business rule — it just keeps the arithmetic exact.
+  const max = Math.max(1, Math.min(maxProp ?? MAX_SAFE_QUANTITY, MAX_SAFE_QUANTITY));
+  const reportExceed = () => onExceedMax?.(max);
+
   // Track external changes (+/− taps, cart cleared) unless the user is typing.
   useEffect(() => {
     if (!editing) setDraft(String(qty));
   }, [qty, editing]);
 
-  const atMax = max != null && qty >= max;
+  const atMax = qty >= max;
   const small = size === 'sm';
 
-  // Grow with the digit count: a fixed width either wastes room on "1" or
-  // clips "10000". Clamped so it stays compact and never crowds the price.
+  // Grow with the digit count: a fixed width either wastes room on "1" or clips
+  // a long quantity. The upper clamp keeps it from crowding the price on a
+  // phone; past it the field scrolls rather than pushing the row out of shape.
   const digits = Math.max(draft.length, 1);
   const inputWidth = small
-    ? Math.min(72, Math.max(30, 14 + digits * 8))
-    : Math.min(84, Math.max(36, 16 + digits * 9));
+    ? Math.min(112, Math.max(32, 16 + digits * 9))
+    : Math.min(168, Math.max(44, 20 + digits * 10));
 
   const commit = () => {
     setEditing(false);
@@ -59,8 +66,8 @@ export function QuantityStepper({
       setDraft(String(qty)); // empty / junk → keep what we had
       return;
     }
-    if (max != null && parsed > max) {
-      onExceedMax?.(max);
+    if (parsed > max) {
+      reportExceed();
       setDraft(String(max));
       onChange(max);
       return;
@@ -71,8 +78,8 @@ export function QuantityStepper({
 
   const bump = (delta: number) => {
     const next = qty + delta;
-    if (delta > 0 && max != null && next > max) {
-      onExceedMax?.(max);
+    if (delta > 0 && next > max) {
+      reportExceed();
       return;
     }
     onChange(Math.max(0, next));
@@ -85,7 +92,7 @@ export function QuantityStepper({
         onPress={() => bump(-1)}
         accessibilityLabel={t('products.decrease')}
       >
-        <Ionicons name="remove" size={small ? 14 : 16} color={colors.text} />
+        <Ionicons name="remove" size={small ? 16 : 20} color={colors.text} />
       </Pressable>
 
       <TextInput
@@ -96,6 +103,7 @@ export function QuantityStepper({
         onSubmitEditing={commit}
         keyboardType="number-pad"
         returnKeyType="done"
+        maxLength={String(max).length}
         selectTextOnFocus
         style={[styles.input, small && styles.inputSm, { width: inputWidth }]}
         accessibilityLabel={t('products.quantity')}
@@ -106,7 +114,7 @@ export function QuantityStepper({
         onPress={() => bump(1)}
         accessibilityLabel={t('products.increase')}
       >
-        <Ionicons name="add" size={small ? 14 : 16} color={colors.text} />
+        <Ionicons name="add" size={small ? 16 : 20} color={colors.text} />
       </Pressable>
     </View>
   );
@@ -122,16 +130,18 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   wrapFull: { flexGrow: 1, alignSelf: 'stretch', justifyContent: 'space-between' },
+  // Matches the 40pt "Add" pill it replaces, so the row doesn't jump height
+  // when a product goes from not-added to added.
   btn: {
-    width: 28,
-    height: 28,
+    width: 36,
+    height: 40,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  btnSm: { width: 24, height: 24 },
+  btnSm: { width: 28, height: 32 },
   btnDisabled: { opacity: 0.4 },
   input: {
     // Width is computed per-render from the digit count and applied inline.
@@ -140,7 +150,7 @@ const styles = StyleSheet.create({
     // stretch across the card.
     flexGrow: 0,
     flexShrink: 0,
-    height: 28,
+    height: 40,
     paddingHorizontal: 2,
     borderRadius: radius.sm,
     borderWidth: 1,
@@ -151,5 +161,5 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '600',
   },
-  inputSm: { height: 24 },
+  inputSm: { height: 32 },
 });

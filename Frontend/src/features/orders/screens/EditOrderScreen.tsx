@@ -25,6 +25,10 @@ import { formatINR, isPreDispatch, toNum } from '@/features/orders/constants';
 import { TransportModeField } from '@/features/orders/components/TransportModeField';
 import type { OrdersScreenProps } from '@/navigation/types';
 
+/** Width an amount claims before it wraps onto its own line (see CartScreen). */
+const AMOUNT_MIN_WIDTH = 140;
+
+
 /** A line in the editor — seeded from an order item's snapshot fields. */
 interface EditLine {
   productId: string;
@@ -350,21 +354,39 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   lineName: { ...typography.title, flex: 1 },
+  // Wraps so a long amount drops under the stepper rather than being clipped.
   lineBottom: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  lineTotal: { ...typography.title },
+  lineTotal: {
+    ...typography.title,
+    flexGrow: 1,
+    minWidth: AMOUNT_MIN_WIDTH,
+    textAlign: 'right',
+  },
   discountCard: { marginTop: spacing.sm, gap: spacing.sm },
   discountTitle: { ...typography.title },
   discountRow: { flexDirection: 'row', gap: spacing.md },
   discountField: { flex: 1, gap: spacing.xs },
   fieldLabel: { ...typography.label, color: colors.textMuted },
   summary: { marginTop: spacing.sm, gap: spacing.xs },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  summaryLabel: { ...typography.body, color: colors.textMuted },
-  summaryValue: { ...typography.title },
+  summaryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  summaryLabel: { ...typography.body, color: colors.textMuted, flexShrink: 1 },
+  summaryValue: {
+    ...typography.title,
+    flexGrow: 1,
+    minWidth: AMOUNT_MIN_WIDTH,
+    textAlign: 'right',
+  },
   negative: { color: colors.success },
   reason: { marginTop: spacing.lg },
   cancel: { marginTop: spacing.md },

@@ -25,10 +25,13 @@ export function ProductCard({
   product,
   addable = true,
   enforceStock = true,
+  onOpenDetails,
   onEdit,
   onDelete,
 }: {
   product: Product;
+  /** Open the read-only full-detail view. */
+  onOpenDetails?: () => void;
   /** Show the add-to-cart / quantity controls (only during an active visit). */
   addable?: boolean;
   /**
@@ -67,18 +70,27 @@ export function ProductCard({
   const imageUrls = resolveMediaUrls(product.product_image_url);
   const manufacturer = manufacturerName(product);
 
-  // Tablet/desktop widths have room to sit the control beside the price; on a
-  // phone it goes full-width under the card body instead.
+  // On a phone the control gets its own row under the body — a compact "Add"
+  // pill on the right, or the full-width stepper once the product is in the
+  // cart. Tablet/desktop sits it beside the price instead, where there's room.
+  const outOfStock = stock != null && stock < 1;
   const inlineControl = isWide;
 
   const control = !addable ? null : qty === 0 ? (
     <Pressable
-      style={[styles.addBtn, !inlineControl && styles.addBtnFull]}
+      style={({ pressed }) => [
+        styles.addBtn,
+        isWide && styles.addBtnWide,
+        outOfStock && styles.addBtnDisabled,
+        pressed && styles.addBtnPressed,
+      ]}
       onPress={handleAdd}
+      hitSlop={6}
       accessibilityRole="button"
+      accessibilityState={{ disabled: outOfStock }}
       accessibilityLabel={t('products.addToCart')}
     >
-      <Ionicons name="add" size={18} color="#FFFFFF" />
+      <Ionicons name="add" size={isWide ? 18 : 16} color="#FFFFFF" />
       <Text style={styles.addLabel}>{t('products.add')}</Text>
     </Pressable>
   ) : (
@@ -108,8 +120,22 @@ export function ProductCard({
           <Text style={[typography.title, styles.titleText]} numberOfLines={2}>
             {product.name}
           </Text>
-          {onEdit || onDelete ? (
+          {onOpenDetails || onEdit || onDelete ? (
             <View style={styles.manageRow}>
+              {onOpenDetails ? (
+                <Pressable
+                  onPress={onOpenDetails}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('products.details.view')}
+                >
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={20}
+                    color={colors.primary}
+                  />
+                </Pressable>
+              ) : null}
               {onEdit ? (
                 <Pressable onPress={onEdit} hitSlop={8} accessibilityLabel={t('common.submit')}>
                   <Ionicons name="create-outline" size={20} color={colors.primary} />
@@ -190,6 +216,8 @@ const styles = StyleSheet.create({
   priceGroup: {
     flexShrink: 1,
     flexDirection: 'row',
+    // Wraps rather than squeezing the pill when price + MRP + unit are long.
+    flexWrap: 'wrap',
     alignItems: 'baseline',
     gap: spacing.sm,
   },
@@ -200,21 +228,30 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   unit: { ...typography.caption, color: colors.textMuted },
+  // Compact pill sized to its label — it must never stretch, so the price
+  // keeps the rest of the row.
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
+    flexGrow: 0,
     flexShrink: 0,
-    backgroundColor: colors.primary,
+    height: 34,
+    minWidth: 88,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
   },
-  addBtnFull: { flex: 1 },
+  addBtnWide: { height: 40, minWidth: 104, paddingHorizontal: spacing.lg },
+  addBtnPressed: { opacity: 0.85 },
+  addBtnDisabled: { backgroundColor: colors.textMuted },
+  // Phone-only row under the body. The pill sits right; the stepper stretches
+  // across it (`fullWidth`), so justify only affects the pill.
   controlBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
     marginTop: spacing.xs,
     paddingTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,

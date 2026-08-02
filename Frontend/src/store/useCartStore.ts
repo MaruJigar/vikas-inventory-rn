@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 
+import { MAX_SAFE_QUANTITY } from '@/features/products/pricing';
 import type { Product } from '@/types/product';
 import type { CartLine } from '@/features/products/pricing';
+
+/** Whole units. No business ceiling — only the precision bound (see pricing). */
+const clampQty = (qty: number) =>
+  Math.min(MAX_SAFE_QUANTITY, Math.max(1, Math.floor(qty)));
 
 interface CartState {
   /** Keyed by product id for O(1) qty lookups. */
@@ -41,7 +46,7 @@ export const useCartStore = create<CartState>((set, get) => ({
           ...state.items,
           [product.id]: {
             product,
-            qty: existing ? existing.qty + 1 : 1,
+            qty: clampQty(existing ? existing.qty + 1 : 1),
           },
         },
       };
@@ -53,7 +58,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       if (qty <= 0) {
         delete next[product.id];
       } else {
-        next[product.id] = { product, qty: Math.floor(qty) };
+        next[product.id] = { product, qty: clampQty(qty) };
       }
       return { items: next };
     }),
@@ -65,7 +70,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       return {
         items: {
           ...state.items,
-          [productId]: { ...line, qty: line.qty + 1 },
+          [productId]: { ...line, qty: clampQty(line.qty + 1) },
         },
       };
     }),

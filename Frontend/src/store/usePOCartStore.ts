@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+import { MAX_SAFE_QUANTITY } from '@/features/products/pricing';
+
 import type { Product } from '@/types/product';
 import type { CartLine } from '@/features/products/pricing';
 
@@ -9,6 +11,10 @@ import type { CartLine } from '@/features/products/pricing';
  * flows never collide. On submit the backend auto-splits these items into one
  * order per manufacturer (see features/purchaseOrders).
  */
+/** Whole units. No business ceiling — only the precision bound (see pricing). */
+const clampQty = (qty: number) =>
+  Math.min(MAX_SAFE_QUANTITY, Math.max(1, Math.floor(qty)));
+
 interface POCartState {
   /** Keyed by product id for O(1) qty lookups. */
   items: Record<string, CartLine>;
@@ -44,7 +50,7 @@ export const usePOCartStore = create<POCartState>((set, get) => ({
       return {
         items: {
           ...state.items,
-          [product.id]: { product, qty: existing ? existing.qty + 1 : 1 },
+          [product.id]: { product, qty: clampQty(existing ? existing.qty + 1 : 1) },
         },
       };
     }),
@@ -53,7 +59,7 @@ export const usePOCartStore = create<POCartState>((set, get) => ({
     set((state) => {
       const next = { ...state.items };
       if (qty <= 0) delete next[product.id];
-      else next[product.id] = { product, qty: Math.floor(qty) };
+      else next[product.id] = { product, qty: clampQty(qty) };
       return { items: next };
     }),
 
@@ -62,7 +68,10 @@ export const usePOCartStore = create<POCartState>((set, get) => ({
       const line = state.items[productId];
       if (!line) return state;
       return {
-        items: { ...state.items, [productId]: { ...line, qty: line.qty + 1 } },
+        items: {
+          ...state.items,
+          [productId]: { ...line, qty: clampQty(line.qty + 1) },
+        },
       };
     }),
 

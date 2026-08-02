@@ -1,5 +1,16 @@
 import type { Product } from '@/types/product';
 
+/**
+ * Quantities are NOT capped to a business limit — order any amount, and the
+ * layout adapts to however long the resulting totals are.
+ *
+ * This bound exists only so the arithmetic stays exact: past
+ * Number.MAX_SAFE_INTEGER, JavaScript silently loses precision and totals stop
+ * adding up. 15 digits keeps every product of quantity × price well inside
+ * that, and no real order comes close.
+ */
+export const MAX_SAFE_QUANTITY = 999_999_999_999_999;
+
 /** Numeric DB columns arrive as strings over JSON — coerce safely. */
 export const toNum = (v: number | string | null | undefined): number => {
   const n = typeof v === 'string' ? parseFloat(v) : (v ?? 0);
