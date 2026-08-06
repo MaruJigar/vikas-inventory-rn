@@ -21,6 +21,7 @@ import {
   Settings,
   ShieldAlert,
   BarChart,
+  Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hasRole } from '@/lib/auth/guards';
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { title: 'Distributors', href: ROUTES.DISTRIBUTORS, icon: Truck, roles: PERMISSIONS.DISTRIBUTORS_VIEW },
   { title: 'Salesmen', href: ROUTES.SALESMEN, icon: Users, roles: PERMISSIONS.SALESMEN_VIEW },
   { title: 'Products', href: ROUTES.PRODUCTS, icon: Package, roles: PERMISSIONS.PRODUCTS_VIEW },
+  { title: 'Product Categories', href: ROUTES.PRODUCT_CATEGORIES, icon: Layers, roles: PERMISSIONS.PRODUCT_CATEGORIES_VIEW },
   { title: 'Shops', href: ROUTES.SHOPS, icon: Store, roles: PERMISSIONS.SHOPS_VIEW },
   { title: 'Orders', href: ROUTES.ORDERS, icon: ShoppingCart, roles: PERMISSIONS.ORDERS_VIEW },
   { title: 'Attendance', href: ROUTES.WORKING_DAYS, icon: CalendarDays, roles: PERMISSIONS.WORKING_DAYS_VIEW },

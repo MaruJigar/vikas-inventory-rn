@@ -5,6 +5,7 @@ export const ROUTES = {
   DISTRIBUTORS: '/distributors',
   SALESMEN: '/salesmen',
   PRODUCTS: '/products',
+  PRODUCT_CATEGORIES: '/product-categories',
   SHOPS: '/shops',
   VISITS: '/visits',
   WORKING_DAYS: '/working-days',

@@ -1,10 +1,7 @@
-import React, { useState } from 'react';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+'use client';
+
+import React, { useEffect } from 'react';
+import { EntityFormDrawer } from '@/components/shared/EntityFormDrawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,26 +18,37 @@ import * as z from 'zod';
 import { useCreateCategoryMutation, useGetCategories } from '@/hooks/categories/useCategories';
 
 const categorySchema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string().min(1, 'Category name is required').trim(),
   parent_id: z.string().uuid().optional().or(z.literal('')),
 });
 
 type FormData = z.infer<typeof categorySchema>;
 
 interface Props {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onClose?: () => void;
 }
 
-export function CreateCategoryDrawer({ open, onOpenChange }: Props) {
+export function CreateCategoryDrawer({ open, isOpen, onOpenChange, onClose }: Props) {
+  const isDrawerOpen = open ?? isOpen ?? false;
+  const handleOpenChange = (newOpen: boolean) => {
+    if (onOpenChange) onOpenChange(newOpen);
+    if (!newOpen && onClose) onClose();
+  };
+
   const mutation = useCreateCategoryMutation();
-  const { data: categories } = useGetCategories();
+  const { data: categoriesResponse, isLoading: isCategoriesLoading } = useGetCategories({ limit: 1000 });
+  const categories = categoriesResponse?.data ?? [];
+
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useRHForm<FormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
@@ -49,64 +57,102 @@ export function CreateCategoryDrawer({ open, onOpenChange }: Props) {
     },
   });
 
+  const parentId = watch('parent_id');
+
+  useEffect(() => {
+    if (!isDrawerOpen) {
+      reset();
+    }
+  }, [isDrawerOpen, reset]);
+
   const onSubmit = (data: FormData) => {
     mutation.mutate(
       {
-        ...data,
+        name: data.name.trim(),
         parent_id: data.parent_id === '' ? undefined : data.parent_id,
       },
       {
         onSuccess: () => {
           reset();
-          onOpenChange(false);
+          handleOpenChange(false);
         },
       }
     );
   };
 
+  const isPending = isSubmitting || mutation.isPending;
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[425px]">
-        <SheetHeader>
-          <SheetTitle>Create Category</SheetTitle>
-        </SheetHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name <span className="text-red-500">*</span></Label>
-            <Input id="name" {...register('name')} />
-            {errors.name && (
-              <p className="text-sm text-red-500">{errors.name.message}</p>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="parent_id">Parent Category</Label>
-            <Select onValueChange={(v: string | null) => setValue('parent_id', v === 'none' || v === null ? '' : v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a parent category (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {categories?.data?.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.parent_id && (
-              <p className="text-sm text-red-500">{errors.parent_id.message}</p>
-            )}
-          </div>
+    <EntityFormDrawer
+      open={isDrawerOpen}
+      onOpenChange={handleOpenChange}
+      title="Create Category"
+      description="Add a new product category to organize your inventory."
+      width="md"
+      footer={
+        <div className="flex gap-2 justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            form="create-category-form"
+            type="submit"
+            disabled={isPending}
+          >
+            {isPending ? 'Creating...' : 'Create Category'}
+          </Button>
+        </div>
+      }
+    >
+      <form id="create-category-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="name">
+            Category Name <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="name"
+            placeholder="e.g. Edible Oils, Snacks, Personal Care"
+            {...register('name')}
+          />
+          {errors.name && (
+            <p className="text-xs text-destructive">{errors.name.message}</p>
+          )}
+        </div>
 
-
-          <div className="flex justify-end pt-4">
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Creating...' : 'Create Category'}
-            </Button>
-          </div>
-        </form>
-      </SheetContent>
-    </Sheet>
+        <div className="space-y-2">
+          <Label htmlFor="parent_id">Parent Category</Label>
+          <Select
+            value={parentId || 'none'}
+            onValueChange={(v: string | null) => setValue('parent_id', v === 'none' || v === null ? '' : v)}
+          >
+            <SelectTrigger id="parent_id" className="w-full">
+              <SelectValue placeholder="— None (Top Level) —">
+                {isCategoriesLoading
+                  ? 'Loading categories...'
+                  : parentId && parentId !== 'none'
+                  ? categories.find((c) => c.id === parentId)?.name || parentId
+                  : '— None (Top Level) —'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None (Top Level)</SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.parent_id && (
+            <p className="text-xs text-destructive">{errors.parent_id.message}</p>
+          )}
+        </div>
+      </form>
+    </EntityFormDrawer>
   );
 }

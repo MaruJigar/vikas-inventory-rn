@@ -25,7 +25,7 @@ import {
 export class CategoryController {
   constructor(private categoryService: CategoryService) {}
 
-  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
   @Post()
   @ApiOperation({ summary: 'Create Category' })
   @ApiBearerAuth('bearer')
@@ -40,7 +40,7 @@ export class CategoryController {
     return this.categoryService.getAllCategories(queryDto);
   }
 
-  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
   @Patch(':id')
   @ApiOperation({ summary: 'Update Category' })
   @ApiBearerAuth('bearer')
@@ -51,7 +51,7 @@ export class CategoryController {
     return this.categoryService.updateCategory(id, dto);
   }
 
-  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
   @Delete(':id')
   @ApiOperation({ summary: 'Delete Category' })
   @ApiBearerAuth('bearer')
