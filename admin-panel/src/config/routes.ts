@@ -10,6 +10,7 @@ export const ROUTES = {
   VISITS: '/visits',
   WORKING_DAYS: '/working-days',
   ORDERS: '/orders',
+  ORDER_STATUSES: '/order-statuses',
   INVENTORY: '/inventory',
   BACKORDERS: '/backorders',
   FULFILLMENT: '/fulfillment',

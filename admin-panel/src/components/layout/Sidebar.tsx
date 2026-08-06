@@ -22,6 +22,7 @@ import {
   ShieldAlert,
   BarChart,
   Layers,
+  ListOrdered,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hasRole } from '@/lib/auth/guards';
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
   { title: 'Product Categories', href: ROUTES.PRODUCT_CATEGORIES, icon: Layers, roles: PERMISSIONS.PRODUCT_CATEGORIES_VIEW },
   { title: 'Shops', href: ROUTES.SHOPS, icon: Store, roles: PERMISSIONS.SHOPS_VIEW },
   { title: 'Orders', href: ROUTES.ORDERS, icon: ShoppingCart, roles: PERMISSIONS.ORDERS_VIEW },
+  { title: 'Order Statuses', href: ROUTES.ORDER_STATUSES, icon: ListOrdered, roles: PERMISSIONS.ORDER_STATUSES_VIEW },
   { title: 'Attendance', href: ROUTES.WORKING_DAYS, icon: CalendarDays, roles: PERMISSIONS.WORKING_DAYS_VIEW },
   { title: 'Inventory', href: ROUTES.INVENTORY, icon: Boxes, roles: PERMISSIONS.INVENTORY_VIEW },
   { title: 'Analytics', href: ROUTES.ANALYTICS, icon: BarChart, roles: PERMISSIONS.ANALYTICS_VIEW },

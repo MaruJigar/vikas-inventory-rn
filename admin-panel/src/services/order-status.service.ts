@@ -1,18 +1,35 @@
 import { api } from '@/lib/api/axios';
-import { ApiResponse } from '@/types/api/common.types';
+import {
+  OrderStatusDto,
+  CreateOrderStatusDto,
+  UpdateOrderStatusDto,
+} from '@/types/api/order-status.types';
 
-export interface OrderStatusDto {
-  id: string;
-  name: string;
-  sequence: number;
-  is_active: boolean;
-  is_initial: boolean;
-  is_final: boolean;
-  can_cancel_order: boolean;
-  created_at: string;
-  updated_at: string;
-}
+export * from '@/types/api/order-status.types';
 
 export const orderStatusService = {
-  getNextStatus: (id: string) => api.get<ApiResponse<OrderStatusDto>>(`/order-status/${id}/next`).then(res => res.data),
+  getAll: async (): Promise<OrderStatusDto[]> => {
+    const res = await api.get<OrderStatusDto[]>('/order-status');
+    return res.data;
+  },
+
+  getById: async (id: string): Promise<OrderStatusDto> => {
+    const res = await api.get<OrderStatusDto>(`/order-status/${id}`);
+    return res.data;
+  },
+
+  create: async (data: CreateOrderStatusDto): Promise<OrderStatusDto> => {
+    const res = await api.post<OrderStatusDto>('/order-status', data);
+    return res.data;
+  },
+
+  update: async (id: string, data: UpdateOrderStatusDto): Promise<OrderStatusDto> => {
+    const res = await api.put<OrderStatusDto>(`/order-status/${id}`, data);
+    return res.data;
+  },
+
+  getNextStatus: async (id: string) => {
+    const res = await api.get<{ id: string; name: string; can_cancel_order: boolean }>(`/order-status/${id}/next`);
+    return res.data;
+  },
 };

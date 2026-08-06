@@ -3960,6 +3960,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Create a new order status",
         "tags": [
           "Order Statuses"
@@ -3983,6 +3988,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get all order statuses",
         "tags": [
           "Order Statuses"
@@ -4014,6 +4024,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get a single order status by id",
         "tags": [
           "Order Statuses"
@@ -4053,6 +4068,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Update an order status",
         "tags": [
           "Order Statuses"
@@ -4077,6 +4097,11 @@
             "description": "Success"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get the next active order status based on sequence",
         "tags": [
           "Order Statuses"
