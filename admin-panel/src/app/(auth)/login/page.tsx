@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 
 const loginSchema = z.object({
-  email: z.string().email({ message: "Invalid email address" }),
+  email: z.string().trim().email({ message: "Invalid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
@@ -35,7 +35,8 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setError(null);
-      const response = await authService.login({ email_or_phone: data.email, password: data.password });
+      const email = data.email.trim();
+      const response = await authService.login({ email_or_phone: email, password: data.password });
       if (response && response.access_token) {
         // Decode JWT to extract user info
         const token = response.access_token;

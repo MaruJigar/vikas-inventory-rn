@@ -84,6 +84,28 @@ describe('AuthService', () => {
       expect(result).toEqual(mockUser);
     });
 
+    it('should trim email and support case-insensitive email matching', async () => {
+      const mockUser = { id: '1', password_hash: 'hashed', is_active: true, approval_status: 'APPROVED' };
+      mockUserRepo.findOne.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const result = await service.validateUser('  Test@Test.COM  ', 'password');
+      expect(result).toEqual(mockUser);
+      expect(mockUserRepo.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.arrayContaining([
+            expect.objectContaining({ phone: 'Test@Test.COM' }),
+          ]),
+        }),
+      );
+    });
+
+    it('should throw UnauthorizedException if empty or whitespace only', async () => {
+      await expect(service.validateUser('   ', 'password')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
     it('should throw UnauthorizedException if wrong password', async () => {
       const mockUser = { id: '1', password_hash: 'hashed', is_active: true };
       mockUserRepo.findOne.mockResolvedValue(mockUser);

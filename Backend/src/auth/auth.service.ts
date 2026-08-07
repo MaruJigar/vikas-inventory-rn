@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User } from '../user/user.entity';
@@ -24,8 +24,13 @@ export class AuthService {
   ) {}
 
   async validateUser(emailOrPhone: string, pass: string): Promise<User> {
+    const trimmed = typeof emailOrPhone === 'string' ? emailOrPhone.trim() : '';
+    if (!trimmed) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     const user = await this.userRepo.findOne({
-      where: [{ email: emailOrPhone }, { phone: emailOrPhone }],
+      where: [{ email: ILike(trimmed) }, { phone: trimmed }],
     });
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
