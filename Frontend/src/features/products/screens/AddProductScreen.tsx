@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 
-import { Screen, Button, Card, ControlledInput, Input, Spinner, EmptyState } from '@/components';
+import { Screen, Button, Card, ControlledInput, Spinner, EmptyState } from '@/components';
 import { useAuthStore } from '@/store/useAuthStore';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
@@ -29,7 +29,6 @@ import { addProductSchema, type AddProductForm } from '@/features/products/schem
 import {
   useCreateProduct,
   useUpdateProduct,
-  useCreateCategory,
   useCategories,
 } from '@/features/products/hooks';
 import { toNum } from '@/features/products/pricing';
@@ -47,7 +46,6 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
   const { data: categories } = useCategories();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct(editing?.id ?? '');
-  const createCategory = useCreateCategory();
 
   // The backend keeps every photo in one comma-separated `product_image_url`,
   // so we track kept existing paths and freshly picked files separately and
@@ -57,17 +55,26 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
     splitMediaPaths(editing?.product_image_url),
   );
   const [photosTouched, setPhotosTouched] = useState(false);
+  // Arriving from a category-scoped Products list ("Vidit" → +) means the new
+  // product belongs to THAT category: it's pre-selected and the rest lock out.
+  // Opened from the dashboard instead, there's no scope and the user picks.
+  const scopedCategoryId = !isEdit ? route.params?.categoryId : undefined;
+
   // A product belongs to exactly ONE category — the backend Product entity has a
   // single `category_id` FK, so picking several was never persistable.
   const [categoryId, setCategoryId] = useState<string | null>(
-    editing?.category?.id ?? null,
+    editing?.category?.id ?? scopedCategoryId ?? null,
   );
-  const [addingTag, setAddingTag] = useState(false);
-  const [tagName, setTagName] = useState('');
+  // Category lives outside react-hook-form (it's chips, not an input), so its
+  // required-check is manual rather than part of the zod schema.
+  const [categoryError, setCategoryError] = useState<string | undefined>();
 
-  /** Tapping the selected chip clears it — the field is optional. */
-  const selectCategory = (id: string) =>
-    setCategoryId((prev) => (prev === id ? null : id));
+  /** Single-choice: picking a chip replaces the previous one. Required, so
+   * tapping the selected chip does NOT clear it. */
+  const selectCategory = (id: string) => {
+    setCategoryId(id);
+    setCategoryError(undefined);
+  };
 
   const { control, handleSubmit } = useForm<AddProductForm>({
     resolver: zodResolver(addProductSchema),
@@ -161,20 +168,12 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
     ]);
   };
 
-  const addTag = () => {
-    const name = tagName.trim();
-    if (!name) return;
-    createCategory.mutate(name, {
-      onSuccess: (cat) => {
-        setCategoryId(cat.id);
-        setAddingTag(false);
-        setTagName('');
-      },
-      onError: (e) => toast.error(getApiErrorMessage(e, t) || t('products.form.tagError')),
-    });
-  };
-
   const onSubmit = (values: AddProductForm) => {
+    // Chips sit outside the zod schema, so guard the required category here.
+    if (!categoryId) {
+      setCategoryError(t('validation.required'));
+      return;
+    }
     const gst = values.gst_percent ? parseFloat(values.gst_percent) : undefined;
 
     if (isEdit) {
@@ -278,49 +277,55 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
         multiline
       />
 
-      <Text style={styles.sectionLabel}>{opt(t('products.form.category'))}</Text>
+      {/* Category is REQUIRED and single-choice. Creating one lives on the
+          All Categories screen, not here — a product form shouldn't be able to
+          edit the catalogue. */}
+      <Text style={styles.sectionLabel}>{t('products.form.category')}</Text>
       <View style={styles.chips}>
         {(categories ?? []).map((c) => {
           const selected = categoryId === c.id;
+          // Category fixed by the list we came from: show it selected and grey
+          // out every other chip rather than hiding them, so it's clear which
+          // category the product is being added to.
+          const locked = !!scopedCategoryId && !selected;
           return (
             <Pressable
               key={c.id}
               onPress={() => selectCategory(c.id)}
-              style={[styles.chip, selected && styles.chipOn]}
+              disabled={locked}
+              style={[
+                styles.chip,
+                selected && styles.chipOn,
+                locked && styles.chipLocked,
+              ]}
               accessibilityRole="radio"
-              accessibilityState={{ selected }}
+              accessibilityState={{ selected, disabled: locked }}
             >
-              <Text style={[styles.chipText, selected && styles.chipTextOn]}>
+              <Text
+                style={[
+                  styles.chipText,
+                  selected && styles.chipTextOn,
+                  locked && styles.chipTextLocked,
+                ]}
+              >
                 {c.name}
               </Text>
             </Pressable>
           );
         })}
-        <Pressable
-          onPress={() => setAddingTag((v) => !v)}
-          style={[styles.chip, styles.chipAdd]}
-        >
-          <Ionicons name="add" size={14} color={colors.primary} />
-          <Text style={styles.chipAddText}>{t('products.form.addTag')}</Text>
-        </Pressable>
       </View>
-      {addingTag ? (
-        <View style={styles.addTagRow}>
-          <View style={styles.flex}>
-            <Input
-              value={tagName}
-              onChangeText={setTagName}
-              placeholder={t('products.form.tagName')}
-            />
-          </View>
-          <Button
-            label={t('products.form.addTagSubmit')}
-            loading={createCategory.isPending}
-            disabled={!tagName.trim()}
-            onPress={addTag}
-            style={styles.addTagBtn}
-          />
-        </View>
+      {categoryError ? (
+        <Text style={styles.fieldError}>{categoryError}</Text>
+      ) : null}
+      {scopedCategoryId ? (
+        <Text style={styles.hint}>
+          {t('products.form.categoryFixed', {
+            name: route.params?.categoryName ?? '',
+          })}
+        </Text>
+      ) : null}
+      {(categories ?? []).length === 0 ? (
+        <Text style={styles.hint}>{t('products.form.noCategories')}</Text>
       ) : null}
 
       <Text style={styles.sectionLabel}>
@@ -390,10 +395,11 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { ...typography.label, color: colors.text },
   chipTextOn: { color: '#FFFFFF' },
-  chipAdd: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  chipAddText: { ...typography.label, color: colors.primary },
-  addTagRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: spacing.sm },
-  addTagBtn: { paddingHorizontal: spacing.md },
+  // Greyed out: categories other than the one this product is being added to.
+  chipLocked: { backgroundColor: colors.surface, borderColor: colors.border },
+  chipTextLocked: { color: colors.textMuted },
+  fieldError: { ...typography.caption, color: colors.danger, marginTop: spacing.xs },
+  hint: { ...typography.caption, marginTop: spacing.xs },
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   photoTile: { width: 100, height: 100 },
   photo: {

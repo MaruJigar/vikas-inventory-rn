@@ -215,7 +215,10 @@ export function ProductsScreen({
       {isDistributor ? (
         <Pressable
           style={[styles.fab, totals.itemCount > 0 && styles.fabRaised]}
-          onPress={() => navigation.navigate('AddProduct')}
+          // Scoped to a category → the new product goes into that category.
+          onPress={() =>
+            navigation.navigate('AddProduct', { categoryId, categoryName })
+          }
           accessibilityRole="button"
           accessibilityLabel={t('products.form.title')}
         >

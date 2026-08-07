@@ -41,7 +41,13 @@ export type HomeStackParamList = {
   Products: { categoryId?: string; categoryName?: string } | undefined;
   /** Read-only full record; the list already carries it, so it travels here. */
   ProductDetail: { product: Product };
-  AddProduct: { product?: Product } | undefined;
+  /**
+   * `categoryId`/`categoryName` come from a category-scoped Products list: the
+   * new product belongs to the category being browsed, so the form locks to it.
+   */
+  AddProduct:
+    | { product?: Product; categoryId?: string; categoryName?: string }
+    | undefined;
   Cart: undefined;
   OrderSuccess: { orderNumber: string };
   /** Distributor→Manufacturer purchase-order flow. */

@@ -17,7 +17,7 @@ import type { AccountScreenProps } from '@/navigation/types';
  * phone renders as plain text rather than a tap that goes nowhere.
  */
 const DEVELOPERS: { name: string; phone: string }[] = [
-  { name: 'Param Buddh', phone: '+918141155884' },
+  { name: 'Param Buddh', phone: '+919426516080' },
   { name: 'Jigar Maru', phone: '+918141155884' },
 ];
 
