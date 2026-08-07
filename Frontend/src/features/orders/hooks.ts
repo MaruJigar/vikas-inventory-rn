@@ -31,7 +31,8 @@ export const orderKeys = {
   fulfillment: (id: string) => ['orders', 'fulfillment', id] as const,
 };
 
-/** The dynamic status catalogue (GET /order-status) — cached, rarely changes. */
+/** The dynamic status catalogue (GET /order-status/active) — cached, rarely
+ * changes. Already active-only and sequence-sorted server-side. */
 export function useOrderStatuses() {
   return useQuery({
     queryKey: orderKeys.statuses,
@@ -47,11 +48,10 @@ export function useOrderStatuses() {
 export function useStatusIndex() {
   const { data, isLoading, isError } = useOrderStatuses();
   const index = useMemo(() => indexStatuses(data ?? []), [data]);
+  // The endpoint returns active statuses only, already ordered by sequence;
+  // the sort is kept as a cheap guard against relying on response ordering.
   const activeStatuses = useMemo(
-    () =>
-      (data ?? [])
-        .filter((s) => s.isactive)
-        .sort((a, b) => a.sequence - b.sequence),
+    () => [...(data ?? [])].sort((a, b) => a.sequence - b.sequence),
     [data],
   );
   // The status catalogue loaded but is empty → the admin hasn't configured any

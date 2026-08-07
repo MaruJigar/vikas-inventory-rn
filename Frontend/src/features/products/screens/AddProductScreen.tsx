@@ -57,16 +57,17 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
     splitMediaPaths(editing?.product_image_url),
   );
   const [photosTouched, setPhotosTouched] = useState(false);
-  const [categoryIds, setCategoryIds] = useState<string[]>(
-    editing?.category ? [editing.category.id] : [],
+  // A product belongs to exactly ONE category — the backend Product entity has a
+  // single `category_id` FK, so picking several was never persistable.
+  const [categoryId, setCategoryId] = useState<string | null>(
+    editing?.category?.id ?? null,
   );
   const [addingTag, setAddingTag] = useState(false);
   const [tagName, setTagName] = useState('');
 
-  const toggleCategory = (id: string) =>
-    setCategoryIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+  /** Tapping the selected chip clears it — the field is optional. */
+  const selectCategory = (id: string) =>
+    setCategoryId((prev) => (prev === id ? null : id));
 
   const { control, handleSubmit } = useForm<AddProductForm>({
     resolver: zodResolver(addProductSchema),
@@ -77,6 +78,7 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
       gst_percent: editing ? String(toNum(editing.gst_percent)) : '',
       unit: editing?.unit ?? '',
       sku: editing?.sku ?? '',
+      hsn_code: editing?.hsn_code ?? '',
       description: editing?.description ?? '',
     },
   });
@@ -164,7 +166,7 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
     if (!name) return;
     createCategory.mutate(name, {
       onSuccess: (cat) => {
-        setCategoryIds((prev) => [...prev, cat.id]);
+        setCategoryId(cat.id);
         setAddingTag(false);
         setTagName('');
       },
@@ -185,9 +187,9 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
             gst_percent: gst,
             unit: values.unit || undefined,
             sku: values.sku || undefined,
+            hsn_code: values.hsn_code || undefined,
             description: values.description || undefined,
-            category_id: categoryIds[0] ?? undefined,
-            category_ids: categoryIds.length ? categoryIds : undefined,
+            category_id: categoryId ?? undefined,
           },
           images,
           // Only send the photo set when the user actually changed it, so an
@@ -217,9 +219,9 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
           gst_percent: gst,
           unit: values.unit || undefined,
           sku: values.sku || undefined,
+          hsn_code: values.hsn_code || undefined,
           description: values.description || undefined,
-          category_id: categoryIds[0] ?? undefined,
-          category_ids: categoryIds.length ? categoryIds : undefined,
+          category_id: categoryId ?? undefined,
         },
         images,
       },
@@ -264,6 +266,13 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
       <ControlledInput control={control} name="sku" label={opt(t('products.form.sku'))} />
       <ControlledInput
         control={control}
+        name="hsn_code"
+        label={opt(t('products.form.hsn'))}
+        autoCapitalize="characters"
+        maxLength={20}
+      />
+      <ControlledInput
+        control={control}
         name="description"
         label={opt(t('products.form.description'))}
         multiline
@@ -272,12 +281,14 @@ export function AddProductScreen({ route, navigation }: HomeScreenProps<'AddProd
       <Text style={styles.sectionLabel}>{opt(t('products.form.category'))}</Text>
       <View style={styles.chips}>
         {(categories ?? []).map((c) => {
-          const selected = categoryIds.includes(c.id);
+          const selected = categoryId === c.id;
           return (
             <Pressable
               key={c.id}
-              onPress={() => toggleCategory(c.id)}
+              onPress={() => selectCategory(c.id)}
               style={[styles.chip, selected && styles.chipOn]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
             >
               <Text style={[styles.chipText, selected && styles.chipTextOn]}>
                 {c.name}

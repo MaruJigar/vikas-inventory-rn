@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 
@@ -35,6 +41,9 @@ export function QuantityStepper({
   fullWidth = false,
 }: Props) {
   const { t } = useTranslation();
+  // Reactive, unlike PixelRatio.getFontScale() — the control resizes if the
+  // user changes their text size while the app is open.
+  const { fontScale } = useWindowDimensions();
   const [draft, setDraft] = useState(String(qty));
   const [editing, setEditing] = useState(false);
 
@@ -54,10 +63,20 @@ export function QuantityStepper({
   // Grow with the digit count: a fixed width either wastes room on "1" or clips
   // a long quantity. The upper clamp keeps it from crowding the price on a
   // phone; past it the field scrolls rather than pushing the row out of shape.
+  //
+  // Both the width and the control height are then multiplied by the device's
+  // font scale. The digit sizes below are measured at scale 1, but the text
+  // inside DOES scale with the user's display/font-size setting — so on a phone
+  // set to a large text size a fixed box clipped the number horizontally (and,
+  // at bigger scales, vertically too). `fontScale` can be < 1 on "small text"
+  // settings; don't shrink below the measured minimums.
+  const scale = Math.max(1, fontScale);
   const digits = Math.max(draft.length, 1);
-  const inputWidth = small
-    ? Math.min(112, Math.max(32, 16 + digits * 9))
-    : Math.min(168, Math.max(44, 20 + digits * 10));
+  const baseWidth = small
+    ? Math.min(120, Math.max(34, 16 + digits * 10))
+    : Math.min(176, Math.max(46, 20 + digits * 11));
+  const inputWidth = Math.round(baseWidth * scale);
+  const controlHeight = Math.round((small ? 32 : 40) * scale);
 
   const commit = () => {
     setEditing(false);
@@ -88,7 +107,7 @@ export function QuantityStepper({
   return (
     <View style={[styles.wrap, fullWidth && styles.wrapFull]}>
       <Pressable
-        style={[styles.btn, small && styles.btnSm]}
+        style={[styles.btn, small && styles.btnSm, { height: controlHeight }]}
         onPress={() => bump(-1)}
         accessibilityLabel={t('products.decrease')}
       >
@@ -105,12 +124,17 @@ export function QuantityStepper({
         returnKeyType="done"
         maxLength={String(max).length}
         selectTextOnFocus
-        style={[styles.input, small && styles.inputSm, { width: inputWidth }]}
+        style={[styles.input, { width: inputWidth, height: controlHeight }]}
         accessibilityLabel={t('products.quantity')}
       />
 
       <Pressable
-        style={[styles.btn, small && styles.btnSm, atMax && styles.btnDisabled]}
+        style={[
+          styles.btn,
+          small && styles.btnSm,
+          { height: controlHeight },
+          atMax && styles.btnDisabled,
+        ]}
         onPress={() => bump(1)}
         accessibilityLabel={t('products.increase')}
       >
@@ -130,28 +154,31 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   wrapFull: { flexGrow: 1, alignSelf: 'stretch', justifyContent: 'space-between' },
-  // Matches the 40pt "Add" pill it replaces, so the row doesn't jump height
-  // when a product goes from not-added to added.
+  // Height is font-scaled and applied inline (see controlHeight) so the buttons
+  // stay level with the taller quantity box on large-text devices.
   btn: {
     width: 36,
-    height: 40,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  btnSm: { width: 28, height: 32 },
+  btnSm: { width: 28 },
   btnDisabled: { opacity: 0.4 },
   input: {
-    // Width is computed per-render from the digit count and applied inline.
-    // It must be an explicit width, never minWidth: on react-native-web a bare
-    // <input> keeps its default ~20-character intrinsic width and would
-    // stretch across the card.
+    // Width and height are computed per-render (digit count × font scale) and
+    // applied inline. The width must be explicit, never minWidth: on
+    // react-native-web a bare <input> keeps its default ~20-character intrinsic
+    // width and would stretch across the card.
     flexGrow: 0,
     flexShrink: 0,
-    height: 40,
     paddingHorizontal: 2,
+    // Android gives TextInput generous default vertical padding and extra font
+    // padding; both eat into the fixed height and clip the digits.
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
@@ -161,5 +188,4 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '600',
   },
-  inputSm: { height: 32 },
 });

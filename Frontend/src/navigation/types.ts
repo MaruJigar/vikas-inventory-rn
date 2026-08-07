@@ -2,6 +2,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { Product } from '@/types/product';
+import type { InventoryItem } from '@/types/inventory';
 
 /**
  * Auth flow (shown when unauthenticated). The app is login-only — distributors
@@ -99,6 +100,13 @@ export type AccountStackParamList = {
    * doesn't re-resolve it for shop approvals). */
   ApprovalDetail: { id: string; subject?: string };
   Attendance: undefined;
+  /** Distributor stock management (distributor-only, entered from Account). */
+  Inventory: undefined;
+  /** There is no `GET /inventory/:id`, so the row travels from the list. */
+  InventoryDetail: { item: InventoryItem };
+  /** Without params the screen picks a product first (opening stock). */
+  AdjustStock: { productId?: string; productName?: string } | undefined;
+  InventoryValuation: undefined;
 };
 
 export type AccountScreenProps<T extends keyof AccountStackParamList> =

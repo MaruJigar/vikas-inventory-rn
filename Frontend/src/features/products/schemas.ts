@@ -17,6 +17,9 @@ export const addProductSchema = z.object({
     .or(z.literal('')),
   unit: z.string().trim().optional(),
   sku: z.string().trim().optional(),
+  /** Backend column is varchar(20) with a MaxLength(20) guard — match it here
+   * so an over-long code fails in the form rather than as a 400. */
+  hsn_code: z.string().trim().max(20, 'validation.maxLength20').optional(),
   description: z.string().trim().optional(),
 });
 

@@ -67,8 +67,18 @@ export const ordersApi = {
     apiClient.patch<Order>(`/orders/${id}/cancel`, body).then((r) => r.data),
 };
 
-/** GET /v1/order-status — the dynamic status catalogue (plain array, sorted). */
+/**
+ * GET /v1/order-status/active — the dynamic status catalogue (plain array,
+ * already sorted by sequence ASC).
+ *
+ * NOT `/order-status`: that one is `@Roles('SUPER_ADMIN','MANUFACTURER_ADMIN')`
+ * and 403s for the distributors and salesmen who use this app. The `/active`
+ * route carries no `@Roles`, so any authenticated user may read it. It returns
+ * only `isactive = true` rows and omits the flag itself.
+ */
 export const orderStatusApi = {
   list: () =>
-    apiClient.get<OrderStatusRecord[]>('/order-status').then((r) => r.data),
+    apiClient
+      .get<OrderStatusRecord[]>('/order-status/active')
+      .then((r) => r.data),
 };

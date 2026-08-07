@@ -103,7 +103,7 @@ export function ProductCard({
     />
   );
 
-  return (
+  const body = (
     <Card style={styles.card}>
       <View style={styles.imageWrap}>
         {imageUrls.length > 0 ? (
@@ -120,22 +120,9 @@ export function ProductCard({
           <Text style={[typography.title, styles.titleText]} numberOfLines={2}>
             {product.name}
           </Text>
-          {onOpenDetails || onEdit || onDelete ? (
+          {/* No "info" icon: tapping anywhere on the card opens the details. */}
+          {onEdit || onDelete ? (
             <View style={styles.manageRow}>
-              {onOpenDetails ? (
-                <Pressable
-                  onPress={onOpenDetails}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('products.details.view')}
-                >
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={20}
-                    color={colors.primary}
-                  />
-                </Pressable>
-              ) : null}
               {onEdit ? (
                 <Pressable onPress={onEdit} hitSlop={8} accessibilityLabel={t('common.submit')}>
                   <Ionicons name="create-outline" size={20} color={colors.primary} />
@@ -184,10 +171,26 @@ export function ProductCard({
       </View>
     </Card>
   );
+
+  // The whole card opens the detail view. The add/quantity controls and the
+  // edit/delete icons are Pressables of their own, so they consume their taps
+  // before this outer one sees them.
+  if (!onOpenDetails) return body;
+  return (
+    <Pressable
+      onPress={onOpenDetails}
+      accessibilityRole="button"
+      accessibilityLabel={t('products.details.view')}
+      style={({ pressed }) => (pressed ? styles.cardPressed : undefined)}
+    >
+      {body}
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
   card: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
+  cardPressed: { opacity: 0.7 },
   imageWrap: { width: IMAGE_SIZE },
   imagePlaceholder: {
     width: IMAGE_SIZE,

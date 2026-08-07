@@ -12,6 +12,10 @@ import { SalesmanDetailScreen } from '@/features/salesman/screens/SalesmanDetail
 import { ApprovalsListScreen } from '@/features/approvals/screens/ApprovalsListScreen';
 import { ApprovalDetailScreen } from '@/features/approvals/screens/ApprovalDetailScreen';
 import { AttendanceScreen } from '@/features/attendance/screens/AttendanceScreen';
+import { InventoryListScreen } from '@/features/inventory/screens/InventoryListScreen';
+import { InventoryDetailScreen } from '@/features/inventory/screens/InventoryDetailScreen';
+import { AdjustStockScreen } from '@/features/inventory/screens/AdjustStockScreen';
+import { InventoryValuationScreen } from '@/features/inventory/screens/InventoryValuationScreen';
 
 const Stack = createNativeStackNavigator<AccountStackParamList>();
 
@@ -66,6 +70,26 @@ export function AccountNavigator() {
         name="Attendance"
         component={AttendanceScreen}
         options={{ title: t('attendance.title') }}
+      />
+      <Stack.Screen
+        name="Inventory"
+        component={InventoryListScreen}
+        options={{ title: t('inventory.title') }}
+      />
+      <Stack.Screen
+        name="InventoryDetail"
+        component={InventoryDetailScreen}
+        options={{ title: t('inventory.detail.title') }}
+      />
+      <Stack.Screen
+        name="AdjustStock"
+        component={AdjustStockScreen}
+        options={{ title: t('inventory.adjust.title') }}
+      />
+      <Stack.Screen
+        name="InventoryValuation"
+        component={InventoryValuationScreen}
+        options={{ title: t('inventory.valuation.title') }}
       />
     </Stack.Navigator>
   );

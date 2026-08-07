@@ -223,6 +223,11 @@ export function AccountScreen({
               onPress={() => navigation.navigate('Salesmen')}
             />
             <Row
+              icon="cube-outline"
+              label={t('inventory.title')}
+              onPress={() => navigation.navigate('Inventory')}
+            />
+            <Row
               icon="checkmark-done-outline"
               label={t('approvals.title')}
               divider={false}

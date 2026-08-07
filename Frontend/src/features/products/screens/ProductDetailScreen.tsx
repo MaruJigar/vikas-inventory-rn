@@ -120,6 +120,10 @@ export function ProductDetailScreen({
           />
           <DetailRow label={t('products.details.sku')} value={product.sku} />
           <DetailRow
+            label={t('products.details.hsn')}
+            value={product.hsn_code}
+          />
+          <DetailRow
             label={t('products.details.stock')}
             value={
               stock != null

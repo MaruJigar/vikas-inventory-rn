@@ -6,12 +6,19 @@
  * `status_id`; resolve the name/colour via the status index (see
  * `features/orders/constants.ts` + `useStatusIndex`).
  */
+/**
+ * A row of the dynamic status catalogue, as returned by
+ * `GET /v1/order-status/active` (backend `ActiveOrderStatusDto`).
+ *
+ * That endpoint filters to `isactive = true` and does NOT return the flag, so
+ * there is deliberately no `isactive` field here: every record is active by
+ * construction and callers must not re-filter on it.
+ */
 export interface OrderStatusRecord {
   id: string;
   name: string;
   sequence: number;
   can_cancel_order: boolean;
-  isactive: boolean;
   is_cancel_status: boolean;
   is_dispatch_status: boolean;
 }

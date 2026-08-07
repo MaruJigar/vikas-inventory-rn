@@ -20,9 +20,10 @@ export interface StatusMeta {
 export function indexStatuses(
   list: OrderStatusRecord[],
 ): Map<string, StatusMeta> {
-  // The terminal/success status is the highest-sequence active, non-cancel one.
+  // The terminal/success status is the highest-sequence non-cancel one. The
+  // catalogue is already active-only (see OrderStatusRecord).
   const finalSeq = list
-    .filter((s) => s.isactive && !s.is_cancel_status)
+    .filter((s) => !s.is_cancel_status)
     .reduce((max, s) => Math.max(max, s.sequence), -Infinity);
 
   const map = new Map<string, StatusMeta>();
@@ -94,9 +95,7 @@ export function nextStatus(
   const current = list.find((s) => s.id === currentStatusId);
   if (!current || current.is_cancel_status) return undefined;
   return list
-    .filter(
-      (s) => s.isactive && !s.is_cancel_status && s.sequence > current.sequence,
-    )
+    .filter((s) => !s.is_cancel_status && s.sequence > current.sequence)
     .sort((a, b) => a.sequence - b.sequence)[0];
 }
 
@@ -111,7 +110,7 @@ export function isPreDispatch(
   statusId: string | null | undefined,
 ): boolean {
   const current = list.find((s) => s.id === statusId);
-  const dispatch = list.find((s) => s.isactive && s.is_dispatch_status);
+  const dispatch = list.find((s) => s.is_dispatch_status);
   if (!current || !dispatch || current.is_cancel_status) return false;
   return current.sequence < dispatch.sequence;
 }
