@@ -362,7 +362,7 @@ export class SalesmanService {
 
     await this.salesmanRepo.save(salesman);
 
-    if (dto.full_name || dto.phone || dto.email) {
+    if (dto.full_name || dto.phone || dto.email || dto.is_active !== undefined) {
       const user = await this.userRepo.findOne({
         where: { id: salesman.user_id },
       });
@@ -370,6 +370,7 @@ export class SalesmanService {
         if (dto.full_name) user.full_name = dto.full_name;
         if (dto.phone) user.phone = dto.phone;
         if (dto.email) user.email = dto.email;
+        if (dto.is_active !== undefined) user.is_active = dto.is_active;
         await this.userRepo.save(user);
       }
     }

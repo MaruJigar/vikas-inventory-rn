@@ -7,6 +7,7 @@ import { EntityFormDrawer } from '@/components/shared/EntityFormDrawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { updateSalesmanSchema, UpdateSalesmanInput } from '@/lib/validation/salesmen/schema';
 import { useUpdateSalesmanMutation } from '@/hooks/salesmen/useUpdateSalesmanMutation';
 import { useSalesmanQuery } from '@/hooks/salesmen/useSalesmanQuery';
@@ -52,12 +53,14 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
       phone: '',
       state_id: '',
       city_id: '',
+      is_active: true,
     },
   });
 
   const { data: states, isLoading: isLoadingStates } = useStates();
 
   const selectedStateId = watch('state_id');
+  const isActive = watch('is_active') ?? true;
   const { data: cities, isLoading: isLoadingCities } = useCities(selectedStateId);
 
   // Clear messages only when drawer opens
@@ -78,6 +81,7 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
           phone: salesman.phone || '',
           state_id: salesman.state_id || '',
           city_id: salesman.city_id || '',
+          is_active: salesman.is_active ?? true,
         });
       } else {
         reset();
@@ -91,12 +95,13 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const payload: UpdateSalesmanInput & { city?: string | null; city_id?: string | null; state?: string } = {
+    const payload: UpdateSalesmanInput & { city?: string | null; city_id?: string | null; state?: string; is_active?: boolean } = {
       full_name: data.full_name,
       email: data.email || undefined,
       phone: data.phone || undefined,
       state_id: data.state_id || undefined,
       city_id: data.city_id === 'none' ? null : (data.city_id || undefined),
+      is_active: data.is_active,
     };
 
     if (data.state_id) {
@@ -246,6 +251,24 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
                 )}
               />
               {errors.city_id && <p className="text-red-500 text-xs mt-1">{errors.city_id.message}</p>}
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Account Status</h3>
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50">
+              <div className="space-y-0.5">
+                <Label className="text-base font-medium">Active Account</Label>
+                <p className="text-sm text-slate-500">
+                  {isActive 
+                    ? 'Salesman can log in and take orders.' 
+                    : 'Salesman cannot log in. Their data remains in the system.'}
+                </p>
+              </div>
+              <Switch 
+                checked={isActive} 
+                onCheckedChange={(checked) => setValue('is_active', checked, { shouldDirty: true })} 
+              />
             </div>
           </div>
 

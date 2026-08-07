@@ -5,7 +5,20 @@ export interface RegisterSalesmanDto {
   distributor_id: string;
   phone?: string;
 }
-export type UpdateSalesmanDto = Partial<RegisterSalesmanDto>;
+export interface UpdateSalesmanDto {
+  full_name?: string;
+  email?: string;
+  phone?: string;
+  state?: string;
+  state_id?: string;
+  city?: string | null;
+  city_id?: string | null;
+  is_active?: boolean;
+}
+
+export interface UpdateSalesmanStatusDto {
+  is_active: boolean;
+}
 
 export interface SalesmanDto {
   id: string;

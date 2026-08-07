@@ -6614,6 +6614,10 @@
           "city_id": {
             "type": "string",
             "description": "City id"
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Is active status"
           }
         }
       },

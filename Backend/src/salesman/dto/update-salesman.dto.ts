@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsOptional, IsUUID } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsUUID, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateSalesmanDto {
@@ -36,4 +36,9 @@ export class UpdateSalesmanDto {
   @IsOptional()
   @ApiPropertyOptional({ description: 'City id' })
   city_id?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  @ApiPropertyOptional({ description: 'Is active status' })
+  is_active?: boolean;
 }

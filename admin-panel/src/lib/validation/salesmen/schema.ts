@@ -25,6 +25,7 @@ export const updateSalesmanSchema = z.object({
   state: z.string().optional().or(z.literal('')),
   city_id: z.string().optional().or(z.literal('')),
   city: z.string().optional().or(z.literal('')),
+  is_active: z.boolean().optional(),
 });
 
 export type CreateSalesmanInput = z.infer<typeof createSalesmanSchema>;

@@ -1,6 +1,6 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { SalesmanDto } from '@/types/api/salesman.types';
-import { formatDate } from '@/lib/utils';
+import { formatDate, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Edit, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { SalesmanStatusBadge } from './components/SalesmanStatusBadge';
@@ -15,7 +15,11 @@ interface SalesmenColumnsProps {
   onReview: (salesman: SalesmanDto, action: 'APPROVE' | 'REJECT') => void;
 }
 
-export const getSalesmenColumns = ({ onViewDetails, onEdit, onReview }: SalesmenColumnsProps): ColumnDef<SalesmanDto>[] => [
+export const getSalesmenColumns = ({
+  onViewDetails,
+  onEdit,
+  onReview,
+}: SalesmenColumnsProps): ColumnDef<SalesmanDto>[] => [
   {
     accessorKey: 'full_name',
     header: 'Full Name',
@@ -58,9 +62,16 @@ export const getSalesmenColumns = ({ onViewDetails, onEdit, onReview }: Salesmen
     accessorKey: 'is_active',
     header: 'Active Status',
     cell: ({ row }) => (
-      <div className="text-slate-600">
+      <span
+        className={cn(
+          'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+          row.original.is_active
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+            : 'bg-slate-100 text-slate-600 border border-slate-200'
+        )}
+      >
         {row.original.is_active ? 'Active' : 'Inactive'}
-      </div>
+      </span>
     ),
   },
   {
