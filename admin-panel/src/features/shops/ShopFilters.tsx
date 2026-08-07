@@ -16,8 +16,9 @@ interface ShopFiltersProps {
   verificationStatus?: string;
   isActive?: string;
   onSearchChange: (value: string) => void;
-  onVerificationStatusChange: (value: string | undefined) => void;
-  onIsActiveChange: (value: string | undefined) => void;
+  onVerificationStatusChange?: (value: string | undefined) => void;
+  onIsActiveChange?: (value: string | undefined) => void;
+  hideStatusFilters?: boolean;
 }
 
 export function ShopFilters({ 
@@ -26,7 +27,8 @@ export function ShopFilters({
   isActive,
   onSearchChange,
   onVerificationStatusChange,
-  onIsActiveChange
+  onIsActiveChange,
+  hideStatusFilters = false,
 }: ShopFiltersProps) {
   const [localSearch, setLocalSearch] = useState(searchQuery);
 
@@ -53,43 +55,47 @@ export function ShopFilters({
           type="text"
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder="Search by name, owner, phone..."
+          placeholder={hideStatusFilters ? "Search by shop name, city, state..." : "Search by name, owner, phone..."}
           className="pl-10 h-9"
         />
       </div>
 
-      <div className="w-[180px]">
-        <Select 
-          value={verificationStatus || "ALL"} 
-          onValueChange={(val) => onVerificationStatusChange(val === "ALL" ? undefined : (val || undefined))}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Verification Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Statuses</SelectItem>
-            <SelectItem value="VERIFIED">Verified</SelectItem>
-            <SelectItem value="PENDING">Pending</SelectItem>
-            <SelectItem value="REJECTED">Rejected</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {!hideStatusFilters && (
+        <>
+          <div className="w-[180px]">
+            <Select 
+              value={verificationStatus || "ALL"} 
+              onValueChange={(val) => onVerificationStatusChange?.(val === "ALL" ? undefined : (val || undefined))}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Verification Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Statuses</SelectItem>
+                <SelectItem value="VERIFIED">Verified</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div className="w-[180px]">
-        <Select 
-          value={isActive || "ALL"} 
-          onValueChange={(val) => onIsActiveChange(val === "ALL" ? undefined : (val || undefined))}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Active Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Active States</SelectItem>
-            <SelectItem value="true">Active</SelectItem>
-            <SelectItem value="false">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+          <div className="w-[180px]">
+            <Select 
+              value={isActive || "ALL"} 
+              onValueChange={(val) => onIsActiveChange?.(val === "ALL" ? undefined : (val || undefined))}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Active Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Active States</SelectItem>
+                <SelectItem value="true">Active</SelectItem>
+                <SelectItem value="false">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </>
+      )}
     </div>
   );
 }

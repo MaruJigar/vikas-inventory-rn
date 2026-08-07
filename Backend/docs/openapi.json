@@ -2781,6 +2781,120 @@
         ]
       }
     },
+    "/v1/shops/manufacturer": {
+      "get": {
+        "operationId": "ShopController_getManufacturerShops_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Limit",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "SortBy",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "SortOrder",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "StartDate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "EndDate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Status",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ManufacturerShopDto"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get Manufacturer Shops (Restricted View)",
+        "tags": [
+          "Shop"
+        ]
+      }
+    },
     "/v1/shops/{id}": {
       "get": {
         "operationId": "ShopController_getShopById_v1",
@@ -7057,6 +7171,33 @@
           "state",
           "city_id",
           "state_id"
+        ]
+      },
+      "ManufacturerShopDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Shop ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Shop Name"
+          },
+          "city": {
+            "type": "string",
+            "description": "City Name"
+          },
+          "state": {
+            "type": "string",
+            "description": "State Name"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "city",
+          "state"
         ]
       },
       "User": {

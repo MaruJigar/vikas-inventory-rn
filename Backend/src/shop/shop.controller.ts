@@ -33,6 +33,7 @@ import {
 } from '@nestjs/swagger';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { Shop } from './shop.entity';
+import { ManufacturerShopDto } from './dto/manufacturer-shop.dto';
 
 @Controller('shops')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -66,7 +67,16 @@ export class ShopController {
     return this.shopService.createShop(dto, req.user.userId, req.user.role);
   }
 
-  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
+  @Roles('MANUFACTURER_ADMIN')
+  @Get('manufacturer')
+  @ApiOperation({ summary: 'Get Manufacturer Shops (Restricted View)' })
+  @ApiBearerAuth('bearer')
+  @ApiPaginatedResponse(ManufacturerShopDto)
+  getManufacturerShops(@Request() req, @Query() query: ListQueryDto) {
+    return this.shopService.getManufacturerShops(req.user.userId, query);
+  }
+
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
   @Get()
   @ApiOperation({ summary: 'Get Shops' })
   @ApiBearerAuth('bearer')
@@ -75,7 +85,7 @@ export class ShopController {
     return this.shopService.getShops(req.user.userId, req.user.role, query);
   }
 
-  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
   @Get(':id')
   @ApiOperation({ summary: 'Get Shop By Id' })
   @ApiBearerAuth('bearer')

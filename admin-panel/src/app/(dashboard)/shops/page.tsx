@@ -1,6 +1,6 @@
 'use client';
 import { PERMISSIONS } from '@/config/permissions';
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { DataTable } from '@/components/data-table/DataTable';
@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useDataTable } from '@/hooks/table/useDataTable';
 import { useShopsQuery } from '@/hooks/shops/useShopsQuery';
-import { getShopsColumns } from '@/features/shops/shops-columns';
+import { useManufacturerShopsQuery } from '@/hooks/shops/useManufacturerShopsQuery';
+import { getShopsColumns, getManufacturerShopsColumns } from '@/features/shops/shops-columns';
 import { ShopFilters } from '@/features/shops/ShopFilters';
 import { ShopDetailsDrawer } from '@/features/shops/components/shop-details-drawer';
 import { CreateShopDrawer } from '@/features/shops/components/CreateShopDrawer';
@@ -18,8 +19,12 @@ import { UploadShopImageDialog } from '@/features/shops/components/UploadShopIma
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { ShopDto } from '@/types/api/shop.types';
 import { useDeleteShopMutation } from '@/hooks/shops/useDeleteShopMutation';
+import { useAuthStore } from '@/store/useAuthStore';
 
 function ShopsPageContent() {
+  const { user } = useAuthStore();
+  const isManufacturerAdmin = user?.role === 'MANUFACTURER_ADMIN';
+
   const [selectedShop, setSelectedShop] = useState<ShopDto | null>(null);
   const [editingShop, setEditingShop] = useState<ShopDto | null>(null);
   const [uploadingShop, setUploadingShop] = useState<ShopDto | null>(null);
@@ -38,15 +43,26 @@ function ShopsPageContent() {
     setFilter,
   } = useDataTable();
 
-  // ── API query ──────────────────────────────────────────────────────
-  const { data, isLoading, isError, error } = useShopsQuery(queryState);
+  // ── API query: conditionally fetch based on role ───────────────────
+  const shopsQuery = useShopsQuery(queryState, { enabled: !isManufacturerAdmin });
+  const manufacturerShopsQuery = useManufacturerShopsQuery(queryState, { enabled: isManufacturerAdmin });
 
-  const columns = getShopsColumns({
-    onViewDetails: (shop) => setSelectedShop(shop),
-    onEdit: (shop) => setEditingShop(shop),
-    onUploadImage: (shop) => setUploadingShop(shop),
-    onDelete: (shop) => setDeletingShop(shop),
-  });
+  const activeQuery = isManufacturerAdmin ? manufacturerShopsQuery : shopsQuery;
+  const { data, isLoading, isError, error } = activeQuery;
+
+  const defaultColumns = useMemo(
+    () =>
+      getShopsColumns({
+        onViewDetails: (shop) => setSelectedShop(shop),
+        onEdit: (shop) => setEditingShop(shop),
+        onUploadImage: (shop) => setUploadingShop(shop),
+        onDelete: (shop) => setDeletingShop(shop),
+      }),
+    [],
+  );
+
+  const manufacturerColumns = useMemo(() => getManufacturerShopsColumns(), []);
+  const columns = isManufacturerAdmin ? manufacturerColumns : defaultColumns;
 
   const handleDelete = async () => {
     if (!deletingShop) return;
@@ -66,13 +82,15 @@ function ShopsPageContent() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Shops</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Manage and view registered shops.
+              {isManufacturerAdmin ? 'View linked distributor shops.' : 'Manage and view registered shops.'}
             </p>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Shop
-          </Button>
+          {!isManufacturerAdmin && (
+            <Button onClick={() => setIsCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Shop
+            </Button>
+          )}
         </div>
 
         {/* Toolbar: Search Filter */}
@@ -83,12 +101,13 @@ function ShopsPageContent() {
           onSearchChange={setSearch}
           onVerificationStatusChange={(val) => setFilter('verification_status', val)}
           onIsActiveChange={(val) => setFilter('is_active', val)}
+          hideStatusFilters={isManufacturerAdmin}
         />
 
         {/* DataTable */}
         <DataTable
-          columns={columns ?? []}
-          data={data ?? undefined}
+          columns={columns as any}
+          data={data as any}
           isLoading={isLoading || isPending}
           isError={isError}
           error={error as Error | null}
@@ -96,44 +115,48 @@ function ShopsPageContent() {
           onLimitChange={setLimit}
         />
 
-        {/* Details Drawer */}
-        <ShopDetailsDrawer
-          shop={selectedShop}
-          isOpen={!!selectedShop}
-          onClose={() => setSelectedShop(null)}
-        />
+        {!isManufacturerAdmin && (
+          <>
+            {/* Details Drawer */}
+            <ShopDetailsDrawer
+              shop={selectedShop}
+              isOpen={!!selectedShop}
+              onClose={() => setSelectedShop(null)}
+            />
 
-        {/* Create Drawer */}
-        <CreateShopDrawer
-          isOpen={isCreateOpen}
-          onClose={() => setIsCreateOpen(false)}
-        />
+            {/* Create Drawer */}
+            <CreateShopDrawer
+              isOpen={isCreateOpen}
+              onClose={() => setIsCreateOpen(false)}
+            />
 
-        {/* Edit Drawer */}
-        <EditShopDrawer
-          shop={editingShop}
-          isOpen={!!editingShop}
-          onClose={() => setEditingShop(null)}
-        />
+            {/* Edit Drawer */}
+            <EditShopDrawer
+              shop={editingShop}
+              isOpen={!!editingShop}
+              onClose={() => setEditingShop(null)}
+            />
 
-        {/* Upload Image Dialog */}
-        <UploadShopImageDialog
-          shop={uploadingShop}
-          isOpen={!!uploadingShop}
-          onClose={() => setUploadingShop(null)}
-        />
+            {/* Upload Image Dialog */}
+            <UploadShopImageDialog
+              shop={uploadingShop}
+              isOpen={!!uploadingShop}
+              onClose={() => setUploadingShop(null)}
+            />
 
-        {/* Delete Confirmation */}
-        <ConfirmDialog
-          open={!!deletingShop}
-          onOpenChange={(open) => !open && setDeletingShop(null)}
-          title="Delete Shop"
-          description={`Are you sure you want to delete "${deletingShop?.name}"? This action cannot be undone.`}
-          confirmLabel="Delete"
-          intent="destructive"
-          onConfirm={handleDelete}
-          isLoading={deleteShopMutation.isPending}
-        />
+            {/* Delete Confirmation */}
+            <ConfirmDialog
+              open={!!deletingShop}
+              onOpenChange={(open) => !open && setDeletingShop(null)}
+              title="Delete Shop"
+              description={`Are you sure you want to delete "${deletingShop?.name}"? This action cannot be undone.`}
+              confirmLabel="Delete"
+              intent="destructive"
+              onConfirm={handleDelete}
+              isLoading={deleteShopMutation.isPending}
+            />
+          </>
+        )}
       </div>
     </AppLayout>
   );

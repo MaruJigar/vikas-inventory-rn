@@ -54,8 +54,27 @@ export interface ShopDto {
   deleted_at: string | null;
 }
 
+export interface ManufacturerShopDto {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+}
+
 export interface PaginatedShopResponse {
   data: ShopDto[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
+export interface PaginatedManufacturerShopResponse {
+  data: ManufacturerShopDto[];
   meta: {
     page: number;
     limit: number;

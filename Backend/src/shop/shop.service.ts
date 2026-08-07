@@ -11,6 +11,7 @@ import { Distributor } from '../distributor/distributor.entity';
 import { Salesman } from '../salesman/salesman.entity';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
+import { ManufacturerShopDto } from './dto/manufacturer-shop.dto';
 import { ShopDuplicateDetectionService } from '../shop-duplicate-detection/shop-duplicate-detection.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { UploadedFile } from '../shop-image/uploaded-file.entity';
@@ -153,20 +154,6 @@ export class ShopService {
 
     if (userRole === 'SUPER_ADMIN') {
       // Global
-    } else if (userRole === 'MANUFACTURER_ADMIN') {
-      const mfrResult = await this.dataSource.query(
-        `SELECT id FROM manufacturers WHERE user_id = $1`,
-        [userId],
-      );
-      if (!mfrResult.length)
-        throw new ForbiddenException('Manufacturer profile not found');
-
-      qb.innerJoin(
-        'manufacturer_distributors',
-        'md',
-        'md.distributor_id = shop.distributor_id AND md.manufacturer_id = :mfrId',
-        { mfrId: mfrResult[0].id },
-      );
     } else if (userRole === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
       if (!dist) throw new ForbiddenException('Distributor profile not found');
@@ -246,6 +233,88 @@ export class ShopService {
     };
   }
 
+  async getManufacturerShops(
+    userId: string,
+    queryDto: ListQueryDto = {} as any,
+  ): Promise<PaginatedResponse<ManufacturerShopDto>> {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      sortBy,
+      sortOrder = 'DESC',
+    } = queryDto as any;
+    const skip = (page - 1) * limit;
+
+    const mfrResult = await this.dataSource.query(
+      `SELECT id FROM manufacturers WHERE user_id = $1`,
+      [userId],
+    );
+    if (!mfrResult.length) {
+      throw new ForbiddenException('Manufacturer profile not found');
+    }
+
+    const qb = this.shopRepo
+      .createQueryBuilder('shop')
+      .leftJoin('shop.city', 'city')
+      .leftJoin('shop.state', 'state')
+      .innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = shop.distributor_id AND md.manufacturer_id = :mfrId',
+        { mfrId: mfrResult[0].id },
+      )
+      .select([
+        'shop.id AS id',
+        'shop.name AS name',
+        'COALESCE(city.name, shop.city_name, \'\') AS city',
+        'COALESCE(state.name, shop.state_name, \'\') AS state',
+      ]);
+
+    if (search) {
+      qb.andWhere(
+        '(shop.name ILIKE :search OR city.name ILIKE :search OR shop.city_name ILIKE :search OR state.name ILIKE :search OR shop.state_name ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    const allowedSortFields: Record<string, string> = {
+      name: 'shop.name',
+      created_at: 'shop.created_at',
+      city: 'city.name',
+      state: 'state.name',
+    };
+    if (sortBy && allowedSortFields[sortBy]) {
+      qb.orderBy(allowedSortFields[sortBy], sortOrder === 'ASC' ? 'ASC' : 'DESC');
+    } else {
+      qb.orderBy('shop.created_at', 'DESC');
+    }
+
+    const total = await qb.getCount();
+    const rawData = await qb.offset(skip).limit(limit).getRawMany();
+
+    const data: ManufacturerShopDto[] = rawData.map((r) => ({
+      id: r.id,
+      name: r.name,
+      city: r.city || '',
+      state: r.state || '',
+    }));
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+
   async getShopById(id: string, userId: string, userRole: string) {
     const qb = this.shopRepo
       .createQueryBuilder('shop')
@@ -258,20 +327,6 @@ export class ShopService {
 
     if (userRole === 'SUPER_ADMIN') {
       // Global
-    } else if (userRole === 'MANUFACTURER_ADMIN') {
-      const mfrResult = await this.dataSource.query(
-        `SELECT id FROM manufacturers WHERE user_id = $1`,
-        [userId],
-      );
-      if (!mfrResult.length)
-        throw new ForbiddenException('Manufacturer profile not found');
-
-      qb.innerJoin(
-        'manufacturer_distributors',
-        'md',
-        'md.distributor_id = shop.distributor_id AND md.manufacturer_id = :mfrId',
-        { mfrId: mfrResult[0].id },
-      );
     } else if (userRole === 'DISTRIBUTOR_ADMIN') {
       const dist = await this.distRepo.findOne({ where: { user_id: userId } });
       if (!dist) throw new ForbiddenException('Distributor profile not found');

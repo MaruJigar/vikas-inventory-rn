@@ -1,5 +1,5 @@
 import { ColumnDef } from '@tanstack/react-table';
-import { ShopDto } from '@/types/api/shop.types';
+import { ShopDto, ManufacturerShopDto } from '@/types/api/shop.types';
 import { formatDate } from '@/lib/utils';
 
 import { Eye, MoreHorizontal, Edit, Image as ImageIcon, Trash } from 'lucide-react';
@@ -162,6 +162,30 @@ export const getShopsColumns = ({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+    ),
+  },
+];
+
+export const getManufacturerShopsColumns = (): ColumnDef<ManufacturerShopDto>[] => [
+  {
+    accessorKey: 'name',
+    header: 'Shop Name',
+    cell: ({ row }) => (
+      <div className="font-medium text-slate-900">{row.original.name}</div>
+    ),
+  },
+  {
+    accessorKey: 'city',
+    header: 'City',
+    cell: ({ row }) => (
+      <div className="text-slate-600">{row.original.city || '-'}</div>
+    ),
+  },
+  {
+    accessorKey: 'state',
+    header: 'State',
+    cell: ({ row }) => (
+      <div className="text-slate-600">{row.original.state || '-'}</div>
     ),
   },
 ];
