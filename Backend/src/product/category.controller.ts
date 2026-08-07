@@ -25,7 +25,7 @@ import {
 export class CategoryController {
   constructor(private categoryService: CategoryService) {}
 
-  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @Post()
   @ApiOperation({ summary: 'Create Category' })
   @ApiBearerAuth('bearer')

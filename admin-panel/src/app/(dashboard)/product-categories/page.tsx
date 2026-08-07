@@ -19,11 +19,13 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { CategoryDto } from '@/types/api/product.types';
 import { useAuthStore } from '@/store/useAuthStore';
 
-const CATEGORY_WRITE_ROLES = ['SUPER_ADMIN', 'MANUFACTURER_ADMIN'];
+const CATEGORY_CREATE_ROLES = ['SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN'];
+const CATEGORY_MANAGE_ROLES = ['SUPER_ADMIN', 'MANUFACTURER_ADMIN'];
 
 function ProductCategoriesContent() {
   const user = useAuthStore((s) => s.user);
-  const canManage = Boolean(user?.role && CATEGORY_WRITE_ROLES.includes(user.role));
+  const canCreate = Boolean(user?.role && CATEGORY_CREATE_ROLES.includes(user.role));
+  const canManage = Boolean(user?.role && CATEGORY_MANAGE_ROLES.includes(user.role));
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryDto | null>(null);
@@ -68,7 +70,7 @@ function ProductCategoriesContent() {
               Manage and organize product categories across the catalog.
             </p>
           </div>
-          {canManage && (
+          {canCreate && (
             <Button onClick={() => setIsCreateOpen(true)} id="categories-create-btn">
               <Plus className="mr-2 h-4 w-4" />
               Add Category
