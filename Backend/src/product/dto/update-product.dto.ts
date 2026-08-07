@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsNumber, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProductDto {
@@ -11,6 +12,13 @@ export class UpdateProductDto {
   @IsString()
   @ApiPropertyOptional({ description: 'Sku' })
   sku?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @ApiPropertyOptional({ description: 'HSN code' })
+  hsn_code?: string;
 
   @IsOptional()
   @IsString()

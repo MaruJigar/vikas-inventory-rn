@@ -5261,7 +5261,7 @@
   },
   "info": {
     "title": "Vikas Inventory RN Platform API",
-    "description": "Enterprise Backend API for Vikas Inventory Platform",
+    "description": "Enterprise Backend API",
     "version": "1.0",
     "contact": {}
   },
@@ -5272,10 +5272,7 @@
       "bearer": {
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "type": "http",
-        "name": "JWT",
-        "description": "Enter JWT token",
-        "in": "header"
+        "type": "http"
       }
     },
     "schemas": {
@@ -6493,6 +6490,10 @@
             "type": "string",
             "description": "Sku"
           },
+          "hsn_code": {
+            "type": "string",
+            "description": "HSN code"
+          },
           "unit": {
             "type": "string",
             "description": "Unit"
@@ -6558,6 +6559,10 @@
           "sku": {
             "type": "string",
             "description": "Sku"
+          },
+          "hsn_code": {
+            "type": "string",
+            "description": "HSN code"
           },
           "unit": {
             "type": "string",
@@ -6659,6 +6664,10 @@
           "sku": {
             "type": "string",
             "description": "Sku"
+          },
+          "hsn_code": {
+            "type": "string",
+            "description": "HSN code"
           },
           "unit": {
             "type": "string",

@@ -274,13 +274,22 @@ export function CreateProductDrawer({ open, onOpenChange }: CreateProductDrawerP
           <div className="space-y-1">
             <Label htmlFor="sku">SKU</Label>
             <Input id="sku" {...register('sku')} placeholder="e.g. PCO-500" />
+            {errors.sku && <p className="text-xs text-destructive">{errors.sku.message}</p>}
           </div>
 
-          {/* Unit */}
+          {/* HSN Code */}
           <div className="space-y-1">
-            <Label htmlFor="unit">Unit</Label>
-            <Input id="unit" {...register('unit')} placeholder="e.g. Piece, Box, Kg" />
+            <Label htmlFor="hsn_code">HSN Code</Label>
+            <Input id="hsn_code" {...register('hsn_code')} placeholder="Enter HSN Code" />
+            {errors.hsn_code && <p className="text-xs text-destructive">{errors.hsn_code.message}</p>}
           </div>
+        </div>
+
+        {/* Unit */}
+        <div className="space-y-1">
+          <Label htmlFor="unit">Unit</Label>
+          <Input id="unit" {...register('unit')} placeholder="e.g. Piece, Box, Kg" />
+          {errors.unit && <p className="text-xs text-destructive">{errors.unit.message}</p>}
         </div>
 
         {/* MRP */}
@@ -371,7 +380,9 @@ export function CreateProductDrawer({ open, onOpenChange }: CreateProductDrawerP
         {/* Mutation error */}
         {createMutation.isError && (
           <p className="text-xs text-destructive">
-            Failed to create product. Please try again.
+            {Array.isArray((createMutation.error as any)?.response?.data?.message)
+              ? (createMutation.error as any)?.response?.data?.message.join(', ')
+              : (createMutation.error as any)?.response?.data?.message || 'Failed to create product. Please try again.'}
           </p>
         )}
       </form>

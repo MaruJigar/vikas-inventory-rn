@@ -59,6 +59,10 @@ export class Product {
   @ApiPropertyOptional({ description: 'Sku' })
   sku: string;
 
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  @ApiPropertyOptional({ description: 'HSN code' })
+  hsn_code: string;
+
   @Column({ type: 'varchar', length: 50, nullable: true })
   @ApiPropertyOptional({ description: 'Unit' })
   unit: string;

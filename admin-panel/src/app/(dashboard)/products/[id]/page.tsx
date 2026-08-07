@@ -83,7 +83,7 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{product.name}</h1>
             <p className="text-sm text-slate-500">
-              SKU: {product.sku || 'N/A'} • {product.category?.name || 'Uncategorized'}
+              SKU: {product.sku || 'N/A'} • HSN: {product.hsn_code || '-'} • {product.category?.name || 'Uncategorized'}
             </p>
           </div>
         </div>
@@ -180,6 +180,10 @@ export default function ProductDetailsPage({ params }: { params: Promise<{ id: s
               <div className="space-y-1">
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">SKU</p>
                 <p className="font-medium text-slate-900">{product.sku || '—'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">HSN Code</p>
+                <p className="font-medium text-slate-900">{product.hsn_code || '-'}</p>
               </div>
             </CardContent>
           </Card>

@@ -8,6 +8,13 @@ export const CreateProductSchema = z.object({
   category_id: z.string().uuid().optional(),
   name: z.string().min(1, 'Product name is required').max(200, 'Product name is too long'),
   sku: z.string().max(100, 'SKU is too long').optional().or(z.literal('')).transform(v => v === '' ? undefined : v),
+  hsn_code: z
+    .string()
+    .transform(v => typeof v === 'string' ? v.trim() : v)
+    .pipe(z.string().max(20, 'HSN Code must not exceed 20 characters'))
+    .optional()
+    .or(z.literal(''))
+    .transform(v => v === '' ? undefined : v),
   unit: z.string().max(50, 'Unit is too long').optional().or(z.literal('')).transform(v => v === '' ? undefined : v),
   description: z.string().optional(),
   product_image_url: z.string().optional().or(z.literal('')),

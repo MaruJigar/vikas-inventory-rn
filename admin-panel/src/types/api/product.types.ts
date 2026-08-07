@@ -2,6 +2,7 @@ export interface ProductDto {
   id: string;
   name: string;
   sku?: string;
+  hsn_code?: string;
   unit?: string;
   description?: string;
   product_image_url?: string;
@@ -14,6 +15,7 @@ export interface ProductDto {
   distributor_id?: string;
   external_manufacturer_name?: string;
   category_id?: string;
+  is_active?: boolean;
 }
 
 export interface CategoryDto {
@@ -40,6 +42,7 @@ export interface CreateProductDto {
   category_id?: string;
   name: string;
   sku?: string;
+  hsn_code?: string;
   unit?: string;
   description?: string;
   product_image_url?: string;
@@ -47,6 +50,7 @@ export interface CreateProductDto {
   gst_percent?: number;
   distributor_discount_percent?: number;
   special_discount_percent?: number;
+  is_active?: boolean;
 }
 
 export type UpdateProductDto = Partial<CreateProductDto>;

@@ -174,13 +174,16 @@ export class ProductService {
 
     // Search
     if (search) {
-      qb.andWhere('(product.name ILIKE :search OR product.sku ILIKE :search)', {
-        search: `%${search}%`,
-      });
+      qb.andWhere(
+        '(product.name ILIKE :search OR product.sku ILIKE :search OR product.hsn_code ILIKE :search)',
+        {
+          search: `%${search}%`,
+        },
+      );
     }
 
     // Sorting
-    const allowedSortFields = ['created_at', 'updated_at', 'name', 'price'];
+    const allowedSortFields = ['created_at', 'updated_at', 'name', 'price', 'hsn_code'];
     if (sortBy && allowedSortFields.includes(sortBy)) {
       qb.orderBy(`product.${sortBy}`, sortOrder);
     } else {

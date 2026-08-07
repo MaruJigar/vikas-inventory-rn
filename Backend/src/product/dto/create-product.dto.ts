@@ -6,7 +6,9 @@ import {
   IsNumber,
   IsIn,
   ValidateIf,
+  MaxLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateProductDto {
@@ -44,6 +46,13 @@ export class CreateProductDto {
   @IsString()
   @ApiPropertyOptional({ description: 'Sku' })
   sku?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @ApiPropertyOptional({ description: 'HSN code' })
+  hsn_code?: string;
 
   @IsOptional()
   @IsString()

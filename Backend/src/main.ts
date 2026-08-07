@@ -1,6 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { requestIdMiddleware } from './common/middleware/request-id.middleware';
@@ -11,12 +14,14 @@ import * as path from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
     }),
   );
+
   app.use(requestIdMiddleware);
   app.useGlobalInterceptors(new LoggingInterceptor());
 
@@ -28,67 +33,110 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const appConfig = configService.get('app');
 
-  app.useGlobalFilters(new GlobalExceptionFilter(configService));
+  app.useGlobalFilters(
+    new GlobalExceptionFilter(configService),
+  );
 
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:8081',
-      'https://app.avchousehold.com',
-      'https://www.app.avchousehold.com',
-      'https://admin.avchousehold.com',
-      'https://www.avchousehold.com',
-      appConfig.adminPanelUrl,
-      appConfig.reactNativeWebUrl,
-    ].filter(Boolean) as string[],
+    origin: (origin, callback) => {
+      // Mobile apps / Postman / Swagger
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      const allowedOrigins = [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:8081',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
+
+        appConfig.adminPanelUrl,
+        appConfig.reactNativeWebUrl,
+        appConfig.frontendUrl,
+      ].filter(Boolean);
+
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.avchousehold.com')
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked: ${origin}`));
+    },
+
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+
+    methods: [
+      'GET',
+      'POST',
+      'PUT',
+      'PATCH',
+      'DELETE',
+      'OPTIONS',
+    ],
+
+    allowedHeaders: [
+      'Authorization',
+      'Content-Type',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+    ],
   });
 
-  const config = new DocumentBuilder()
+  const swaggerConfig = new DocumentBuilder()
     .setTitle('Vikas Inventory RN Platform API')
-    .setDescription('Enterprise Backend API for Vikas Inventory Platform')
+    .setDescription('Enterprise Backend API')
     .setVersion('1.0')
     .addBearerAuth(
       {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter JWT token',
-        in: 'header',
       },
-      'bearer', // This matches the @ApiBearerAuth('bearer') we'll use
+      'bearer',
     )
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(
+    app,
+    swaggerConfig,
+  );
 
   SwaggerModule.setup('api/docs', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
       displayRequestDuration: true,
-      displayOperationId: true,
-      defaultModelsExpandDepth: 2,
-      defaultModelExpandDepth: 2,
-      tagsSorter: 'alpha',
-      operationsSorter: 'alpha',
       deepLinking: true,
     },
   });
 
-  // Export OpenAPI specification to JSON
-  const docsDir = path.join(process.cwd(), 'docs');
-  if (!fs.existsSync(docsDir)) {
-    fs.mkdirSync(docsDir);
-  }
-  fs.writeFileSync(
-    path.join(docsDir, 'openapi.json'),
-    JSON.stringify(document, null, 2),
-  );
+  // Export OpenAPI (safe everywhere)
+  try {
+    const docsDir = path.resolve(process.cwd(), 'docs');
 
-  await app.listen(appConfig.port);
+    fs.mkdirSync(docsDir, {
+      recursive: true,
+    });
+
+    fs.writeFileSync(
+      path.join(docsDir, 'openapi.json'),
+      JSON.stringify(document, null, 2),
+    );
+  } catch (err) {
+    console.warn(
+      'Unable to write OpenAPI specification:',
+      err.message,
+    );
+  }
+
+  await app.listen(appConfig.port, '0.0.0.0');
+
+  console.log(
+    `Server running on port ${appConfig.port}`,
+  );
 }
+
 bootstrap();

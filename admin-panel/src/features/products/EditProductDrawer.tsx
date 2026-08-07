@@ -52,6 +52,7 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
       reset({
         name: product.name,
         sku: product.sku ?? '',
+        hsn_code: product.hsn_code ?? '',
         unit: product.unit ?? '',
         description: product.description ?? '',
         product_image_url: product.product_image_url ?? '',
@@ -205,11 +206,19 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
           <div className="space-y-1">
             <Label htmlFor="edit-sku">SKU</Label>
             <Input id="edit-sku" {...register('sku')} />
+            {errors.sku && <p className="text-xs text-destructive">{errors.sku.message}</p>}
           </div>
           <div className="space-y-1">
-            <Label htmlFor="edit-unit">Unit</Label>
-            <Input id="edit-unit" {...register('unit')} />
+            <Label htmlFor="edit-hsn_code">HSN Code</Label>
+            <Input id="edit-hsn_code" {...register('hsn_code')} placeholder="Enter HSN Code" />
+            {errors.hsn_code && <p className="text-xs text-destructive">{errors.hsn_code.message}</p>}
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="edit-unit">Unit</Label>
+          <Input id="edit-unit" {...register('unit')} />
+          {errors.unit && <p className="text-xs text-destructive">{errors.unit.message}</p>}
         </div>
 
         {/* MRP */}
@@ -288,7 +297,11 @@ export function EditProductDrawer({ open, onOpenChange, product }: EditProductDr
         </div>
 
         {updateMutation.isError && (
-          <p className="text-xs text-destructive">Failed to update product. Please try again.</p>
+          <p className="text-xs text-destructive">
+            {Array.isArray((updateMutation.error as any)?.response?.data?.message)
+              ? (updateMutation.error as any)?.response?.data?.message.join(', ')
+              : (updateMutation.error as any)?.response?.data?.message || 'Failed to update product. Please try again.'}
+          </p>
         )}
       </form>
     </EntityFormDrawer>
