@@ -1,103 +1,150 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useGetCategories, useDeleteCategoryMutation } from '@/hooks/categories/useCategories';
-import { CategoryDto } from '@/types/api/product.types';
-import { useDataTable } from '@/hooks/table/useDataTable';
+import { Suspense, useState } from 'react';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { RoleGuard } from '@/components/auth/RoleGuard';
+import { PERMISSIONS } from '@/config/permissions';
 import { DataTable } from '@/components/data-table/DataTable';
-import { getCategoryColumns } from '@/features/categories/categories-columns';
-import { CreateCategoryDrawer } from '@/features/categories/CreateCategoryDrawer';
-import { EditCategoryDrawer } from '@/features/categories/EditCategoryDrawer';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { DataTableSearch } from '@/components/data-table/DataTableSearch';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useDataTable } from '@/hooks/table/useDataTable';
+import { useGetCategories, useDeleteCategoryMutation } from '@/hooks/categories/useCategories';
+import { getCategoryColumns } from '@/features/categories/categories-columns';
+import { CategoryFilters } from '@/features/categories/CategoryFilters';
+import { CreateCategoryDrawer } from '@/features/categories/CreateCategoryDrawer';
+import { EditCategoryDrawer } from '@/features/categories/EditCategoryDrawer';
+import { CategoryDetailsDrawer } from '@/features/categories/components/CategoryDetailsDrawer';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { CategoryDto } from '@/types/api/product.types';
+import { useAuthStore } from '@/store/useAuthStore';
+
+const CATEGORY_WRITE_ROLES = ['SUPER_ADMIN', 'MANUFACTURER_ADMIN'];
 
 function ProductCategoriesContent() {
   const user = useAuthStore((s) => s.user);
-  const canManage = ['SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN'].includes(user?.role || '');
-
-  const { queryState, setPage, setLimit, setSearch, setSort } = useDataTable();
-  const { data: categoriesResponse, isLoading, isError, error } = useGetCategories(queryState);
-  const deleteMutation = useDeleteCategoryMutation();
+  const canManage = Boolean(user?.role && CATEGORY_WRITE_ROLES.includes(user.role));
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<CategoryDto | null>(null);
+  const [editingCategory, setEditingCategory] = useState<CategoryDto | null>(null);
+  const [viewingCategory, setViewingCategory] = useState<CategoryDto | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<CategoryDto | null>(null);
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this category?')) {
-      deleteMutation.mutate(id);
-    }
+  // ── URL-driven table state (canonical hook) ────────────────────────
+  const {
+    queryState,
+    isPending,
+    setPage,
+    setLimit,
+    setSearch,
+  } = useDataTable();
+
+  // ── API queries & mutations ────────────────────────────────────────
+  const { data, isLoading, isError, error } = useGetCategories(queryState);
+  const deleteMutation = useDeleteCategoryMutation();
+
+  const handleDelete = () => {
+    if (!deletingCategory) return;
+    deleteMutation.mutate(deletingCategory.id, {
+      onSuccess: () => setDeletingCategory(null),
+    });
   };
 
   const columns = getCategoryColumns({
-    onEdit: setSelectedCategory,
-    onDelete: handleDelete,
+    onViewDetails: (cat) => setViewingCategory(cat),
+    onEdit: (cat) => setEditingCategory(cat),
+    onDelete: (cat) => setDeletingCategory(cat),
     canManage,
-    queryState,
-    setSort,
   });
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Product Categories</h2>
-        {canManage && (
-          <div className="flex items-center space-x-2">
-            <Button onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Create Category
+    <AppLayout>
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Product Categories</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage and organize product categories across the catalog.
+            </p>
+          </div>
+          {canManage && (
+            <Button onClick={() => setIsCreateOpen(true)} id="categories-create-btn">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Category
             </Button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Categories</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex items-center gap-4">
-            <DataTableSearch
-              placeholder="Search categories..."
-              initialValue={queryState.search || ''}
-              onSearch={setSearch}
-            />
-          </div>
-          <DataTable
-            columns={columns}
-            data={categoriesResponse}
-            isLoading={isLoading}
-            isError={isError}
-            error={error}
-            onPageChange={setPage}
-            onLimitChange={setLimit}
-          />
-        </CardContent>
-      </Card>
+        {/* Toolbar: Search Filter */}
+        <CategoryFilters
+          searchQuery={queryState.search || ''}
+          onSearchChange={setSearch}
+        />
 
-      {isCreateOpen && (
+        {/* DataTable */}
+        <DataTable
+          columns={columns}
+          data={data}
+          isLoading={isLoading || isPending}
+          isError={isError}
+          error={error as Error | null}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
+
+        {/* Details Drawer */}
+        <CategoryDetailsDrawer
+          category={viewingCategory}
+          isOpen={!!viewingCategory}
+          onClose={() => setViewingCategory(null)}
+        />
+
+        {/* Create Drawer */}
         <CreateCategoryDrawer
           open={isCreateOpen}
           onOpenChange={setIsCreateOpen}
         />
-      )}
 
-      {selectedCategory && (
+        {/* Edit Drawer */}
         <EditCategoryDrawer
-          open={!!selectedCategory}
-          onOpenChange={(open) => !open && setSelectedCategory(null)}
-          category={selectedCategory}
+          category={editingCategory}
+          open={!!editingCategory}
+          onOpenChange={(open) => !open && setEditingCategory(null)}
         />
-      )}
-    </div>
+
+        {/* Delete Confirmation */}
+        <ConfirmDialog
+          open={!!deletingCategory}
+          onOpenChange={(open) => !open && setDeletingCategory(null)}
+          title="Delete Category"
+          description={`Are you sure you want to delete "${deletingCategory?.name}"? If products are currently assigned to this category, deletion will be blocked.`}
+          confirmLabel="Delete"
+          intent="destructive"
+          isLoading={deleteMutation.isPending}
+          onConfirm={handleDelete}
+        />
+      </div>
+    </AppLayout>
   );
 }
 
 export default function ProductCategoriesPage() {
   return (
-    <Suspense fallback={<div className="p-8">Loading categories...</div>}>
-      <ProductCategoriesContent />
-    </Suspense>
+    <RoleGuard allowedRoles={PERMISSIONS.PRODUCT_CATEGORIES_VIEW}>
+      <Suspense
+        fallback={
+          <AppLayout>
+            <div className="space-y-4 p-6">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-64 w-full rounded-lg" />
+            </div>
+          </AppLayout>
+        }
+      >
+        <ProductCategoriesContent />
+      </Suspense>
+    </RoleGuard>
   );
 }

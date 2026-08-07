@@ -1,7 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table';
-import { CategoryDto } from '@/types/api/product.types';
+import { OrderStatusDto } from '@/types/api/order-status.types';
 import { formatDate } from '@/lib/utils';
-import { MoreHorizontal, Edit, Trash2, Eye, Layers } from 'lucide-react';
+import { MoreHorizontal, Edit, Eye, ListOrdered, Power } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -13,47 +13,88 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-type CategoryRowData = CategoryDto & {
-  parent?: { name: string };
-};
-
-interface CategoryColumnsProps {
-  onViewDetails: (category: CategoryDto) => void;
-  onEdit: (category: CategoryDto) => void;
-  onDelete: (category: CategoryDto) => void;
+interface OrderStatusColumnsProps {
+  onViewDetails: (status: OrderStatusDto) => void;
+  onEdit: (status: OrderStatusDto) => void;
+  onToggleActive: (status: OrderStatusDto) => void;
   canManage?: boolean;
 }
 
-export const getCategoryColumns = ({
+export const getOrderStatusColumns = ({
   onViewDetails,
   onEdit,
-  onDelete,
+  onToggleActive,
   canManage = true,
-}: CategoryColumnsProps): ColumnDef<CategoryDto>[] => [
+}: OrderStatusColumnsProps): ColumnDef<OrderStatusDto>[] => [
+  {
+    accessorKey: 'sequence',
+    header: 'Sequence',
+    cell: ({ row }) => (
+      <Badge variant="outline" className="font-mono font-medium">
+        #{row.original.sequence}
+      </Badge>
+    ),
+  },
   {
     accessorKey: 'name',
-    header: 'Category Name',
+    header: 'Status Name',
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
         <div className="p-1.5 bg-slate-100 rounded-md text-slate-600">
-          <Layers className="h-4 w-4" />
+          <ListOrdered className="h-4 w-4" />
         </div>
-        <span className="font-medium text-slate-900">{row.original.name}</span>
+        <span className="font-semibold text-slate-900">{row.original.name}</span>
       </div>
     ),
   },
   {
-    id: 'parent',
-    header: 'Parent Category',
+    accessorKey: 'isactive',
+    header: 'Status',
     cell: ({ row }) => {
-      const data = row.original as CategoryRowData;
-      return data.parent?.name ? (
-        <Badge variant="secondary" className="font-normal">
-          {data.parent.name}
+      const isActive = row.original.isactive;
+      return isActive ? (
+        <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium">
+          Active
         </Badge>
       ) : (
-        <span className="text-muted-foreground text-sm">— None (Top Level) —</span>
+        <Badge variant="secondary" className="text-slate-600 font-medium">
+          Inactive
+        </Badge>
       );
+    },
+  },
+  {
+    accessorKey: 'can_cancel_order',
+    header: 'Can Cancel',
+    cell: ({ row }) => {
+      return row.original.can_cancel_order ? (
+        <Badge variant="outline" className="text-sky-700 border-sky-300 bg-sky-50 font-normal">
+          Yes
+        </Badge>
+      ) : (
+        <span className="text-muted-foreground text-sm">No</span>
+      );
+    },
+  },
+  {
+    id: 'special_type',
+    header: 'Special Type',
+    cell: ({ row }) => {
+      if (row.original.is_cancel_status) {
+        return (
+          <Badge variant="destructive" className="font-normal">
+            Cancellation
+          </Badge>
+        );
+      }
+      if (row.original.is_dispatch_status) {
+        return (
+          <Badge className="bg-amber-600 hover:bg-amber-700 text-white font-normal">
+            Dispatch
+          </Badge>
+        );
+      }
+      return <span className="text-muted-foreground text-sm">—</span>;
     },
   },
   {
@@ -85,7 +126,7 @@ export const getCategoryColumns = ({
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -97,15 +138,15 @@ export const getCategoryColumns = ({
                   <>
                     <DropdownMenuItem onClick={() => onEdit(row.original)} className="cursor-pointer">
                       <Edit className="mr-2 h-4 w-4" />
-                      Edit Category
+                      Edit Status
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="text-red-600 focus:text-red-600 cursor-pointer"
-                      onClick={() => onDelete(row.original)}
+                      onClick={() => onToggleActive(row.original)}
+                      className="cursor-pointer"
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Category
+                      <Power className="mr-2 h-4 w-4 text-slate-500" />
+                      {row.original.isactive ? 'Mark as Inactive' : 'Mark as Active'}
                     </DropdownMenuItem>
                   </>
                 )}
