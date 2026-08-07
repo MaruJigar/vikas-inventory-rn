@@ -3999,6 +3999,37 @@
         ]
       }
     },
+    "/v1/order-status/active": {
+      "get": {
+        "description": "Accessible to all user roles. Returns active order statuses ordered by sequence ASC with id, name, sequence, can_cancel_order, is_cancel_status, and is_dispatch_status flags.",
+        "operationId": "OrderStatusController_findActiveStatuses_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ActiveOrderStatusDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all active order statuses",
+        "tags": [
+          "Order Statuses"
+        ]
+      }
+    },
     "/v1/order-status/{id}": {
       "get": {
         "operationId": "OrderStatusController_findOne_v1",
@@ -7713,6 +7744,43 @@
           "created_at",
           "updated_at",
           "deleted_at"
+        ]
+      },
+      "ActiveOrderStatusDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the order status"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the order status"
+          },
+          "sequence": {
+            "type": "number",
+            "description": "Sequence number for ordering statuses (ascending)"
+          },
+          "can_cancel_order": {
+            "type": "boolean",
+            "description": "Whether an order can be cancelled in this status"
+          },
+          "is_cancel_status": {
+            "type": "boolean",
+            "description": "Whether this is a cancellation status"
+          },
+          "is_dispatch_status": {
+            "type": "boolean",
+            "description": "Whether this is a dispatch status"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sequence",
+          "can_cancel_order",
+          "is_cancel_status",
+          "is_dispatch_status"
         ]
       },
       "CreateLocationDto": {

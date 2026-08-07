@@ -13,6 +13,18 @@ export const orderStatusService = {
     return res.data;
   },
 
+  getActiveStatuses: async (): Promise<{
+    id: string;
+    name: string;
+    sequence: number;
+    can_cancel_order: boolean;
+    is_cancel_status: boolean;
+    is_dispatch_status: boolean;
+  }[]> => {
+    const res = await api.get('/order-status/active');
+    return res.data;
+  },
+
   getById: async (id: string): Promise<OrderStatusDto> => {
     const res = await api.get<OrderStatusDto>(`/order-status/${id}`);
     return res.data;

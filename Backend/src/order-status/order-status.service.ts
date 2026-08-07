@@ -33,6 +33,41 @@ export class OrderStatusService {
     });
   }
 
+  async findActiveStatuses(): Promise<{
+    id: string;
+    name: string;
+    sequence: number;
+    can_cancel_order: boolean;
+    is_cancel_status: boolean;
+    is_dispatch_status: boolean;
+  }[]> {
+    const statuses = await this.orderStatusRepository.find({
+      where: {
+        isactive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        sequence: true,
+        can_cancel_order: true,
+        is_cancel_status: true,
+        is_dispatch_status: true,
+      },
+      order: {
+        sequence: 'ASC',
+      },
+    });
+
+    return statuses.map((status) => ({
+      id: status.id,
+      name: status.name,
+      sequence: status.sequence,
+      can_cancel_order: status.can_cancel_order,
+      is_cancel_status: status.is_cancel_status,
+      is_dispatch_status: status.is_dispatch_status,
+    }));
+  }
+
   async findOne(id: string): Promise<OrderStatus> {
     const status = await this.orderStatusRepository.findOne({ where: { id } });
     if (!status) {

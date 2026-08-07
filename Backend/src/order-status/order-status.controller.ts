@@ -11,6 +11,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { OrderStatusService } from './order-status.service';
 import { CreateOrderStatusDto } from './dto/create-order-status.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { ActiveOrderStatusDto } from './dto/active-order-status.dto';
 import { OrderStatus } from './order-status.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
@@ -37,6 +38,21 @@ export class OrderStatusController {
   @ApiResponse({ status: 200, description: 'Success', type: [OrderStatus] })
   async findAll() {
     return await this.orderStatusService.findAll();
+  }
+
+  @Get('active')
+  @ApiOperation({
+    summary: 'Get all active order statuses',
+    description:
+      'Accessible to all user roles. Returns active order statuses ordered by sequence ASC with id, name, sequence, can_cancel_order, is_cancel_status, and is_dispatch_status flags.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    type: [ActiveOrderStatusDto],
+  })
+  async findActiveStatuses() {
+    return await this.orderStatusService.findActiveStatuses();
   }
 
   @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
