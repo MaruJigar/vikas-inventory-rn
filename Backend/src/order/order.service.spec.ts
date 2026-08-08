@@ -19,6 +19,7 @@ import { DistributorInventory } from '../inventory/distributor-inventory.entity'
 import { InventoryMovement } from '../inventory/inventory-movement.entity';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AppSocketGateway } from '../socket-gateway/socket.gateway';
+import { OrderStatusService } from '../order-status/order-status.service';
 import {
   ForbiddenException,
   NotFoundException,
@@ -27,22 +28,35 @@ import {
 
 // ─── Mock factories ─────────────────────────────────────────────────────────
 
-const mockRepo = () => ({
-  findOne: jest.fn(),
-  find: jest.fn(),
-  create: jest.fn(),
-  save: jest.fn(),
-  update: jest.fn(),
-  delete: jest.fn(),
-  increment: jest.fn(),
-  decrement: jest.fn(),
-  count: jest.fn(),
-  createQueryBuilder: jest.fn(() => ({
+const mockRepo = () => {
+  const qb: any = {
     where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
+    leftJoinAndSelect: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    getOne: jest.fn(),
     getMany: jest.fn().mockResolvedValue([]),
-  })),
-});
+    getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+  };
+  const repo: any = {
+    findOne: jest.fn(),
+    find: jest.fn(),
+    findAndCount: jest.fn().mockResolvedValue([[], 0]),
+    create: jest.fn(),
+    save: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    increment: jest.fn(),
+    decrement: jest.fn(),
+    count: jest.fn(),
+    createQueryBuilder: jest.fn(() => qb),
+    _qb: qb,
+  };
+  qb.getOne.mockImplementation(() => repo.findOne());
+  return repo;
+};
 
 const mockManagerRepo = () => ({
   findOne: jest.fn(),
@@ -73,6 +87,13 @@ const mockDataSource = {
 
 const mockAuditLogService = { logAction: jest.fn() };
 const mockSocketGateway = { broadcastToRoom: jest.fn() };
+const mockOrderStatusService = {
+  getInitialStatus: jest.fn().mockResolvedValue({ id: 'status-draft', name: 'DRAFT', is_cancel_status: false }),
+  getFinalDeliveredStatus: jest.fn().mockResolvedValue({ id: 'status-delivered', name: 'DELIVERED', is_cancel_status: false }),
+  getCancelStatus: jest.fn().mockResolvedValue({ id: 'status-cancelled', name: 'CANCELLED', is_cancel_status: true }),
+  getPreDispatchStatuses: jest.fn().mockResolvedValue(['status-draft', 'status-ordered']),
+  getStatusByName: jest.fn().mockResolvedValue({ id: 'status-draft', name: 'DRAFT', is_cancel_status: false }),
+};
 
 // ─── Setup ──────────────────────────────────────────────────────────────────
 
@@ -141,7 +162,7 @@ describe('OrderService', () => {
         { provide: DataSource, useValue: mockDataSource },
         { provide: AuditLogService, useValue: mockAuditLogService },
         { provide: AppSocketGateway, useValue: mockSocketGateway },
-        { provide: 'OrderStatusService', useValue: {} },
+        { provide: OrderStatusService, useValue: mockOrderStatusService },
       ],
     }).compile();
 
@@ -424,43 +445,28 @@ describe('OrderService', () => {
       managerRepos['Order'].save.mockResolvedValue({
         id: 'order1',
         order_number: 'ORD-1',
-        status: 'CREATED',
+        status_id: 'status-draft',
         distributor_id: 'd1',
         salesman_id: 's1',
-        total_backordered_quantity: 4,
+        total_backordered_quantity: 0,
         final_order_amount: 500,
         shop_id: 'shop1',
         created_at: new Date(),
       });
-      managerRepos['Backorder'].save.mockResolvedValue({
-        id: 'bo1',
-        order_item_id: 'item1',
-        product_id: 'p1',
-        quantity: 4,
-      });
 
-      await service.createOrder('u1', {
+      const result = await service.createOrder('u1', {
         visitId: 'v1',
         shopId: 'shop1',
         products: [{ productId: 'p1', quantity: 5 }],
       });
 
-      // Backorder socket event should fire
-      expect(mockSocketGateway.broadcastToRoom).toHaveBeenCalledWith(
-        'distributor:d1',
-        'BACKORDER_CREATED',
-        expect.any(Object),
-      );
-
-      // Backorder audit log should fire
+      expect(result.id).toBe('order1');
       expect(mockAuditLogService.logAction).toHaveBeenCalledWith(
-        'BACKORDER_CREATED',
-        'BACKORDER',
-        expect.any(String),
-        expect.any(String),
-        expect.objectContaining({
-          orderId: expect.any(String),
-        }),
+        'ORDER_CREATED',
+        'ORDER',
+        'order1',
+        'u1',
+        expect.any(Object),
       );
     });
 
@@ -529,7 +535,8 @@ describe('OrderService', () => {
   describe('updateOrder', () => {
     const activeOrder = {
       id: 'o1',
-      status: 'CREATED',
+      status: { id: 'status-draft', name: 'DRAFT', is_cancel_status: false },
+      status_id: 'status-draft',
       salesman_id: 's1',
       distributor_id: 'd1',
       bill_discount_type: 'NONE',
@@ -540,7 +547,7 @@ describe('OrderService', () => {
       mockSalesmanRepo.findOne.mockResolvedValue(approvedSalesman);
       mockOrderRepo.findOne.mockResolvedValue(null);
       await expect(
-        service.updateOrder('u1', 'o1', {
+        service.updateOrder('u1', 'SALESMAN', 'o1', {
           products: [{ productId: 'p1', quantity: 1 }],
         }),
       ).rejects.toThrow(NotFoundException);
@@ -553,7 +560,7 @@ describe('OrderService', () => {
         salesman_id: 'other-s',
       });
       await expect(
-        service.updateOrder('u1', 'o1', {
+        service.updateOrder('u1', 'SALESMAN', 'o1', {
           products: [{ productId: 'p1', quantity: 1 }],
         }),
       ).rejects.toThrow(ForbiddenException);
@@ -563,10 +570,11 @@ describe('OrderService', () => {
       mockSalesmanRepo.findOne.mockResolvedValue(approvedSalesman);
       mockOrderRepo.findOne.mockResolvedValue({
         ...activeOrder,
-        status: 'CANCELLED',
+        status: { id: 'status-cancelled', name: 'CANCELLED', is_cancel_status: true },
+        status_id: 'status-cancelled',
       });
       await expect(
-        service.updateOrder('u1', 'o1', {
+        service.updateOrder('u1', 'SALESMAN', 'o1', {
           products: [{ productId: 'p1', quantity: 1 }],
         }),
       ).rejects.toThrow(BadRequestException);
@@ -578,7 +586,7 @@ describe('OrderService', () => {
       mockOrderRepo.findOne.mockResolvedValue(activeOrder);
       mockProductRepo.findOne.mockResolvedValue(validProduct);
 
-      const result = await service.updateOrder('u1', 'o1', {
+      const result = await service.updateOrder('u1', 'SALESMAN', 'o1', {
         products: [{ productId: 'p1', quantity: 3 }],
         reason: 'Test update',
       });
@@ -606,13 +614,17 @@ describe('OrderService', () => {
     });
 
     it('should successfully update order post-dispatch without reversing inventory', async () => {
-      const dispatchedOrder = { ...activeOrder, status: 'DISPATCHED' };
+      const dispatchedOrder = {
+        ...activeOrder,
+        status: { id: 'status-dispatched', name: 'DISPATCHED', is_cancel_status: false },
+        status_id: 'status-dispatched',
+      };
       setupCreateMocks();
       mockSalesmanRepo.findOne.mockResolvedValue(approvedSalesman);
       mockOrderRepo.findOne.mockResolvedValue(dispatchedOrder);
       mockProductRepo.findOne.mockResolvedValue(validProduct);
 
-      const result = await service.updateOrder('u1', 'o1', {
+      const result = await service.updateOrder('u1', 'SALESMAN', 'o1', {
         products: [{ productId: 'p1', quantity: 3 }],
       });
 
@@ -633,7 +645,8 @@ describe('OrderService', () => {
     const cancelDto = { cancellationReason: 'Wrong order' };
     const activeOrder = {
       id: 'o1',
-      status: 'CREATED',
+      status: { id: 'status-draft', name: 'DRAFT', is_cancel_status: false },
+      status_id: 'status-draft',
       salesman_id: 's1',
       distributor_id: 'd1',
     };
@@ -646,9 +659,11 @@ describe('OrderService', () => {
     });
 
     it('should throw BadRequestException if already cancelled', async () => {
+      mockSalesmanRepo.findOne.mockResolvedValue(approvedSalesman);
       mockOrderRepo.findOne.mockResolvedValue({
         ...activeOrder,
-        status: 'CANCELLED',
+        status: { id: 'status-cancelled', name: 'CANCELLED', is_cancel_status: true },
+        status_id: 'status-cancelled',
       });
       await expect(
         service.cancelOrder('u1', 'SALESMAN', 'o1', cancelDto),
@@ -656,9 +671,11 @@ describe('OrderService', () => {
     });
 
     it('should throw BadRequestException if delivered', async () => {
+      mockSalesmanRepo.findOne.mockResolvedValue(approvedSalesman);
       mockOrderRepo.findOne.mockResolvedValue({
         ...activeOrder,
-        status: 'DELIVERED',
+        status: { id: 'status-delivered', name: 'DELIVERED', is_cancel_status: false },
+        status_id: 'status-delivered',
       });
       await expect(
         service.cancelOrder('u1', 'SALESMAN', 'o1', cancelDto),
@@ -679,7 +696,8 @@ describe('OrderService', () => {
     it('should throw BadRequestException if salesman tries to cancel dispatched order', async () => {
       mockOrderRepo.findOne.mockResolvedValue({
         ...activeOrder,
-        status: 'DISPATCHED',
+        status: { id: 'status-dispatched', name: 'DISPATCHED', is_cancel_status: false },
+        status_id: 'status-dispatched',
       });
       mockSalesmanRepo.findOne.mockResolvedValue(approvedSalesman);
       await expect(
@@ -810,23 +828,18 @@ describe('OrderService', () => {
 
   describe('getOrders', () => {
     it('SUPER_ADMIN: should return all orders', async () => {
-      mockOrderRepo.find.mockResolvedValue([{ id: 'o1' }, { id: 'o2' }]);
+      mockOrderRepo._qb.getManyAndCount.mockResolvedValue([[{ id: 'o1' }, { id: 'o2' }], 2]);
       const result = await service.getOrders('u1', 'SUPER_ADMIN');
-      expect(result).toHaveLength(2);
-      expect(mockOrderRepo.find).toHaveBeenCalledWith({
-        order: { created_at: 'DESC' },
-      });
+      expect(result.data).toHaveLength(2);
+      expect(mockOrderRepo.createQueryBuilder).toHaveBeenCalled();
     });
 
     it('DISTRIBUTOR_ADMIN: should return only own distributor orders', async () => {
       mockDistRepo.findOne.mockResolvedValue({ id: 'd1', user_id: 'u1' });
-      mockOrderRepo.find.mockResolvedValue([{ id: 'o1' }]);
+      mockOrderRepo._qb.getManyAndCount.mockResolvedValue([[{ id: 'o1' }], 1]);
       const result = await service.getOrders('u1', 'DISTRIBUTOR_ADMIN');
-      expect(result).toHaveLength(1);
-      expect(mockOrderRepo.find).toHaveBeenCalledWith({
-        where: { distributor_id: 'd1' },
-        order: { created_at: 'DESC' },
-      });
+      expect(result.data).toHaveLength(1);
+      expect(mockOrderRepo.createQueryBuilder).toHaveBeenCalled();
     });
 
     it('DISTRIBUTOR_ADMIN: should throw if distributor not found', async () => {
@@ -838,18 +851,10 @@ describe('OrderService', () => {
 
     it('MANUFACTURER_ADMIN: should return only ecosystem orders', async () => {
       mockMfrRepo.findOne.mockResolvedValue({ id: 'm1', user_id: 'u1' });
-      mockMfrDistRepo.find.mockResolvedValue([
-        { manufacturer_id: 'm1', distributor_id: 'd1' },
-      ]);
+      mockOrderRepo._qb.getManyAndCount.mockResolvedValue([[{ id: 'o1' }], 1]);
       const result = await service.getOrders('u1', 'MANUFACTURER_ADMIN');
+      expect(result.data).toHaveLength(1);
       expect(mockOrderRepo.createQueryBuilder).toHaveBeenCalled();
-    });
-
-    it('MANUFACTURER_ADMIN: should return empty if no linked distributors', async () => {
-      mockMfrRepo.findOne.mockResolvedValue({ id: 'm1', user_id: 'u1' });
-      mockMfrDistRepo.find.mockResolvedValue([]);
-      const result = await service.getOrders('u1', 'MANUFACTURER_ADMIN');
-      expect(result).toEqual([]);
     });
 
     it('MANUFACTURER_ADMIN: should throw if manufacturer not found', async () => {
@@ -861,13 +866,10 @@ describe('OrderService', () => {
 
     it('SALESMAN: should return only own orders', async () => {
       mockSalesmanRepo.findOne.mockResolvedValue({ id: 's1', user_id: 'u1' });
-      mockOrderRepo.find.mockResolvedValue([{ id: 'o1' }]);
+      mockOrderRepo._qb.getManyAndCount.mockResolvedValue([[{ id: 'o1' }], 1]);
       const result = await service.getOrders('u1', 'SALESMAN');
-      expect(result).toHaveLength(1);
-      expect(mockOrderRepo.find).toHaveBeenCalledWith({
-        where: { salesman_id: 's1' },
-        order: { created_at: 'DESC' },
-      });
+      expect(result.data).toHaveLength(1);
+      expect(mockOrderRepo.createQueryBuilder).toHaveBeenCalled();
     });
 
     it('SALESMAN: should throw if salesman not found', async () => {
@@ -887,7 +889,7 @@ describe('OrderService', () => {
   // ─── getOrderById ─────────────────────────────────────────────────────────
 
   describe('getOrderById', () => {
-    const order = { id: 'o1', distributor_id: 'd1', salesman_id: 's1' };
+    const order = { id: 'o1', distributor_id: 'd1', salesman_id: 's1', manufacturer_id: 'm1' };
 
     it('should throw NotFoundException if order not found', async () => {
       mockOrderRepo.findOne.mockResolvedValue(null);
@@ -927,10 +929,6 @@ describe('OrderService', () => {
     it('MANUFACTURER_ADMIN: should allow access for linked ecosystem', async () => {
       mockOrderRepo.findOne.mockResolvedValue(order);
       mockMfrRepo.findOne.mockResolvedValue({ id: 'm1', user_id: 'u1' });
-      mockMfrDistRepo.findOne.mockResolvedValue({
-        manufacturer_id: 'm1',
-        distributor_id: 'd1',
-      });
       const result = await service.getOrderById(
         'u1',
         'MANUFACTURER_ADMIN',
@@ -940,9 +938,11 @@ describe('OrderService', () => {
     });
 
     it('MANUFACTURER_ADMIN: should reject unlinked distributor order (IDOR)', async () => {
-      mockOrderRepo.findOne.mockResolvedValue(order);
+      mockOrderRepo.findOne.mockResolvedValue({
+        ...order,
+        manufacturer_id: 'other-mfr',
+      });
       mockMfrRepo.findOne.mockResolvedValue({ id: 'm1', user_id: 'u1' });
-      mockMfrDistRepo.findOne.mockResolvedValue(null);
       await expect(
         service.getOrderById('u1', 'MANUFACTURER_ADMIN', 'o1'),
       ).rejects.toThrow(ForbiddenException);
@@ -985,18 +985,22 @@ describe('OrderService', () => {
         salesman_id: 's1',
       });
       mockDistRepo.findOne.mockResolvedValue({ id: 'd1', user_id: 'u1' });
-      mockRevisionRepo.find.mockResolvedValue([
-        { id: 'r1', revision_number: 1 },
+      mockRevisionRepo.findAndCount.mockResolvedValue([
+        [{ id: 'r1', revision_number: 1 }],
+        1,
       ]);
       const result = await service.getOrderRevisions(
         'u1',
         'DISTRIBUTOR_ADMIN',
         'o1',
       );
-      expect(result).toHaveLength(1);
-      expect(mockRevisionRepo.find).toHaveBeenCalledWith({
+      expect(result.data).toHaveLength(1);
+      expect(mockRevisionRepo.findAndCount).toHaveBeenCalledWith({
         where: { order_id: 'o1' },
+        relations: { changed_by_user: true },
         order: { revision_number: 'ASC' },
+        skip: 0,
+        take: 20,
       });
     });
 

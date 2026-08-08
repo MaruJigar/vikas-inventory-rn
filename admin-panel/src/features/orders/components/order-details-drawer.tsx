@@ -222,14 +222,32 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
                 <span>Gross Amount</span>
                 <span>₹{Number(order.gross_order_amount || 0).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between items-center text-slate-600">
-                <span>Product Discount</span>
-                <span>- ₹{Number(order.total_product_discount_amount || 0).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-600">
-                <span>Bill Discount</span>
-                <span>- ₹{Number(order.bill_discount_amount || 0).toFixed(2)}</span>
-              </div>
+              {Number(order.standard_discount_amount || 0) > 0 && (
+                <>
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Standard Discount ({Number(order.standard_discount_percent || 0)}%)</span>
+                    <span className="text-red-500">- ₹{Number(order.standard_discount_amount || 0).toFixed(2)}</span>
+                  </div>
+                  {Number(order.special_discount_amount || 0) > 0 && (
+                    <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                      <span>Amount after Standard Discount</span>
+                      <span>₹{Number((order.gross_order_amount || 0) - (order.standard_discount_amount || 0)).toFixed(2)}</span>
+                    </div>
+                  )}
+                </>
+              )}
+              {Number(order.special_discount_amount || 0) > 0 && (
+                <div className="flex justify-between items-center text-slate-600">
+                  <span>Special Discount ({Number(order.special_discount_percent || 0)}%)</span>
+                  <span className="text-red-500">- ₹{Number(order.special_discount_amount || 0).toFixed(2)}</span>
+                </div>
+              )}
+              {Number(order.total_gst_amount || 0) > 0 && (
+                <div className="flex justify-between items-center text-slate-600">
+                  <span>Total GST</span>
+                  <span className="text-emerald-600">+ ₹{Number(order.total_gst_amount || 0).toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center font-bold text-slate-900 pt-2 border-t border-slate-200 mt-2">
                 <span>Final Amount</span>
                 <span className="text-base">₹{Number(order.final_order_amount || 0).toFixed(2)}</span>

@@ -82,17 +82,5 @@ export class CreateDistributorManufacturerOrderDto {
   @IsString()
   @ApiPropertyOptional({ description: 'Transport Mode' })
   transportMode?: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiPropertyOptional({ description: 'Standard Discount Percent' })
-  standardDiscountPercent?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @ApiPropertyOptional({ description: 'Special Discount Percent' })
-  specialDiscountPercent?: number;
 }
 

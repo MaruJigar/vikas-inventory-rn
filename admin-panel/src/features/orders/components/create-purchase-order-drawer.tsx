@@ -25,8 +25,6 @@ type FormValues = {
     mrp_snapshot: number;
     quantity: number;
   }[];
-  standardDiscountPercent: number;
-  specialDiscountPercent: number;
   transportMode: string;
 };
 
@@ -35,14 +33,9 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
   const { data: prodResponse } = useProductsQuery({ limit: 500 });
   const allProducts = prodResponse?.data || [];
 
-  const user = useAuthStore((state) => state.user);
-  const isManufacturerAdmin = user?.role === 'MANUFACTURER_ADMIN';
-
   const { register, control, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
     defaultValues: {
       products: [],
-      standardDiscountPercent: 0,
-      specialDiscountPercent: 0,
       transportMode: ''
     }
   });
@@ -63,42 +56,26 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
           mrp_snapshot: Number(item.mrp || 0),
           quantity: Number(item.quantity),
         })),
-        standardDiscountPercent: 0,
-        specialDiscountPercent: 0,
         transportMode: ''
       });
     }
   }, [isOpen, initialItems, reset]);
 
   const watchedProducts = watch('products') || [];
-  const watchedStdDisc = watch('standardDiscountPercent') || 0;
-  const watchedSpecDisc = watch('specialDiscountPercent') || 0;
   const watchedTransportMode = watch('transportMode') || '';
 
   const grossAmount = watchedProducts.reduce((sum, p) => sum + (p.mrp_snapshot * (p.quantity || 0)), 0);
-  const netAfterProductDiscount = grossAmount;
-
-  const standardDiscountAmount = netAfterProductDiscount * (watchedStdDisc / 100);
-  const afterStdDisc = netAfterProductDiscount - standardDiscountAmount;
-  const specialDiscountAmount = afterStdDisc * (watchedSpecDisc / 100);
-
-  const totalDiscount = standardDiscountAmount + specialDiscountAmount;
 
   let totalGstAmount = 0;
   watchedProducts.forEach(p => {
     const product = allProducts.find(ap => ap.id === p.productId);
     const gstPercent = product ? Number(product.gst_percent) : 0;
     const itemGross = p.mrp_snapshot * (p.quantity || 0);
-    const itemNet = itemGross;
 
-    const itemProportion = netAfterProductDiscount > 0 ? itemNet / netAfterProductDiscount : 0;
-    const proratedDisc = itemProportion * totalDiscount;
-    const taxableAmount = itemNet - proratedDisc;
-
-    totalGstAmount += taxableAmount * (gstPercent / 100);
+    totalGstAmount += itemGross * (gstPercent / 100);
   });
 
-  const finalAmount = netAfterProductDiscount - totalDiscount + totalGstAmount;
+  const finalAmount = grossAmount + totalGstAmount;
 
   const onSubmit = (data: FormValues) => {
     if (!data.products.length) return;
@@ -108,8 +85,6 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
         productId: p.productId,
         quantity: Number(p.quantity),
       })),
-      standardDiscountPercent: Number(data.standardDiscountPercent),
-      specialDiscountPercent: Number(data.specialDiscountPercent),
       transportMode: data.transportMode || undefined,
     }, {
       onSuccess: () => {
@@ -226,7 +201,7 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
             </div>
           </section>
 
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-4 border rounded-md p-4 bg-white">
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-md p-4 bg-white">
             <div>
               <Label>Transport Mode</Label>
               <Select
@@ -259,16 +234,6 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
                 />
               )}
             </div>
-            <div>
-              <Label htmlFor="stdDisc">Standard Discount (%)</Label>
-              <Input id="stdDisc" type="number" min="0" max="100" step="0.01" {...register('standardDiscountPercent')} className="mt-1" />
-            </div>
-            {isManufacturerAdmin && (
-              <div>
-                <Label htmlFor="specDisc">Special Discount (%)</Label>
-                <Input id="specDisc" type="number" min="0" max="100" step="0.01" {...register('specialDiscountPercent')} className="mt-1" />
-              </div>
-            )}
           </section>
 
           {/* Financial Summary (Real-time Recalculated) */}
@@ -279,26 +244,6 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
                 <span>Gross Amount</span>
                 <span>₹{Number(grossAmount).toFixed(2)}</span>
               </div>
-              {standardDiscountAmount > 0 && (
-                <>
-                  <div className="flex justify-between items-center text-slate-600">
-                    <span>Standard Discount</span>
-                    <span className="text-red-500">- ₹{Number(standardDiscountAmount).toFixed(2)}</span>
-                  </div>
-                  {specialDiscountAmount > 0 && (
-                    <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
-                      <span>Amount after Standard Discount</span>
-                      <span>₹{Number(afterStdDisc).toFixed(2)}</span>
-                    </div>
-                  )}
-                </>
-              )}
-              {specialDiscountAmount > 0 && (
-                <div className="flex justify-between items-center text-slate-600">
-                  <span>Special Discount</span>
-                  <span className="text-red-500">- ₹{Number(specialDiscountAmount).toFixed(2)}</span>
-                </div>
-              )}
               <div className="flex justify-between items-center text-slate-600">
                 <span>Total GST Amount</span>
                 <span className="text-emerald-600">+ ₹{Number(totalGstAmount).toFixed(2)}</span>

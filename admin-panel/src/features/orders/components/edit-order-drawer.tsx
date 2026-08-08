@@ -49,8 +49,12 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
   const isDistributorAdmin = user?.role === 'DISTRIBUTOR_ADMIN';
 
   const { data: distProfileResp } = useDistributorProfileQuery(isDistributorAdmin);
-  const distProfile = distProfileResp?.data || distProfileResp;
+  const distProfile = distProfileResp && typeof distProfileResp === 'object' && 'data' in distProfileResp ? (distProfileResp as any).data : distProfileResp;
   const isInternalDistributor = isDistributorAdmin && distProfile?.is_internal_distributor;
+
+  const isPurchaseOrder = Boolean(order?.manufacturer_id);
+  const canEditStandardDiscount = isPurchaseOrder ? isManufacturerAdmin : true;
+  const canEditSpecialDiscount = isPurchaseOrder ? isManufacturerAdmin : (isManufacturerAdmin || isInternalDistributor);
 
   const { data: mfrResponse, isLoading: mfrLoading } = useManufacturersQuery({ limit: 100 });
   const { data: prodResponse, isLoading: prodLoading } = useProductsQuery({ limit: 100 });
@@ -77,7 +81,7 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
   useEffect(() => {
     if (order && isOpen) {
       reset({
-        products: (order.items || []).map(item => ({
+        products: ((order.items || []) as any[]).map((item: any) => ({
           productId: item.product_id,
           product_name_snapshot: item.product_name_snapshot,
           sku_snapshot: item.sku_snapshot,
@@ -132,8 +136,12 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
         productId: p.productId,
         quantity: Number(p.quantity),
       })),
-      standardDiscountPercent: Number(data.standardDiscountPercent),
-      specialDiscountPercent: Number(data.specialDiscountPercent),
+      ...(canEditStandardDiscount
+        ? { standardDiscountPercent: Number(data.standardDiscountPercent || 0) }
+        : {}),
+      ...(canEditSpecialDiscount
+        ? { specialDiscountPercent: Number(data.specialDiscountPercent || 0) }
+        : {}),
       transportMode: data.transportMode || undefined,
       reason: data.reason || 'Edited by Admin',
       manufacturerId: data.manufacturerId || undefined
@@ -304,11 +312,13 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                   />
                 )}
               </div>
-              <div>
-                <Label htmlFor="stdDisc">Standard Discount (%)</Label>
-                <Input id="stdDisc" type="number" min="0" max="100" step="0.01" {...register('standardDiscountPercent')} className="mt-1" />
-              </div>
-              {(isManufacturerAdmin || isInternalDistributor) && (
+              {canEditStandardDiscount && (
+                <div>
+                  <Label htmlFor="stdDisc">Standard Discount (%)</Label>
+                  <Input id="stdDisc" type="number" min="0" max="100" step="0.01" {...register('standardDiscountPercent')} className="mt-1" />
+                </div>
+              )}
+              {canEditSpecialDiscount && (
                 <div>
                   <Label htmlFor="specDisc">Special Discount (%)</Label>
                   <Input id="specDisc" type="number" min="0" max="100" step="0.01" {...register('specialDiscountPercent')} className="mt-1" />

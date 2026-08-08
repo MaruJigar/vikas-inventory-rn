@@ -7546,14 +7546,6 @@
           "transportMode": {
             "type": "string",
             "description": "Transport Mode"
-          },
-          "standardDiscountPercent": {
-            "type": "number",
-            "description": "Standard Discount Percent"
-          },
-          "specialDiscountPercent": {
-            "type": "number",
-            "description": "Special Discount Percent"
           }
         },
         "required": [

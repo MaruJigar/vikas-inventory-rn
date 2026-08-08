@@ -307,14 +307,13 @@ export class OrderService {
             });
           }
 
-          const standardDiscountPercent = dto.standardDiscountPercent || 0;
-          const specDiscountPercent = dto.specialDiscountPercent || 0;
+          const standardDiscountPercent = 0;
+          const specDiscountPercent = 0;
 
-          const standardDiscountAmount = (standardDiscountPercent / 100) * grossOrderAmount;
-          const afterDistDiscount = grossOrderAmount - standardDiscountAmount;
-          const specialDiscountAmount = (specDiscountPercent / 100) * afterDistDiscount;
+          const standardDiscountAmount = 0;
+          const specialDiscountAmount = 0;
 
-          const finalOrderAmount = grossOrderAmount - standardDiscountAmount - specialDiscountAmount;
+          const finalOrderAmount = grossOrderAmount;
 
           const idempotencyKey = dto.idempotencyKey ? `${dto.idempotencyKey}-${mfrId || 'self'}` : undefined;
           
@@ -635,8 +634,21 @@ export class OrderService {
         totalQuantity += Number(p.quantity);
       }
 
-      const standardDiscountPercent = dto.standardDiscountPercent ?? order.standard_discount_percent;
-      const specialDiscountPercent = dto.specialDiscountPercent ?? order.special_discount_percent;
+      let standardDiscountPercent: number;
+      let specialDiscountPercent: number;
+
+      if (role === 'DISTRIBUTOR_ADMIN' && order.salesman_id === null) {
+        // Distributors cannot add or edit discounts on purchase orders (order to manufacturer)
+        standardDiscountPercent = Number(order.standard_discount_percent || 0);
+        specialDiscountPercent = Number(order.special_discount_percent || 0);
+      } else {
+        standardDiscountPercent = dto.standardDiscountPercent !== undefined
+          ? Number(dto.standardDiscountPercent)
+          : Number(order.standard_discount_percent || 0);
+        specialDiscountPercent = dto.specialDiscountPercent !== undefined
+          ? Number(dto.specialDiscountPercent)
+          : Number(order.special_discount_percent || 0);
+      }
 
       const standardDiscountAmount = grossOrderAmount * (standardDiscountPercent / 100);
       const afterDistDiscount = grossOrderAmount - standardDiscountAmount;
@@ -1197,7 +1209,7 @@ export class OrderService {
   async getOrders(
     userId: string,
     role: string,
-    queryDto: OrderListQueryDto,
+    queryDto: OrderListQueryDto = {} as any,
   ): Promise<PaginatedResponse<Order>> {
     const {
       page = 1,
@@ -1210,7 +1222,7 @@ export class OrderService {
       shop_id,
       startDate,
       endDate,
-    } = queryDto;
+    } = queryDto || {};
     const skip = (page - 1) * limit;
 
     const qb = this.orderRepo.createQueryBuilder('order')

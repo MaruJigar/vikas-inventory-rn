@@ -11,8 +11,6 @@ export interface CreateDistributorOrderPayload {
     quantity: number;
   }[];
   transportMode?: string;
-  standardDiscountPercent?: number;
-  specialDiscountPercent?: number;
 }
 
 export const useCreateDistributorOrderMutation = () => {
