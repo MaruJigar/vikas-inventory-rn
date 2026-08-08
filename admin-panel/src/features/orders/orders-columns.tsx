@@ -11,19 +11,22 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { OrderStatusBadge } from './components/order-status-badge';
 import { UserRole } from '@/store/useAuthStore';
+import { Button } from '@/components/ui/button';
 
 interface OrdersColumnsProps {
   userRole: UserRole | undefined;
+  activeStatuses: any[];
   onViewDetails: (order: OrderDto) => void;
   onEdit: (order: OrderDto) => void;
   onCancel: (order: OrderDto) => void;
-  onUpdateStatus: (order: OrderDto) => void;
+  onUpdateStatus: (order: OrderDto, preSelectedStatus?: string) => void;
   onViewHistory: (order: OrderDto) => void;
   onViewFulfillmentLogs: (order: OrderDto) => void;
 }
 
 export const getOrdersColumns = ({ 
   userRole,
+  activeStatuses,
   onViewDetails,
   onEdit,
   onCancel,
@@ -132,9 +135,26 @@ export const getOrdersColumns = ({
       if (userRole === 'DISTRIBUTOR_ADMIN' && row.original.salesman_id === null) {
         showUpdateStatus = false;
       }
+      
+      const currentStatusObj = activeStatuses?.find(s => s.name === statusStr);
+      let nextStatusName: string | undefined;
+      if (currentStatusObj) {
+         const nextObj = activeStatuses?.find(s => s.sequence > currentStatusObj.sequence);
+         if (nextObj) nextStatusName = nextObj.name;
+      }
 
       return (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2 items-center">
+          {showUpdateStatus && nextStatusName && (
+            <Button size="sm" variant="default" className="h-8" onClick={() => onUpdateStatus(row.original, nextStatusName)}>
+              Mark as {nextStatusName}
+            </Button>
+          )}
+          {showCancel && (
+            <Button size="sm" variant="destructive" className="h-8" onClick={() => onCancel(row.original)}>
+              Cancel Order
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0">
               <span className="sr-only">Open menu</span>
@@ -161,26 +181,6 @@ export const getOrdersColumns = ({
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Order
                 </DropdownMenuItem>
-              )}
-              
-              {showUpdateStatus && (
-                <DropdownMenuItem onClick={() => onUpdateStatus(row.original)}>
-                  <ArrowRightLeft className="mr-2 h-4 w-4" />
-                  Update Status
-                </DropdownMenuItem>
-              )}
-
-              {showCancel && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={() => onCancel(row.original)}
-                    className="text-red-600 focus:text-red-600"
-                  >
-                    <XCircle className="mr-2 h-4 w-4" />
-                    Cancel Order
-                  </DropdownMenuItem>
-                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>

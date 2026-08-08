@@ -37,6 +37,7 @@ interface UpdateOrderStatusDialogProps {
   order: OrderDto | null;
   isOpen: boolean;
   onClose: () => void;
+  preSelectedStatus?: string;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -48,7 +49,7 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Cancelled',
 };
 
-export function UpdateOrderStatusDialog({ order, isOpen, onClose }: UpdateOrderStatusDialogProps) {
+export function UpdateOrderStatusDialog({ order, isOpen, onClose, preSelectedStatus }: UpdateOrderStatusDialogProps) {
   const { mutate: updateStatus, isPending: isUpdating } = useUpdateOrderStatusMutation(order?.id || null);
   const { mutate: cancelOrder, isPending: isCancelling } = useCancelOrderMutation(order?.id || null);
   
@@ -75,9 +76,9 @@ export function UpdateOrderStatusDialog({ order, isOpen, onClose }: UpdateOrderS
 
   useEffect(() => {
     if (isOpen) {
-      reset({ status: undefined, notes: '' });
+      reset({ status: preSelectedStatus || undefined, notes: '' });
     }
-  }, [isOpen, reset]);
+  }, [isOpen, reset, preSelectedStatus]);
 
   const onOpenChange = (open: boolean) => {
     if (!open && !isPending) {

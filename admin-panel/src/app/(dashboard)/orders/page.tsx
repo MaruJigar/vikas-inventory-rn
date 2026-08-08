@@ -18,20 +18,24 @@ import { OrderHistoryDrawer } from '@/features/orders/components/order-history-d
 import { OrderFulfillmentLogsDrawer } from '@/features/orders/components/order-fulfillment-logs-drawer';
 import { useGeneratePurchaseRequestMutation } from '@/hooks/orders/useGeneratePurchaseRequestMutation';
 import { CreatePurchaseOrderDrawer } from '@/features/orders/components/create-purchase-order-drawer';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { OrderDto } from '@/types/api/order.types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Loader2 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useGetActiveOrderStatusesQuery } from '@/hooks/orders/useGetActiveOrderStatusesQuery';
 
 function OrdersPageContent() {
   const user = useAuthStore(state => state.user);
   const [selectedOrder, setSelectedOrder] = useState<OrderDto | null>(null);
   const [editingOrder, setEditingOrder] = useState<OrderDto | null>(null);
   const [cancellingOrder, setCancellingOrder] = useState<OrderDto | null>(null);
-  const [statusUpdatingOrder, setStatusUpdatingOrder] = useState<OrderDto | null>(null);
+  const [statusUpdatingOrder, setStatusUpdatingOrder] = useState<{order: OrderDto; preSelectedStatus?: string} | null>(null);
   const [historyOrder, setHistoryOrder] = useState<OrderDto | null>(null);
   const [fulfillmentOrder, setFulfillmentOrder] = useState<OrderDto | null>(null);
   const [generatedPRItems, setGeneratedPRItems] = useState<any[] | null>(null);
+
+  const { data: activeStatuses, isLoading: isLoadingStatuses } = useGetActiveOrderStatusesQuery();
 
   // ── URL-driven table state (canonical hook) ────────────────────────
   const {
@@ -46,6 +50,12 @@ function OrdersPageContent() {
   // ── API query ──────────────────────────────────────────────────────
   const { data, isLoading, isError, error } = useOrdersQuery(queryState);
 
+  useEffect(() => {
+    if (activeStatuses?.length && !queryState.status) {
+      setFilter('status', activeStatuses[0].id);
+    }
+  }, [activeStatuses, queryState.status, setFilter]);
+
   const generatePRMutation = useGeneratePurchaseRequestMutation();
 
   const handleGeneratePR = () => {
@@ -58,10 +68,11 @@ function OrdersPageContent() {
 
   const columns = getOrdersColumns({
     userRole: user?.role,
+    activeStatuses: activeStatuses || [],
     onViewDetails: (order) => setSelectedOrder(order),
     onEdit: (order) => setEditingOrder(order),
     onCancel: (order) => setCancellingOrder(order),
-    onUpdateStatus: (order) => setStatusUpdatingOrder(order),
+    onUpdateStatus: (order, preSelectedStatus) => setStatusUpdatingOrder({ order, preSelectedStatus }),
     onViewHistory: (order) => setHistoryOrder(order),
     onViewFulfillmentLogs: (order) => setFulfillmentOrder(order),
   });
@@ -93,14 +104,31 @@ function OrdersPageContent() {
           )}
         </div>
 
+        {/* Status Tabs */}
+        {isLoadingStatuses ? (
+          <Skeleton className="h-10 w-full" />
+        ) : (
+          <Tabs 
+            value={(queryState.status as string) || (activeStatuses?.[0]?.id ?? '')}
+            onValueChange={(val) => setFilter('status', val)}
+            className="w-full"
+          >
+            <TabsList className="w-full justify-start h-auto flex-wrap">
+              {activeStatuses?.map((status) => (
+                <TabsTrigger key={status.id} value={status.id} className="flex-1 min-w-[120px]">
+                  {status.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        )}
+
         {/* Toolbar: Search Filter */}
         <OrderFilters
           searchQuery={queryState.search || ''}
-          status={queryState.status as string | undefined}
           startDate={queryState.startDate as string | undefined}
           endDate={queryState.endDate as string | undefined}
           onSearchChange={setSearch}
-          onStatusChange={(val) => setFilter('status', val)}
           onStartDateChange={(val) => setFilter('startDate', val)}
           onEndDateChange={(val) => setFilter('endDate', val)}
         />
@@ -139,7 +167,8 @@ function OrdersPageContent() {
 
         {/* Update Status Dialog */}
         <UpdateOrderStatusDialog
-          order={statusUpdatingOrder}
+          order={statusUpdatingOrder?.order || null}
+          preSelectedStatus={statusUpdatingOrder?.preSelectedStatus}
           isOpen={!!statusUpdatingOrder}
           onClose={() => setStatusUpdatingOrder(null)}
         />

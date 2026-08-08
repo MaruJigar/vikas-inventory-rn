@@ -3,32 +3,21 @@
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface OrderFiltersProps {
   searchQuery: string;
-  status?: string;
   startDate?: string;
   endDate?: string;
   onSearchChange: (value: string) => void;
-  onStatusChange: (value: string | undefined) => void;
   onStartDateChange: (value: string | undefined) => void;
   onEndDateChange: (value: string | undefined) => void;
 }
 
 export function OrderFilters({ 
   searchQuery, 
-  status,
   startDate,
   endDate,
   onSearchChange,
-  onStatusChange,
   onStartDateChange,
   onEndDateChange
 }: OrderFiltersProps) {
@@ -60,27 +49,6 @@ export function OrderFilters({
           placeholder="Search by order, shop, salesman..."
           className="pl-10 h-9"
         />
-      </div>
-
-      <div className="w-[180px]">
-        <Select 
-          value={status || "ALL"} 
-          onValueChange={(val) => onStatusChange(val === "ALL" ? undefined : (val || undefined))}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Statuses</SelectItem>
-            <SelectItem value="CREATED">Created</SelectItem>
-            <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-            <SelectItem value="PROCESSING">Processing</SelectItem>
-            <SelectItem value="PACKED">Packed</SelectItem>
-            <SelectItem value="DISPATCHED">Dispatched</SelectItem>
-            <SelectItem value="DELIVERED">Delivered</SelectItem>
-            <SelectItem value="CANCELLED">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       <div className="flex items-center space-x-2">

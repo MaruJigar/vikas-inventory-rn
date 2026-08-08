@@ -8,7 +8,7 @@ export function useGetNextOrderStatusQuery(statusId: string | null) {
     queryFn: async () => {
       if (!statusId) return null;
       const response = await orderStatusService.getNextStatus(statusId);
-      return response.data || response; // handle API wrapping if any
+      return (response as any).data || response; // handle API wrapping if any
     },
     enabled: !!statusId,
   });
