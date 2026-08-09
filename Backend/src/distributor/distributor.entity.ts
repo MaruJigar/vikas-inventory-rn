@@ -94,6 +94,10 @@ export class Distributor {
   @ApiProperty({ description: 'Updated at' })
   updated_at: Date;
 
+  @Column({ type: 'int', array: true, default: [1, 2, 3, 4, 5, 6] })
+  @ApiProperty({ description: 'Weekly working days schedule (0=Sun, 1=Mon, ..., 6=Sat)', type: [Number] })
+  working_days: number[];
+
   @DeleteDateColumn()
   @ApiProperty({ description: 'Deleted at' })
   deleted_at: Date;

@@ -20,6 +20,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 @Index('idx_visits_dist_status', ['distributor_id', 'status'])
 @Index('idx_visits_salesman_status', ['salesman_id', 'status'])
 @Index('idx_visits_created_at', ['created_at'])
+@Index('idx_visits_salesman_started', ['salesman_id', 'started_at'])
 export class ShopVisit {
   @PrimaryGeneratedColumn('uuid')
   @ApiProperty({ description: 'Id' })

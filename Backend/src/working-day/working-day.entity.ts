@@ -17,6 +17,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
   unique: true,
   where: "status = 'ACTIVE'",
 })
+@Index('idx_wd_salesman_check_in', ['salesman_id', 'check_in_at'])
 export class WorkingDay {
   @PrimaryGeneratedColumn('uuid')
   @ApiProperty({ description: 'Id' })

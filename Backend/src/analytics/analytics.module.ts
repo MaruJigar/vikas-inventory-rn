@@ -19,6 +19,9 @@ import { InventoryMovement } from '../inventory/inventory-movement.entity';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
 import { ManufacturerDistributor } from '../distributor/manufacturer-distributor.entity';
 import { SocketGatewayModule } from '../socket-gateway/socket-gateway.module';
+import { AttendanceAnalyticsController } from './attendance-analytics.controller';
+import { AttendanceAnalyticsService } from './attendance-analytics.service';
+import { WorkingDayModule } from '../working-day/working-day.module';
 
 @Module({
   imports: [
@@ -35,17 +38,20 @@ import { SocketGatewayModule } from '../socket-gateway/socket-gateway.module';
       InventoryMovement,
     ]),
     SocketGatewayModule,
+    WorkingDayModule,
   ],
   controllers: [
     AnalyticsController,
     SalesReportsController,
     InventoryReportsController,
+    AttendanceAnalyticsController,
   ],
   providers: [
     AnalyticsService,
     SalesReportsService,
     InventoryReportsService,
+    AttendanceAnalyticsService,
   ],
-  exports: [AnalyticsService],
+  exports: [AnalyticsService, AttendanceAnalyticsService],
 })
 export class AnalyticsModule {}

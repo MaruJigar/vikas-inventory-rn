@@ -10,7 +10,16 @@ import {
   ApprovalsResponse,
   AnalyticsQueryParams,
   OrdersAnalyticsDto,
+  AnalyticsSnapshot,
 } from '@/types/api/analytics.types';
+import {
+  AttendanceSummaryDto,
+  DailyAttendanceResponse,
+  MonthlySalesmanReport,
+  SalesmanDetailReport,
+  DailyActivityTimelineResponse,
+  AttendanceQueryParams,
+} from '@/types/api/attendance.types';
 
 export const analyticsService = {
   getDashboard: () =>
@@ -79,12 +88,27 @@ export const analyticsService = {
   getOrdersAnalytics: (params?: AnalyticsQueryParams) =>
     api.get<unknown>('/analytics/orders', { params }).then((res) => ({
       success: true,
-      data: res.data,
-    }) as ApiResponse<OrdersAnalyticsDto>),
+      data: (res as any).data,
+    }) as ApiResponse<AnalyticsSnapshot[]>),
+
+  // Attendance & Field Activity
+  getAttendanceSummary: (params?: AttendanceQueryParams) =>
+    api.get<any>('/analytics/attendance/summary', { params }).then(res => res.data as AttendanceSummaryDto),
+
+  getDailyAttendance: (params?: AttendanceQueryParams) =>
+    api.get<any>('/analytics/attendance/daily', { params }).then(res => res.data as DailyAttendanceResponse),
+
+  getMonthlyAttendance: (params?: AttendanceQueryParams) =>
+    api.get<any>('/analytics/attendance/monthly', { params }).then(res => res.data as MonthlySalesmanReport[]),
+
+  getSalesmanAttendance: (salesmanId: string, params?: AttendanceQueryParams) =>
+    api.get<any>(`/analytics/attendance/salesman/${salesmanId}`, { params }).then(res => res.data as SalesmanDetailReport),
+
+  getSalesmanTimeline: (salesmanId: string, date: string) =>
+    api.get<any>(`/analytics/attendance/salesman/${salesmanId}/day/${date}`).then(res => res.data as DailyActivityTimelineResponse),
 
   getInventory: () => api.get<ApiResponse<InventoryResponse>>('/analytics/inventory').then(res => res.data),
   getBackorders: () => api.get<ApiResponse<OrdersResponse>>('/analytics/backorders').then(res => res.data),
   getFulfillment: () => api.get<ApiResponse<FulfillmentResponse>>('/analytics/fulfillment').then(res => res.data),
   getApprovals: () => api.get<ApiResponse<ApprovalsResponse>>('/analytics/approvals').then(res => res.data),
-
 };
