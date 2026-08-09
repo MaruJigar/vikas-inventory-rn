@@ -380,7 +380,7 @@ export class AttendanceAnalyticsService {
     const visits = await this.dataSource.query(`
       SELECT 
         v.id, v.started_at, v.ended_at, v.status,
-        s.id as shop_id, s.shop_name,
+        s.id as shop_id, s.name as shop_name,
         ST_X(v.start_location::geometry) as start_lon, ST_Y(v.start_location::geometry) as start_lat,
         ST_X(v.end_location::geometry) as end_lon, ST_Y(v.end_location::geometry) as end_lat
       FROM shop_visits v
