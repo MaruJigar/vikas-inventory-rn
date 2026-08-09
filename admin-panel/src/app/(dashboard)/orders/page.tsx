@@ -23,6 +23,16 @@ import { OrderDto } from '@/types/api/order.types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Loader2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useGetActiveOrderStatusesQuery } from '@/hooks/orders/useGetActiveOrderStatusesQuery';
 
 function OrdersPageContent() {
@@ -31,6 +41,7 @@ function OrdersPageContent() {
   const [editingOrder, setEditingOrder] = useState<OrderDto | null>(null);
   const [cancellingOrder, setCancellingOrder] = useState<OrderDto | null>(null);
   const [statusUpdatingOrder, setStatusUpdatingOrder] = useState<{order: OrderDto; preSelectedStatus?: string} | null>(null);
+  const [discountPromptOrder, setDiscountPromptOrder] = useState<{order: OrderDto; preSelectedStatus?: string} | null>(null);
   const [historyOrder, setHistoryOrder] = useState<OrderDto | null>(null);
   const [fulfillmentOrder, setFulfillmentOrder] = useState<OrderDto | null>(null);
   const [generatedPRItems, setGeneratedPRItems] = useState<any[] | null>(null);
@@ -72,7 +83,16 @@ function OrdersPageContent() {
     onViewDetails: (order) => setSelectedOrder(order),
     onEdit: (order) => setEditingOrder(order),
     onCancel: (order) => setCancellingOrder(order),
-    onUpdateStatus: (order, preSelectedStatus) => setStatusUpdatingOrder({ order, preSelectedStatus }),
+    onUpdateStatus: (order, preSelectedStatus) => {
+      const statusStr = typeof order.status === 'object' ? (order.status as any)?.name : order.status;
+      const currentStatusIndex = activeStatuses?.findIndex(s => s.name === statusStr);
+      
+      if (user?.role === 'MANUFACTURER_ADMIN' && currentStatusIndex === 0) {
+        setDiscountPromptOrder({ order, preSelectedStatus });
+      } else {
+        setStatusUpdatingOrder({ order, preSelectedStatus });
+      }
+    },
     onViewHistory: (order) => setHistoryOrder(order),
     onViewFulfillmentLogs: (order) => setFulfillmentOrder(order),
   });
@@ -143,6 +163,33 @@ function OrdersPageContent() {
           onPageChange={setPage}
           onLimitChange={setLimit}
         />
+
+        <AlertDialog open={!!discountPromptOrder} onOpenChange={(open) => !open && setDiscountPromptOrder(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Add Discounts?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Do you want to add discounts to this order before processing it?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {
+                const payload = discountPromptOrder;
+                setDiscountPromptOrder(null);
+                if (payload) setStatusUpdatingOrder(payload);
+              }}>
+                No, just update status
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={() => {
+                const payload = discountPromptOrder;
+                setDiscountPromptOrder(null);
+                if (payload) setEditingOrder(payload.order);
+              }}>
+                Yes, add discounts
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Order Details Drawer */}
         <OrderDetailsDrawer

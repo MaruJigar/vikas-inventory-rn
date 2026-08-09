@@ -156,7 +156,7 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-[400px] sm:w-[600px] md:w-[900px] sm:max-w-none overflow-y-auto">
+      <SheetContent className="w-full !max-w-2xl overflow-y-auto p-4 sm:p-6">
         <SheetHeader className="mb-6">
           <SheetTitle>Edit Order {order?.order_number ? `- ${order.order_number}` : ''}</SheetTitle>
         </SheetHeader>
