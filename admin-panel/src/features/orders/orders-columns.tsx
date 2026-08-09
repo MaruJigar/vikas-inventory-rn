@@ -124,7 +124,7 @@ export const getOrdersColumns = ({
         if (userRole === 'SALESMAN') {
           return !['SHIPPED', 'DELIVERED'].includes(statusStr);
         }
-        if (userRole === 'DISTRIBUTOR_ADMIN' || userRole === 'SUPER_ADMIN') {
+        if (userRole === 'DISTRIBUTOR_ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'MANUFACTURER_ADMIN') {
           return true;
         }
         return false;

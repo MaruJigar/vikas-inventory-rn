@@ -173,7 +173,7 @@ export class OrdersController {
   // ─── Cancel ──────────────────────────────────────────────────────────────
 
   @Patch(':id/cancel')
-  @Roles('SUPER_ADMIN', 'SALESMAN', 'DISTRIBUTOR_ADMIN')
+  @Roles('SUPER_ADMIN', 'SALESMAN', 'DISTRIBUTOR_ADMIN', 'MANUFACTURER_ADMIN')
   @ApiOperation({ summary: 'Cancel Order' })
   @ApiBearerAuth('bearer')
   cancelOrder(

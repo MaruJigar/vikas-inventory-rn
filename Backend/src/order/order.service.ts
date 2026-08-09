@@ -804,6 +804,11 @@ export class OrderService {
       const dist = await this.getDistributorOrFail(userId);
       if (order.distributor_id !== dist.id)
         throw new ForbiddenException('Not your order');
+    } else if (role === 'MANUFACTURER_ADMIN') {
+      const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
+      if (!mfr) throw new ForbiddenException('Manufacturer not found');
+      if (order.manufacturer_id !== mfr.id)
+        throw new ForbiddenException('Not your order');
     } else {
       throw new ForbiddenException('Unauthorized role');
     }
