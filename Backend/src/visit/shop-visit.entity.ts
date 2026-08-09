@@ -6,12 +6,14 @@ import {
   UpdateDateColumn,
   Index,
   ManyToOne,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { Salesman } from '../salesman/salesman.entity';
 import { Distributor } from '../distributor/distributor.entity';
 import { Shop } from '../shop/shop.entity';
 import { WorkingDay } from '../working-day/working-day.entity';
+import { Order } from '../order/order.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('shop_visits')
@@ -120,4 +122,7 @@ export class ShopVisit {
   @UpdateDateColumn({ type: 'timestamp' })
   @ApiProperty({ description: 'Updated at' })
   updated_at: Date;
+
+  @OneToMany(() => Order, order => order.visit)
+  orders: Order[];
 }

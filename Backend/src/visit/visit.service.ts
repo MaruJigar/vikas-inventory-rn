@@ -282,7 +282,10 @@ export class VisitService {
     } = queryDto;
     const skip = (page - 1) * limit;
 
-    const qb = this.visitRepo.createQueryBuilder('visit');
+    const qb = this.visitRepo.createQueryBuilder('visit')
+      .leftJoinAndSelect('visit.shop', 'shop')
+      .leftJoinAndSelect('visit.salesman', 'salesman')
+      .leftJoinAndSelect('visit.orders', 'orders');
 
     if (role === 'SUPER_ADMIN') {
       // Global

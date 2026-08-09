@@ -23,6 +23,7 @@ import {
   BarChart,
   Layers,
   ListOrdered,
+  Footprints,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hasRole } from '@/lib/auth/guards';
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
   { title: 'Products', href: ROUTES.PRODUCTS, icon: Package, roles: PERMISSIONS.PRODUCTS_VIEW },
   { title: 'Product Categories', href: ROUTES.PRODUCT_CATEGORIES, icon: Layers, roles: PERMISSIONS.PRODUCT_CATEGORIES_VIEW },
   { title: 'Shops', href: ROUTES.SHOPS, icon: Store, roles: PERMISSIONS.SHOPS_VIEW },
+  { title: 'Visits', href: ROUTES.VISITS, icon: Footprints, roles: PERMISSIONS.VISITS_VIEW },
   { title: 'Orders', href: ROUTES.ORDERS, icon: ShoppingCart, roles: PERMISSIONS.ORDERS_VIEW },
   { title: 'Order Statuses', href: ROUTES.ORDER_STATUSES, icon: ListOrdered, roles: PERMISSIONS.ORDER_STATUSES_VIEW },
   { title: 'Attendance', href: ROUTES.WORKING_DAYS, icon: CalendarDays, roles: PERMISSIONS.WORKING_DAYS_VIEW },

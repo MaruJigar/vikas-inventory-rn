@@ -42,7 +42,7 @@ export class Order {
   @ApiProperty({ description: 'Visit id', required: false })
   visit_id: string;
 
-  @ManyToOne(() => ShopVisit)
+  @ManyToOne(() => ShopVisit, visit => visit.orders)
   @JoinColumn({ name: 'visit_id' })
   visit: ShopVisit;
 
