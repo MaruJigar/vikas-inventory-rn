@@ -14,6 +14,7 @@ import { AuditLogService } from '../audit-log/audit-log.service';
 import { UpdateDistributorProfileDto } from './dto/update-distributor-profile.dto';
 import { CreateDistributorAdminDto } from './dto/create-distributor-admin.dto';
 import { UpdateDistributorAdminDto } from './dto/update-distributor-admin.dto';
+import { UpdateWorkingScheduleDto } from './dto/update-working-schedule.dto';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 
@@ -40,6 +41,33 @@ export class DistributorService {
     const profile = await this.getProfile(userId);
     Object.assign(profile, dto);
     return this.distributorRepo.save(profile);
+  }
+
+  async updateWorkingSchedule(userId: string, role: string, id: string, dto: UpdateWorkingScheduleDto) {
+    const distributor = await this.distributorRepo.findOne({ where: { id } });
+    if (!distributor) throw new NotFoundException('Distributor not found');
+
+    if (role === 'DISTRIBUTOR_ADMIN') {
+      const actorDistributor = await this.getProfile(userId);
+      if (actorDistributor.id !== id) {
+        throw new ForbiddenException('You can only update your own working schedule');
+      }
+    } else if (role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Unauthorized');
+    }
+
+    distributor.working_days = dto.working_days;
+    const updated = await this.distributorRepo.save(distributor);
+
+    await this.auditLogService.logAction(
+      'WORKING_SCHEDULE_UPDATED',
+      'DISTRIBUTOR',
+      id,
+      userId,
+      { new_schedule: dto.working_days },
+    );
+
+    return updated;
   }
 
   async getDistributors(

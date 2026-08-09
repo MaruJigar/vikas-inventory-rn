@@ -18,6 +18,7 @@ import { Roles } from '../role-permission/roles.decorator';
 import { UpdateDistributorProfileDto } from './dto/update-distributor-profile.dto';
 import { CreateDistributorAdminDto } from './dto/create-distributor-admin.dto';
 import { UpdateDistributorAdminDto } from './dto/update-distributor-admin.dto';
+import { UpdateWorkingScheduleDto } from './dto/update-working-schedule.dto';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import {
   ApiTags,
@@ -55,6 +56,19 @@ export class DistributorController {
   updateProfile(@Request() req, @Body() dto: UpdateDistributorProfileDto) {
     return this.distributorService.updateProfile(req.user.userId, dto);
   }
+
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Put(':id/working-schedule')
+  @ApiOperation({ summary: 'Update Working Schedule' })
+  @ApiBearerAuth('bearer')
+  updateWorkingSchedule(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: UpdateWorkingScheduleDto,
+  ) {
+    return this.distributorService.updateWorkingSchedule(req.user.userId, req.user.role, id, dto);
+  }
+
 
   @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
   @Get()

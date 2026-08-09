@@ -19,6 +19,7 @@ import { AppSocketGateway } from '../socket-gateway/socket.gateway';
 
 import { WorkingDayQueryDto } from './dto/working-day-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
+import { WorkingDayCalculatorService } from './working-day-calculator.service';
 
 @Injectable()
 export class WorkingDayService {
@@ -32,6 +33,7 @@ export class WorkingDayService {
     private dataSource: DataSource,
     private auditLogService: AuditLogService,
     private socketGateway: AppSocketGateway,
+    private wdCalculatorService: WorkingDayCalculatorService,
   ) {}
 
   async checkIn(userId: string, dto: CheckInDto) {
@@ -336,6 +338,52 @@ export class WorkingDayService {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
       },
+    };
+  }
+
+  async getSalesmanAttendanceSummary(salesmanId: string, startDateStr: string, endDateStr: string) {
+    const salesman = await this.salesmanRepo.findOne({ where: { id: salesmanId } });
+    if (!salesman) throw new NotFoundException('Salesman not found');
+
+    const applicableDays = await this.wdCalculatorService.getApplicableAttendanceDays(
+      salesman.distributor_id,
+      startDateStr,
+      endDateStr,
+    );
+
+    // Get attendance records in range, cast to IST strings to group
+    // In PG, we convert timestamp to IST to safely group by YYYY-MM-DD
+    const records = await this.dataSource.query(
+      `
+      SELECT 
+        TO_CHAR((check_in_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata'), 'YYYY-MM-DD') as check_in_date,
+        COUNT(id) as record_count
+      FROM working_days
+      WHERE salesman_id = $1
+      AND check_in_at >= ($2::date AT TIME ZONE 'Asia/Kolkata' AT TIME ZONE 'UTC')
+      AND check_in_at < ($3::date + interval '1 day') AT TIME ZONE 'Asia/Kolkata' AT TIME ZONE 'UTC'
+      GROUP BY check_in_date
+      `,
+      [salesmanId, startDateStr, endDateStr],
+    );
+
+    const attendedDateSet = new Set(records.map((r: any) => r.check_in_date));
+
+    let present = 0;
+    let absent = 0;
+
+    for (const dateStr of applicableDays) {
+      if (attendedDateSet.has(dateStr)) {
+        present++;
+      } else {
+        absent++;
+      }
+    }
+
+    return {
+      total_applicable_days: applicableDays.length,
+      present_days: present,
+      absent_days: absent,
     };
   }
 }
