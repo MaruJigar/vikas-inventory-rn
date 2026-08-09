@@ -1,7 +1,7 @@
 import { DailyAttendanceResponse, DailySalesmanReport } from '@/types/api/attendance.types';
 import { DataTable } from '@/components/data-table/DataTable';
 import { ColumnDef } from '@tanstack/react-table';
-import { AttendanceStatusBadge } from './status-badges';
+import { AttendanceStatusBadge } from '../status-badges';
 import { formatDuration, formatKolkataTime } from '@/lib/utils/date';
 import { MapPin } from 'lucide-react';
 
