@@ -53,13 +53,9 @@ export function POProductsScreen({
 
   const items = usePOCartStore((s) => s.items);
   const totals = useMemo(
-    // Same GST rule as the PO cart, so the bottom bar matches the cart total.
-    () =>
-      computeCartTotals(Object.values(items), {
-        standardPercent: 0,
-        specialPercent: 0,
-        includeGst: true,
-      }),
+    // Undiscounted, untaxed — same as the PO cart, so the bottom bar matches
+    // the cart total and what the backend stores on create.
+    () => computeCartTotals(Object.values(items)),
     [items],
   );
 

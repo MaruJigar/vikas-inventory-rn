@@ -20,8 +20,6 @@ interface Props {
   /** Called instead of clamping silently, so the screen can explain the cap. */
   onExceedMax?: (max: number) => void;
   size?: 'md' | 'sm';
-  /** Stretch across the parent, pushing −/+ to the edges (mobile bottom bar). */
-  fullWidth?: boolean;
 }
 
 /**
@@ -38,7 +36,6 @@ export function QuantityStepper({
   max: maxProp,
   onExceedMax,
   size = 'md',
-  fullWidth = false,
 }: Props) {
   const { t } = useTranslation();
   // Reactive, unlike PixelRatio.getFontScale() — the control resizes if the
@@ -105,7 +102,7 @@ export function QuantityStepper({
   };
 
   return (
-    <View style={[styles.wrap, fullWidth && styles.wrapFull]}>
+    <View style={styles.wrap}>
       <Pressable
         style={[styles.btn, small && styles.btnSm, { height: controlHeight }]}
         onPress={() => bump(-1)}
@@ -153,7 +150,6 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     flexShrink: 0,
   },
-  wrapFull: { flexGrow: 1, alignSelf: 'stretch', justifyContent: 'space-between' },
   // Height is font-scaled and applied inline (see controlHeight) so the buttons
   // stay level with the taller quantity box on large-text devices.
   btn: {

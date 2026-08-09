@@ -42,6 +42,13 @@ export function Screen({
       >
         {scroll ? (
           <ScrollView
+            // `flex: 1` is load-bearing, not decoration. Without an explicit
+            // height the ScrollView's own frame grows to its content, so
+            // contentSize === frameSize and it never scrolls — and anything
+            // rendered after it (a `floatingAction` bar) gets pushed off the
+            // bottom of the screen. It survives on short pages, which is why
+            // this only showed up on a tall one.
+            style={styles.flex}
             contentContainerStyle={[styles.scrollContent, inner, style]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}

@@ -45,6 +45,9 @@ export function AdjustStockScreen({
   const [query, setQuery] = useState('');
   const search = useDebouncedValue(query.trim(), 350);
 
+  // Own products, inactive ones KEPT: stock adjustment is management, not
+  // selling. A deactivated product still holds stock, and the app can't
+  // reactivate one, so hiding it here would strand that stock.
   const {
     data,
     isLoading,
@@ -53,7 +56,7 @@ export function AdjustStockScreen({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useProducts(search, true);
+  } = useProducts(search, true, /* includeInactive */ true);
 
   const products = useMemo(
     () => data?.pages.flatMap((p) => p.data) ?? [],

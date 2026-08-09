@@ -70,9 +70,10 @@ export function ProductCard({
   const imageUrls = resolveMediaUrls(product.product_image_url);
   const manufacturer = manufacturerName(product);
 
-  // On a phone the control gets its own row under the body — a compact "Add"
-  // pill on the right, or the full-width stepper once the product is in the
-  // cart. Tablet/desktop sits it beside the price instead, where there's room.
+  // On a phone the control gets its own row under the details, right-aligned —
+  // the "Add" pill, or the stepper once the product is in the cart. Both size
+  // to their content. Tablet/desktop sits it alongside the details instead,
+  // where there's room.
   const outOfStock = stock != null && stock < 1;
   const inlineControl = isWide;
 
@@ -97,14 +98,20 @@ export function ProductCard({
     <QuantityStepper
       qty={qty}
       max={stock ?? undefined}
-      fullWidth={!inlineControl}
       onChange={(next) => setQty(product, next)}
       onExceedMax={(m) => notify(t('products.maxStock', { count: m }))}
     />
   );
 
-  const body = (
-    <Card style={styles.card}>
+  // Everything that opens the product details. The quantity control is
+  // deliberately NOT in here — it's rendered as a sibling of the Pressable
+  // below. A TextInput nested inside a Pressable loses the tap to it on
+  // Android (focus is handled natively, outside the JS responder system), so
+  // tapping the number to type a quantity opened the detail screen instead.
+  // The −/+ buttons are Pressables and would have been fine; the typable box
+  // is why the whole control has to sit outside.
+  const details = (
+    <View style={styles.detailsRow}>
       <View style={styles.imageWrap}>
         {imageUrls.length > 0 ? (
           <ImageCarousel urls={imageUrls} size={IMAGE_SIZE} />
@@ -120,7 +127,7 @@ export function ProductCard({
           <Text style={[typography.title, styles.titleText]} numberOfLines={2}>
             {product.name}
           </Text>
-          {/* No "info" icon: tapping anywhere on the card opens the details. */}
+          {/* No "info" icon: tapping the details area opens the details. */}
           {onEdit || onDelete ? (
             <View style={styles.manageRow}>
               {onEdit ? (
@@ -142,19 +149,12 @@ export function ProductCard({
           </Text>
         ) : null}
 
-        {/* Price and the add control share one row: price left, action right. */}
-        <View style={styles.priceRow}>
-          <View style={styles.priceGroup}>
-            <Text style={styles.price}>{formatINR(price)}</Text>
-            {discounted ? (
-              <Text style={styles.mrp}>{formatINR(mrp)}</Text>
-            ) : null}
-            {product.unit ? (
-              <Text style={styles.unit}>/ {product.unit}</Text>
-            ) : null}
-          </View>
-
-          {inlineControl ? control : null}
+        <View style={styles.priceGroup}>
+          <Text style={styles.price}>{formatINR(price)}</Text>
+          {discounted ? <Text style={styles.mrp}>{formatINR(mrp)}</Text> : null}
+          {product.unit ? (
+            <Text style={styles.unit}>/ {product.unit}</Text>
+          ) : null}
         </View>
 
         {stock != null ? (
@@ -164,32 +164,51 @@ export function ProductCard({
               : t('products.inStock', { count: stock })}
           </Text>
         ) : null}
-
-        {!inlineControl && control ? (
-          <View style={styles.controlBar}>{control}</View>
-        ) : null}
       </View>
-    </Card>
+    </View>
   );
 
-  // The whole card opens the detail view. The add/quantity controls and the
-  // edit/delete icons are Pressables of their own, so they consume their taps
-  // before this outer one sees them.
-  if (!onOpenDetails) return body;
-  return (
+  // Tapping the details area opens the detail view. The edit/delete icons sit
+  // inside it but are Pressables of their own, so they consume their own taps.
+  const tappableDetails = onOpenDetails ? (
     <Pressable
       onPress={onOpenDetails}
       accessibilityRole="button"
       accessibilityLabel={t('products.details.view')}
       style={({ pressed }) => (pressed ? styles.cardPressed : undefined)}
     >
-      {body}
+      {details}
     </Pressable>
+  ) : (
+    details
+  );
+
+  return (
+    <Card style={styles.card}>
+      {inlineControl ? (
+        // Tablet/desktop: the control sits beside the details, where there's room.
+        <View style={styles.wideRow}>
+          <View style={styles.flex1}>{tappableDetails}</View>
+          {control}
+        </View>
+      ) : (
+        <>
+          {tappableDetails}
+          {control ? <View style={styles.controlBar}>{control}</View> : null}
+        </>
+      )}
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
+  // A column: the tappable details row, then the control row beneath it. The
+  // control must not be a descendant of the details Pressable (see `details`).
+  card: { gap: spacing.xs, marginBottom: spacing.md },
+  detailsRow: { flexDirection: 'row', gap: spacing.md },
+  // Tablet/desktop: details take the room they need, control sits alongside.
+  wideRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  flex1: { flex: 1 },
   cardPressed: { opacity: 0.7 },
   imageWrap: { width: IMAGE_SIZE },
   imagePlaceholder: {
@@ -208,21 +227,15 @@ const styles = StyleSheet.create({
   stockOut: { color: colors.danger },
   body: { flex: 1, gap: spacing.xs },
   muted: { ...typography.caption, color: colors.textMuted },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  // Price + struck-through MRP + unit stay baseline-aligned to each other.
+  // Price + struck-through MRP + unit stay baseline-aligned to each other, and
+  // wrap rather than squeeze when all three are long.
   priceGroup: {
     flexShrink: 1,
     flexDirection: 'row',
-    // Wraps rather than squeezing the pill when price + MRP + unit are long.
     flexWrap: 'wrap',
     alignItems: 'baseline',
     gap: spacing.sm,
+    marginTop: spacing.xs,
   },
   price: { ...typography.title, color: colors.text },
   mrp: {
@@ -249,13 +262,18 @@ const styles = StyleSheet.create({
   addBtnWide: { height: 40, minWidth: 104, paddingHorizontal: spacing.lg },
   addBtnPressed: { opacity: 0.85 },
   addBtnDisabled: { backgroundColor: colors.textMuted },
-  // Phone-only row under the body. The pill sits right; the stepper stretches
-  // across it (`fullWidth`), so justify only affects the pill.
+  // Phone-only row under the details, right-aligned — the pill and the stepper
+  // both size to their content.
+  //
+  // Indented to start where the text column does. This row is a sibling of the
+  // details (the tap fix — see `details`) rather than a child of the text
+  // column, so without the padding its divider would run the full card width,
+  // under the image. Vertical spacing comes from the card's gap, not a margin.
   controlBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginTop: spacing.xs,
+    paddingLeft: IMAGE_SIZE + spacing.md,
     paddingTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,

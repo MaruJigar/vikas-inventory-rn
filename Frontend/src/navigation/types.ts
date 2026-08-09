@@ -39,7 +39,8 @@ export type HomeStackParamList = {
   Categories: undefined;
   /** Optional category scopes the list to one category (client-side filter). */
   Products: { categoryId?: string; categoryName?: string } | undefined;
-  /** Read-only full record; the list already carries it, so it travels here. */
+  /** Full record; the list already carries it, so it travels here rather than
+   * being re-fetched. Also offers add-to-cart during an active visit. */
   ProductDetail: { product: Product };
   /**
    * `categoryId`/`categoryName` come from a category-scoped Products list: the
@@ -70,18 +71,28 @@ export type ShopsStackParamList = {
 export type ShopsScreenProps<T extends keyof ShopsStackParamList> =
   NativeStackScreenProps<ShopsStackParamList, T>;
 
+/**
+ * An order's direction, keyed off `salesman_id`: a purchase order is the
+ * distributor→manufacturer one (no salesman), a sales order is salesman→shop.
+ */
+export type OrderTypeFilter = 'PURCHASE' | 'SALES';
+
 /** Orders tab stack (listing → detail → edit; distributor-only backorders). */
 export type OrdersStackParamList = {
   /**
    * `initialStatus` pre-selects a status filter by status_id (e.g. a tile).
    * `salesmanId` / `shopId` scope the list (from a salesman or shop screen);
    * `filterLabel` names that scope for the "Filtered by …" banner.
+   * `orderType` narrows to purchase (distributor→manufacturer) or sales
+   * (salesman→shop) orders — applied CLIENT-side, as the backend has no such
+   * filter; see `OrdersListScreen`.
    */
   OrdersList:
     | {
         initialStatus?: string;
         salesmanId?: string;
         shopId?: string;
+        orderType?: OrderTypeFilter;
         filterLabel?: string;
       }
     | undefined;

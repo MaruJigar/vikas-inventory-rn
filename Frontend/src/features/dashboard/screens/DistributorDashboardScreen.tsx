@@ -175,6 +175,14 @@ export function DistributorDashboardScreen() {
     navigation
       .getParent<BottomTabNavigationProp<MainTabParamList>>()
       ?.navigate('Orders', { screen: 'OrdersList', params: { initialStatus } });
+  /** The purchase-order tile opens the list narrowed to POs, not everything. */
+  const goToPurchaseOrders = () =>
+    navigation
+      .getParent<BottomTabNavigationProp<MainTabParamList>>()
+      ?.navigate('Orders', {
+        screen: 'OrdersList',
+        params: { orderType: 'PURCHASE' },
+      });
   // Backorders entry hidden: the backend no longer creates backorders (inventory
   // is auto-provisioned and only deducted at the final status), so the list is
   // always empty. The feature code + nav routes remain (dormant) so re-adding
@@ -266,7 +274,7 @@ export function DistributorDashboardScreen() {
             label={t('dashboard.distributor.purchaseOrders')}
             value={poCount?.count ?? 0}
             loading={poLoading}
-            onPress={() => goToOrders()}
+            onPress={goToPurchaseOrders}
           />
         </View>
       </Section>

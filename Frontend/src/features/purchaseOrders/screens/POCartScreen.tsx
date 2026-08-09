@@ -53,11 +53,7 @@ export function POCartScreen({
 }: HomeScreenProps<'PurchaseOrderCart'>) {
   const { t } = useTranslation();
   const items = usePOCartStore((s) => s.items);
-  const standardDiscountPercent = usePOCartStore((s) => s.standardDiscountPercent);
-  const specialDiscountPercent = usePOCartStore((s) => s.specialDiscountPercent);
   const transportMode = usePOCartStore((s) => s.transportMode);
-  const setStandard = usePOCartStore((s) => s.setStandardDiscount);
-  const setSpecial = usePOCartStore((s) => s.setSpecialDiscount);
   const setTransport = usePOCartStore((s) => s.setTransportMode);
   const setQty = usePOCartStore((s) => s.setQty);
   const remove = usePOCartStore((s) => s.remove);
@@ -74,16 +70,9 @@ export function POCartScreen({
     () => groupByManufacturer(lines, t('purchaseOrders.unknownManufacturer')),
     [lines, t],
   );
-  const totals = useMemo(
-    () =>
-      computeCartTotals(lines, {
-        standardPercent: standardDiscountPercent,
-        specialPercent: specialDiscountPercent,
-        // Purchase orders to a manufacturer are taxed; shop orders aren't.
-        includeGst: true,
-      }),
-    [lines, standardDiscountPercent, specialDiscountPercent],
-  );
+  // The backend stores a new PO at plain gross — no discounts, no GST (see
+  // CreatePurchaseOrderPayload) — so the preview is the bare subtotal.
+  const totals = useMemo(() => computeCartTotals(lines), [lines]);
 
   const submit = () => {
     const trimmedTransport = transportMode.trim();
@@ -93,8 +82,6 @@ export function POCartScreen({
           productId: l.product.id,
           quantity: l.qty,
         })),
-        ...(standardDiscountPercent > 0 ? { standardDiscountPercent } : {}),
-        ...(specialDiscountPercent > 0 ? { specialDiscountPercent } : {}),
         ...(trimmedTransport ? { transportMode: trimmedTransport } : {}),
         idempotencyKey,
       },
@@ -195,28 +182,7 @@ export function POCartScreen({
         </Card>
       ))}
 
-      <Card style={styles.discountCard}>
-        <Text style={styles.discountTitle}>{t('cart.orderDiscount')}</Text>
-        <View style={styles.discountRow}>
-          <View style={styles.discountField}>
-            <Text style={styles.fieldLabel}>{t('cart.standardDiscount')}</Text>
-            <Input
-              value={standardDiscountPercent ? String(standardDiscountPercent) : ''}
-              onChangeText={(v) => setStandard(Number(v) || 0)}
-              keyboardType="decimal-pad"
-              placeholder="0"
-            />
-          </View>
-          <View style={styles.discountField}>
-            <Text style={styles.fieldLabel}>{t('cart.specialDiscount')}</Text>
-            <Input
-              value={specialDiscountPercent ? String(specialDiscountPercent) : ''}
-              onChangeText={(v) => setSpecial(Number(v) || 0)}
-              keyboardType="decimal-pad"
-              placeholder="0"
-            />
-          </View>
-        </View>
+      <Card style={styles.transportCard}>
         <Text style={styles.fieldLabel}>{t('cart.transportMode')}</Text>
         <Input
           value={transportMode}
@@ -227,36 +193,14 @@ export function POCartScreen({
 
       <Card style={styles.summary}>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>{t('cart.subtotal')}</Text>
-          <Text style={styles.summaryValue}>{formatINR(totals.subtotal)}</Text>
+          <Text style={styles.strong}>
+            {t('purchaseOrders.cart.orderValue')}
+          </Text>
+          <Text style={styles.strongValue}>{formatINR(totals.subtotal)}</Text>
         </View>
-        {totals.standardDiscount > 0 ? (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{t('cart.standardDiscount')}</Text>
-            <Text style={[styles.summaryValue, styles.negative]}>
-              - {formatINR(totals.standardDiscount)}
-            </Text>
-          </View>
-        ) : null}
-        {totals.specialDiscount > 0 ? (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{t('cart.specialDiscount')}</Text>
-            <Text style={[styles.summaryValue, styles.negative]}>
-              - {formatINR(totals.specialDiscount)}
-            </Text>
-          </View>
-        ) : null}
-        {totals.gst > 0 ? (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{t('cart.gst')}</Text>
-            <Text style={styles.summaryValue}>{formatINR(totals.gst)}</Text>
-          </View>
-        ) : null}
-        <View style={styles.divider} />
-        <View style={styles.summaryRow}>
-          <Text style={styles.strong}>{t('cart.finalPayable')}</Text>
-          <Text style={styles.strong}>{formatINR(totals.finalPayable)}</Text>
-        </View>
+        <Text style={styles.pricingNote}>
+          {t('purchaseOrders.cart.pricingNote')}
+        </Text>
       </Card>
 
       <Button
@@ -333,10 +277,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   muted: { ...typography.body, color: colors.textMuted },
-  discountCard: { marginTop: spacing.sm, gap: spacing.sm },
-  discountTitle: { ...typography.title },
-  discountRow: { flexDirection: 'row', gap: spacing.md },
-  discountField: { flex: 1, gap: spacing.xs },
+  transportCard: { marginTop: spacing.sm, gap: spacing.xs },
   fieldLabel: { ...typography.label, color: colors.textMuted },
   summary: { marginTop: spacing.sm, gap: spacing.sm },
   summaryRow: {
@@ -345,16 +286,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  summaryLabel: { ...typography.body, color: colors.textMuted },
-  summaryValue: {
-    ...typography.body,
+  strong: { ...typography.title, color: colors.text },
+  // Wraps onto its own line rather than being clipped (see AMOUNT_MIN_WIDTH).
+  strongValue: {
+    ...typography.title,
+    color: colors.text,
     flexGrow: 1,
     minWidth: AMOUNT_MIN_WIDTH,
     textAlign: 'right',
   },
-  negative: { color: colors.success },
-  strong: { ...typography.title, color: colors.text },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
+  pricingNote: { ...typography.caption, color: colors.textMuted },
   submit: { marginTop: spacing.lg },
   clear: { marginTop: spacing.md },
 });

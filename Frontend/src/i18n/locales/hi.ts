@@ -258,8 +258,13 @@ export const hi: TranslationResources = {
       items: 'वस्तुएं',
       noItems: 'इस ऑर्डर पर कोई वस्तु नहीं।',
       gross: 'कुल राशि',
+      // Order-level discount lines, in the sequence the backend applies them.
       standardDiscount: 'मानक छूट',
+      distributorDiscount: 'वितरक छूट',
+      distributorMargin: 'वितरक मार्जिन',
+      freightDiscount: 'माल भाड़ा छूट',
       specialDiscount: 'विशेष छूट',
+      cashDiscount: 'नकद छूट',
       gst: 'जीएसटी',
       total: 'कुल',
       timeline: 'स्थिति समयरेखा',
@@ -546,9 +551,6 @@ export const hi: TranslationResources = {
       source: 'जोड़ा गया',
       sourceManufacturer: 'निर्माता',
       sourceDistributor: 'वितरक',
-      status: 'स्थिति',
-      active: 'सक्रिय',
-      inactive: 'निष्क्रिय',
       description: 'विवरण',
     },
     form: {
@@ -635,6 +637,9 @@ export const hi: TranslationResources = {
       emptyHint: 'खरीद ऑर्डर बनाने के लिए निर्माता उत्पाद जोड़ें।',
       browse: 'उत्पाद देखें',
       subtotal: 'उप-योग (MRP)',
+      orderValue: 'ऑर्डर मूल्य',
+      pricingNote:
+        'छूट और जीएसटी निर्माता द्वारा इस ऑर्डर की समीक्षा करते समय लागू किए जाते हैं।',
       splitNote:
         'इन वस्तुओं को {{count}} ऑर्डर में विभाजित किया जाएगा — प्रति निर्माता एक।',
       submit: 'खरीद ऑर्डर बनाएं',

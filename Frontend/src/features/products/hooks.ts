@@ -24,9 +24,35 @@ export const productKeys = {
     ['products', 'categories', 'list', search] as const,
 };
 
-/** Paginated, searchable product list (infinite scroll). `ownOnly` restricts to
- * the caller's own products via the backend `own_products_only` filter. */
-export function useProducts(search: string, ownOnly = false) {
+/**
+ * Paginated, searchable product list (infinite scroll), **active products
+ * only**. `ownOnly` restricts to the caller's own products via the backend
+ * `own_products_only` filter.
+ *
+ * The active filter is applied CLIENT-side because the API has no parameter for
+ * it: `ProductListQueryDto` accepts only `own_products_only`, and while the
+ * shared `ListQueryDto` carries a `status` field, `getProducts` never reads it.
+ * The global ValidationPipe uses `whitelist: true`, so an `is_active`/`status`
+ * query key would be stripped silently — it would look accepted and do nothing.
+ *
+ * The backend already hides everyone else's inactive products; what it lets
+ * through is `product.is_active = true OR created_by_user_id = <caller>`, i.e.
+ * the caller's OWN deactivated products. Those are what this drops.
+ *
+ * `includeInactive` keeps them, for screens that manage a product rather than
+ * sell it — stock adjustment still applies to a deactivated product, and the
+ * app can't reactivate one (deactivation is admin-panel only), so hiding it
+ * there would strand its stock.
+ *
+ * Note `includeInactive` is deliberately NOT part of the query key: it only
+ * changes this observer's `select`, not what gets fetched or cached, so two
+ * screens with different values still share one cache entry.
+ */
+export function useProducts(
+  search: string,
+  ownOnly = false,
+  includeInactive = false,
+) {
   return useInfiniteQuery({
     queryKey: productKeys.list(search, ownOnly),
     queryFn: ({ pageParam }) =>
@@ -37,8 +63,18 @@ export function useProducts(search: string, ownOnly = false) {
         ...(ownOnly ? { own_products_only: true } : {}),
       }),
     initialPageParam: 1,
+    // Runs on the RAW page, so paging still follows the server's meta.
     getNextPageParam: (lastPage) =>
       lastPage.meta.hasNextPage ? lastPage.meta.page + 1 : undefined,
+    select: includeInactive
+      ? undefined
+      : (res) => ({
+          ...res,
+          pages: res.pages.map((page) => ({
+            ...page,
+            data: page.data.filter((product) => product.is_active),
+          })),
+        }),
   });
 }
 

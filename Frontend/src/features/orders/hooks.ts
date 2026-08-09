@@ -16,7 +16,12 @@ const PAGE_SIZE = 20;
 export const orderKeys = {
   all: ['orders'] as const,
   statuses: ['order-statuses'] as const,
-  list: (search: string, statusId: string | null, scope?: OrderScope) =>
+  list: (
+    search: string,
+    statusId: string | null,
+    scope?: OrderScope,
+    pageSize: number = PAGE_SIZE,
+  ) =>
     [
       'orders',
       'list',
@@ -24,6 +29,7 @@ export const orderKeys = {
       statusId ?? 'ALL',
       scope?.salesmanId ?? '',
       scope?.shopId ?? '',
+      pageSize,
     ] as const,
   detail: (id: string) => ['orders', 'detail', id] as const,
   history: (id: string) => ['orders', 'history', id] as const,
@@ -126,13 +132,16 @@ export function useOrders(
   search: string,
   statusId: string | null,
   scope?: OrderScope,
+  /** Bigger pages for callers that filter the result client-side (there's no
+   * backend order-type filter), so they page through the tail in fewer trips. */
+  pageSize: number = PAGE_SIZE,
 ) {
   return useInfiniteQuery({
-    queryKey: orderKeys.list(search, statusId, scope),
+    queryKey: orderKeys.list(search, statusId, scope, pageSize),
     queryFn: ({ pageParam }) =>
       ordersApi.list({
         page: pageParam,
-        limit: PAGE_SIZE,
+        limit: pageSize,
         search: search || undefined,
         status: statusId ?? undefined,
         salesman_id: scope?.salesmanId,

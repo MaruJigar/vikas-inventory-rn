@@ -71,12 +71,33 @@ export interface Order {
   manufacturer_id?: string | null;
   distributor: { id: string; business_name: string } | null;
   gross_order_amount: Num;
-  /** Order-level discounts (backend RefactorDiscounts): standard then special,
-   * applied sequentially. Amounts are what the server computed. */
+  /**
+   * Order-level discounts. Every one is a percentage of the balance REMAINING
+   * after the previous one — they cascade, so an amount is not `percent` of the
+   * gross. Amounts are always what the server computed; never re-derive them.
+   *
+   * Which apply depends on the order type (see `orderDiscountRows`):
+   * - **Sales order** (`salesman_id` set) — standard, then special.
+   * - **Purchase order** (`salesman_id` null) — distributor, distributor margin,
+   *   freight, special, then cash. Set by the MANUFACTURER via
+   *   `PATCH /orders/:id`; a distributor's own values are ignored there, and the
+   *   create endpoint stores them all as 0.
+   *
+   * The unused set is 0 on either type, so a single ordered render covers both.
+   */
   standard_discount_percent: Num;
   standard_discount_amount: Num;
+  distributor_discount_percent: Num;
+  distributor_discount_amount: Num;
+  distributor_margin_percent: Num;
+  distributor_margin_amount: Num;
+  freight_discount_percent: Num;
+  freight_discount_amount: Num;
   special_discount_percent: Num;
   special_discount_amount: Num;
+  cash_discount_percent: Num;
+  cash_discount_amount: Num;
+  /** 0 until the order is edited — neither create path computes GST. */
   total_gst_amount: Num;
   transport_mode: string | null;
   final_order_amount: Num;

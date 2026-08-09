@@ -261,8 +261,13 @@ export const en = {
       items: 'Items',
       noItems: 'No items on this order.',
       gross: 'Gross amount',
+      // Order-level discount lines, in the sequence the backend applies them.
       standardDiscount: 'Standard discount',
+      distributorDiscount: 'Distributor discount',
+      distributorMargin: 'Distributor margin',
+      freightDiscount: 'Freight discount',
       specialDiscount: 'Special discount',
+      cashDiscount: 'Cash discount',
       gst: 'GST',
       total: 'Total',
       timeline: 'Status timeline',
@@ -553,9 +558,6 @@ export const en = {
       source: 'Added by',
       sourceManufacturer: 'Manufacturer',
       sourceDistributor: 'Distributor',
-      status: 'Status',
-      active: 'Active',
-      inactive: 'Inactive',
       description: 'Description',
     },
     form: {
@@ -642,6 +644,9 @@ export const en = {
       emptyHint: 'Add manufacturer products to create a purchase order.',
       browse: 'Browse products',
       subtotal: 'Subtotal (MRP)',
+      orderValue: 'Order value',
+      pricingNote:
+        'Discounts and GST are applied by the manufacturer when they review this order.',
       splitNote:
         'These items will be split into {{count}} orders — one per manufacturer.',
       submit: 'Create purchase order',

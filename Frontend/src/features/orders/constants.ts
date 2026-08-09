@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 
 import { colors } from '@/theme';
-import type { OrderStatusRecord } from '@/types/order';
+import type { Order, OrderStatusRecord } from '@/types/order';
 
 /**
  * Statuses are dynamic (Backend `order_statuses`), and orders reference them by
@@ -148,3 +148,61 @@ export const formatINR = (amount: number): string =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+
+/** A percent column is `numeric(5,2)`, so it arrives as e.g. "5.00" — show
+ * "5%", but keep a real fraction ("2.5%"). */
+export const formatPercent = (value: number | string | null | undefined): string =>
+  `${toNum(value).toLocaleString('en-IN', { maximumFractionDigits: 2 })}%`;
+
+export interface OrderDiscountRow {
+  /** i18n key under `orders.detail`. */
+  key: string;
+  percent: number;
+  amount: number;
+}
+
+/**
+ * The order's discount breakdown, in the sequence the backend applies it
+ * (`order.service.ts` `updateOrder`). Each percentage is taken off the balance
+ * left by the previous line, so the rows only make sense in this order — a
+ * 5% line further down is a smaller amount than a 5% line at the top.
+ *
+ * Sales orders use standard → special; purchase orders use distributor →
+ * margin → freight → special → cash. The other type's fields are 0, and rows
+ * with no amount are dropped, so one ordered pass renders either correctly.
+ */
+export function orderDiscountRows(order: Order): OrderDiscountRow[] {
+  const rows: OrderDiscountRow[] = [
+    {
+      key: 'standardDiscount',
+      percent: toNum(order.standard_discount_percent),
+      amount: toNum(order.standard_discount_amount),
+    },
+    {
+      key: 'distributorDiscount',
+      percent: toNum(order.distributor_discount_percent),
+      amount: toNum(order.distributor_discount_amount),
+    },
+    {
+      key: 'distributorMargin',
+      percent: toNum(order.distributor_margin_percent),
+      amount: toNum(order.distributor_margin_amount),
+    },
+    {
+      key: 'freightDiscount',
+      percent: toNum(order.freight_discount_percent),
+      amount: toNum(order.freight_discount_amount),
+    },
+    {
+      key: 'specialDiscount',
+      percent: toNum(order.special_discount_percent),
+      amount: toNum(order.special_discount_amount),
+    },
+    {
+      key: 'cashDiscount',
+      percent: toNum(order.cash_discount_percent),
+      amount: toNum(order.cash_discount_amount),
+    },
+  ];
+  return rows.filter((r) => r.amount > 0);
+}

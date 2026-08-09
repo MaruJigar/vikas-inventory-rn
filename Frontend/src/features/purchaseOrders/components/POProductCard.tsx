@@ -27,9 +27,9 @@ export function POProductCard({ product }: { product: Product }) {
   const imageUrls = resolveMediaUrls(product.product_image_url);
   const manufacturer = manufacturerName(product);
 
-  // Phone: the control gets its own row under the body — compact "Add" pill on
-  // the right, full-width stepper once added. Inline beside the price on wide
-  // screens (matches ProductCard).
+  // Phone: the control gets its own row under the body, right-aligned — "Add"
+  // pill, or the stepper once added; both size to their content. Inline beside
+  // the price on wide screens (matches ProductCard).
   const inlineControl = isWide;
 
   const control =
@@ -49,11 +49,7 @@ export function POProductCard({ product }: { product: Product }) {
         <Text style={styles.addLabel}>{t('products.add')}</Text>
       </Pressable>
     ) : (
-      <QuantityStepper
-        qty={qty}
-        fullWidth={!inlineControl}
-        onChange={(next) => setQty(product, next)}
-      />
+      <QuantityStepper qty={qty} onChange={(next) => setQty(product, next)} />
     );
 
   return (
@@ -146,7 +142,7 @@ const styles = StyleSheet.create({
   },
   addBtnWide: { height: 40, minWidth: 104, paddingHorizontal: spacing.lg },
   addBtnPressed: { opacity: 0.85 },
-  // Phone-only row under the body: pill right-aligned, stepper stretches.
+  // Phone-only row under the body: pill and stepper both right-aligned.
   controlBar: {
     flexDirection: 'row',
     alignItems: 'center',

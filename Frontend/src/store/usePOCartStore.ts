@@ -18,10 +18,8 @@ const clampQty = (qty: number) =>
 interface POCartState {
   /** Keyed by product id for O(1) qty lookups. */
   items: Record<string, CartLine>;
-  /** Order-level discount percentages (backend standard/special, sequential). */
-  standardDiscountPercent: number;
-  specialDiscountPercent: number;
-  /** Optional free-text transport mode. */
+  /** Optional free-text transport mode — the only priced field the PO create
+   * endpoint still accepts (see features/purchaseOrders/types). */
   transportMode: string;
 
   add: (product: Product) => void;
@@ -31,8 +29,6 @@ interface POCartState {
   increment: (productId: string) => void;
   decrement: (productId: string) => void;
   remove: (productId: string) => void;
-  setStandardDiscount: (percent: number) => void;
-  setSpecialDiscount: (percent: number) => void;
   setTransportMode: (mode: string) => void;
   clear: () => void;
   qtyOf: (productId: string) => number;
@@ -40,8 +36,6 @@ interface POCartState {
 
 export const usePOCartStore = create<POCartState>((set, get) => ({
   items: {},
-  standardDiscountPercent: 0,
-  specialDiscountPercent: 0,
   transportMode: '',
 
   add: (product) =>
@@ -96,21 +90,9 @@ export const usePOCartStore = create<POCartState>((set, get) => ({
       return { items: next };
     }),
 
-  setStandardDiscount: (percent) =>
-    set({ standardDiscountPercent: Math.min(100, Math.max(0, percent)) }),
-
-  setSpecialDiscount: (percent) =>
-    set({ specialDiscountPercent: Math.min(100, Math.max(0, percent)) }),
-
   setTransportMode: (mode) => set({ transportMode: mode }),
 
-  clear: () =>
-    set({
-      items: {},
-      standardDiscountPercent: 0,
-      specialDiscountPercent: 0,
-      transportMode: '',
-    }),
+  clear: () => set({ items: {}, transportMode: '' }),
 
   qtyOf: (productId) => get().items[productId]?.qty ?? 0,
 }));

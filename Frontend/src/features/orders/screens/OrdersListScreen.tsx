@@ -26,6 +26,15 @@ import {
 import type { Order } from '@/types/order';
 import type { OrdersScreenProps } from '@/navigation/types';
 
+/** Rows a client-side type filter aims to have before it stops pre-fetching —
+ * enough to overflow a phone screen so normal scroll-paging can take over. */
+const MIN_FILTERED_ROWS = 15;
+
+/** Page size while a type filter is on. Purchase orders are a small slice of a
+ * busy distributor's list, so the default 20 would mean a lot of round trips to
+ * surface a handful of rows. */
+const TYPE_FILTER_PAGE_SIZE = 100;
+
 export function OrdersListScreen({
   navigation,
   route,
@@ -43,23 +52,31 @@ export function OrdersListScreen({
   );
   const search = useDebouncedValue(query.trim(), 350);
 
-  // Scope the list to a salesman or shop (from their detail screens).
-  const { salesmanId, shopId, filterLabel } = route.params ?? {};
+  // Scope the list to a salesman/shop (server-side) or to an order type
+  // (client-side). One banner clears them together.
+  const { salesmanId, shopId, orderType, filterLabel } = route.params ?? {};
   const [scopeCleared, setScopeCleared] = useState(false);
-  const scope =
-    !scopeCleared && (salesmanId || shopId) ? { salesmanId, shopId } : undefined;
+  const scoped = !scopeCleared && !!(salesmanId || shopId || orderType);
+  const scope = scoped && (salesmanId || shopId) ? { salesmanId, shopId } : undefined;
+  const typeFilter = scoped ? orderType : undefined;
 
   // The Orders screen is the tab's initial route, so a second tile tap merges
   // new params without remounting — keep the filter in sync when that happens.
   const paramStatus = route.params?.initialStatus;
   React.useEffect(() => {
     if (paramStatus) setStatus(paramStatus);
-  }, [paramStatus]);
-  // A fresh scope param (new salesman/shop) re-activates the banner.
+    // The PO tile arrives with a type but no status. Drop whatever a previous
+    // tile left selected — the two filters AND together, which would hide most
+    // of the orders the tile just counted.
+    else if (orderType) setStatus(null);
+  }, [paramStatus, orderType]);
+  // A fresh scope param (new salesman/shop/type) re-activates the banner.
   React.useEffect(() => {
-    if (salesmanId || shopId) setScopeCleared(false);
-  }, [salesmanId, shopId]);
+    if (salesmanId || shopId || orderType) setScopeCleared(false);
+  }, [salesmanId, shopId, orderType]);
 
+  // A type filter is applied client-side, so a page can yield almost no rows —
+  // pull bigger pages there to keep the round trips down.
   const {
     data,
     isLoading,
@@ -68,14 +85,51 @@ export function OrdersListScreen({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useOrders(search, status, scope);
+  } = useOrders(
+    search,
+    status,
+    scope,
+    typeFilter ? TYPE_FILTER_PAGE_SIZE : undefined,
+  );
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const mfrNames = useManufacturerNames();
 
-  const orders = useMemo(
-    () => data?.pages.flatMap((p) => p.data) ?? [],
-    [data],
-  );
+  // A caller may name the scope itself (a salesman/shop); an order type names
+  // itself.
+  const scopeLabel =
+    filterLabel ??
+    (typeFilter
+      ? t(typeFilter === 'PURCHASE' ? 'orders.purchaseOrder' : 'orders.salesOrder')
+      : t('orders.filterScope'));
+
+  const orders = useMemo(() => {
+    const all = data?.pages.flatMap((p) => p.data) ?? [];
+    if (!typeFilter) return all;
+    // A purchase order is the distributor→manufacturer one: no salesman.
+    return all.filter((o) =>
+      typeFilter === 'PURCHASE' ? !o.salesman_id : !!o.salesman_id,
+    );
+  }, [data, typeFilter]);
+
+  // The backend has no order-type filter, so the type is applied to whatever
+  // pages we've fetched. A page can contribute few rows — or none — leaving the
+  // list too short to scroll, so `onEndReached` never fires and paging stalls.
+  // Keep pulling until there's enough to fill a screen or the pages run out.
+  React.useEffect(() => {
+    if (!typeFilter || !hasNextPage || isFetchingNextPage) return;
+    if (orders.length < MIN_FILTERED_ROWS) void fetchNextPage();
+  }, [
+    typeFilter,
+    hasNextPage,
+    isFetchingNextPage,
+    orders.length,
+    fetchNextPage,
+  ]);
+
+  // Mid-auto-page there may be no rows yet — that's "still loading", not "no
+  // results", so hold the empty state back until the pages are exhausted.
+  const autoPaging =
+    !!typeFilter && hasNextPage && orders.length < MIN_FILTERED_ROWS;
 
   const renderItem = ({ item }: { item: Order }) => (
     <Pressable
@@ -127,7 +181,7 @@ export function OrdersListScreen({
         <Text style={typography.h1}>{t('orders.title')}</Text>
       </View>
 
-      {scope ? (
+      {scoped ? (
         <Pressable
           style={styles.scopeBanner}
           onPress={() => setScopeCleared(true)}
@@ -135,9 +189,7 @@ export function OrdersListScreen({
           accessibilityLabel={t('orders.clearFilter')}
         >
           <Text style={styles.scopeText} numberOfLines={1}>
-            {t('orders.filteredBy', {
-              label: filterLabel ?? t('orders.filterScope'),
-            })}
+            {t('orders.filteredBy', { label: scopeLabel })}
           </Text>
           <Ionicons name="close-circle" size={18} color={colors.primary} />
         </Pressable>
@@ -208,19 +260,21 @@ export function OrdersListScreen({
             if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
           }}
           ListEmptyComponent={
-            <EmptyState
-              title={
-                search || status || scope
-                  ? t('orders.noResults')
-                  : t('orders.empty')
-              }
-              message={
-                search || status || scope ? undefined : t('orders.emptyHint')
-              }
-            />
+            autoPaging ? null : (
+              <EmptyState
+                title={
+                  search || status || scoped
+                    ? t('orders.noResults')
+                    : t('orders.empty')
+                }
+                message={
+                  search || status || scoped ? undefined : t('orders.emptyHint')
+                }
+              />
+            )
           }
           ListFooterComponent={
-            isFetchingNextPage ? (
+            isFetchingNextPage || autoPaging ? (
               <ActivityIndicator style={styles.footer} color={colors.primary} />
             ) : null
           }

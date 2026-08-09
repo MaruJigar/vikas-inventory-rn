@@ -3,10 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 
-import { Screen, Card, ImageCarousel } from '@/components';
+import { Screen, Card, ImageCarousel, Button, QuantityStepper } from '@/components';
 import { colors, radius, spacing, typography } from '@/theme';
 import { resolveMediaUrls } from '@/lib/media';
 import { useIsWide } from '@/lib/useIsWide';
+import { notify } from '@/lib/dialog';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useCartStore } from '@/store/useCartStore';
+import { useVisitStore } from '@/store/useVisitStore';
 import {
   availableUnits,
   distributorUnitPrice,
@@ -36,16 +40,29 @@ function DetailRow({
 }
 
 /**
- * Read-only view of every field the list carries for a product. The list
- * endpoint already returns the full record and there is no `GET /products/:id`,
- * so the product travels as a route param instead of being re-fetched.
+ * Every field the list carries for a product, plus add-to-cart while a shop
+ * visit is running. The list endpoint already returns the full record and there
+ * is no `GET /products/:id`, so the product travels as a route param instead of
+ * being re-fetched — which also means the cart is the single source of truth
+ * for quantity here, not the route param.
  */
 export function ProductDetailScreen({
   route,
+  navigation,
 }: HomeScreenProps<'ProductDetail'>) {
   const { t } = useTranslation();
   const { product } = route.params;
   const isWide = useIsWide();
+
+  // Add-to-cart mirrors ProductCard exactly: only during an active shop visit,
+  // and only the distributor's view caps quantity at on-hand stock (a salesman
+  // may order beyond it — the backend raises a backorder).
+  const isDistributor = useAuthStore((s) => s.user?.role) === 'DISTRIBUTOR_ADMIN';
+  const activeVisit = useVisitStore((s) => s.activeVisit);
+  const canAdd = !!activeVisit;
+  const cartQty = useCartStore((s) => s.items[product.id]?.qty ?? 0);
+  const addToCart = useCartStore((s) => s.add);
+  const setCartQty = useCartStore((s) => s.setQty);
 
   const mrp = toNum(product.mrp);
   const price = distributorUnitPrice(product);
@@ -58,8 +75,41 @@ export function ProductDetailScreen({
   const manufacturer = manufacturerName(product);
   const imageSize = isWide ? 320 : 220;
 
+  // null = don't cap (salesman flow). `stock` above stays unconditional — the
+  // info row shows what's on hand either way.
+  const stockCap = isDistributor ? stock : null;
+  const outOfStock = stockCap != null && stockCap < 1;
+
+  const addBar = !canAdd ? null : (
+    <View style={styles.actionBar}>
+      {cartQty === 0 ? (
+        <Button
+          label={outOfStock ? t('products.outOfStock') : t('products.addToCart')}
+          icon="add"
+          disabled={outOfStock}
+          onPress={() => addToCart(product)}
+        />
+      ) : (
+        <View style={styles.actionBarRow}>
+          <QuantityStepper
+            qty={cartQty}
+            max={stockCap ?? undefined}
+            onChange={(next) => setCartQty(product, next)}
+            onExceedMax={(m) => notify(t('products.maxStock', { count: m }))}
+          />
+          <Button
+            label={t('products.viewCart')}
+            variant="secondary"
+            style={styles.flex1}
+            onPress={() => navigation.navigate('Cart')}
+          />
+        </View>
+      )}
+    </View>
+  );
+
   return (
-    <Screen edges={[]}>
+    <Screen edges={[]} floatingAction={addBar}>
       <View style={styles.imageWrap}>
         {imageUrls.length > 0 ? (
           <ImageCarousel urls={imageUrls} size={imageSize} />
@@ -131,20 +181,14 @@ export function ProductDetailScreen({
                 : product.unit
             }
           />
+          {/* No active/inactive row: the lists only ever show active products
+           * (see `useProducts`), so the status would always read "Active". */}
           <DetailRow
             label={t('products.details.source')}
             value={
               product.product_source === 'DISTRIBUTOR_CREATED'
                 ? t('products.details.sourceDistributor')
                 : t('products.details.sourceManufacturer')
-            }
-          />
-          <DetailRow
-            label={t('products.details.status')}
-            value={
-              product.is_active
-                ? t('products.details.active')
-                : t('products.details.inactive')
             }
             divider={false}
           />
@@ -197,4 +241,16 @@ const styles = StyleSheet.create({
   rowLabel: { ...typography.body, color: colors.textMuted, flexShrink: 1 },
   rowValue: { ...typography.body, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
   description: { ...typography.body, color: colors.text },
+  // Pinned over the content, so the add control stays reachable however far
+  // down the page you've scrolled.
+  actionBar: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  actionBarRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  flex1: { flex: 1 },
 });
