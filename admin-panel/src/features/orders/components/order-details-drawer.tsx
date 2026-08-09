@@ -35,6 +35,7 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
 
   const { user } = useAuthStore();
   const isCreator = user?.id === order?.salesman_id || user?.id === order?.distributor_id;
+  const isPurchaseOrder = !!order?.manufacturer_id;
 
   const gross = Number(order?.gross_order_amount || 0);
   const dDisc = Number(order?.distributor_discount_amount || 0);
@@ -112,6 +113,10 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
                 <div className="text-slate-500">Total Quantity</div>
                 <div className="font-medium">{Number(order.total_quantity) || 0}</div>
               </div>
+              <div>
+                <div className="text-slate-500">Transport Mode</div>
+                <div className="font-medium capitalize">{order.transport_mode?.replace(/_/g, ' ') || 'N/A'}</div>
+              </div>
               {order.cancellation_reason && (
                 <div className="col-span-2">
                   <div className="text-slate-500">Cancellation Reason</div>
@@ -124,42 +129,46 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
           </section>
 
           {/* Section 2: Shop Information */}
-          <section className="border rounded-md bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900 mb-3 border-b pb-2">Shop Information</h3>
-            <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
-              <div>
-                <div className="text-slate-500">Shop Name</div>
-                <div className="font-medium">{order.shop?.name || 'N/A'}</div>
-              </div>
-              <div>
-                <div className="text-slate-500">Owner Name</div>
-                <div className="font-medium">{order.shop?.owner_name || 'N/A'}</div>
-              </div>
-              <div>
-                <div className="text-slate-500">Phone</div>
-                <div className="font-medium">{order.shop?.phone || 'N/A'}</div>
-              </div>
-              <div>
-                <div className="text-slate-500">Address</div>
-                <div className="font-medium">
-                  {[
-                    order.shop?.address, 
-                    order.shop?.city_name, 
-                    order.shop?.state_name
-                  ].filter(Boolean).join(', ') || 'N/A'}
+          {!isPurchaseOrder && (
+            <section className="border rounded-md bg-white p-4 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900 mb-3 border-b pb-2">Shop Information</h3>
+              <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
+                <div>
+                  <div className="text-slate-500">Shop Name</div>
+                  <div className="font-medium">{order.shop?.name || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-slate-500">Owner Name</div>
+                  <div className="font-medium">{order.shop?.owner_name || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-slate-500">Phone</div>
+                  <div className="font-medium">{order.shop?.phone || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-slate-500">Address</div>
+                  <div className="font-medium">
+                    {[
+                      order.shop?.address, 
+                      order.shop?.city_name, 
+                      order.shop?.state_name
+                    ].filter(Boolean).join(', ') || 'N/A'}
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
+          )}
 
-          {/* Section 3: Salesman Information */}
+          {/* Section 3: Sales Team */}
           <section className="border rounded-md bg-white p-4 shadow-sm">
             <h3 className="text-sm font-semibold text-slate-900 mb-3 border-b pb-2">Sales Team</h3>
             <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
-              <div>
-                <div className="text-slate-500">Salesman Name</div>
-                <div className="font-medium">{order.salesman?.full_name || 'N/A'}</div>
-              </div>
+              {!isPurchaseOrder && (
+                <div>
+                  <div className="text-slate-500">Salesman Name</div>
+                  <div className="font-medium">{order.salesman?.full_name || 'N/A'}</div>
+                </div>
+              )}
               <div>
                 <div className="text-slate-500">Distributor Name</div>
                 <div className="font-medium">{order.distributor?.business_name || 'N/A'}</div>
