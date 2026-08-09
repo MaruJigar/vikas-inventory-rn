@@ -58,6 +58,10 @@ export class Distributor {
   @ApiPropertyOptional({ description: 'Pincode' })
   pincode: string;
 
+  @Column({ type: 'numeric', precision: 5, scale: 2, default: 0 })
+  @ApiProperty({ description: 'Distributor discount percent' })
+  distributor_discount_percent: number;
+
   @Column({ type: 'varchar', length: 50, default: 'PENDING_APPROVAL' })
   @ApiProperty({ description: 'Approval status' })
   approval_status: string;

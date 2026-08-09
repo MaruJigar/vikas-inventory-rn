@@ -46,6 +46,7 @@ export function EditDistributorDrawer({ distributorId, isOpen, onClose }: EditDi
       state: '',
       country: 'India',
       pincode: '',
+      distributor_discount_percent: 0,
       is_active: true,
       manufacturer_ids: [],
     },
@@ -76,6 +77,7 @@ export function EditDistributorDrawer({ distributorId, isOpen, onClose }: EditDi
         state: distributor.state || '',
         country: distributor.country || 'India',
         pincode: distributor.pincode || '',
+        distributor_discount_percent: distributor.distributor_discount_percent || 0,
         is_active: distributor.is_active,
         manufacturer_ids: distributor.manufacturer_ids || [],
       });
@@ -207,6 +209,12 @@ export function EditDistributorDrawer({ distributorId, isOpen, onClose }: EditDi
               <Label htmlFor="edit_pincode">Pincode</Label>
               <Input id="edit_pincode" {...register('pincode')} placeholder="e.g. 400001" maxLength={10} />
               {errors.pincode && <p className="text-sm text-red-500">{errors.pincode.message}</p>}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit_distributor_discount_percent">Distributor Discount (%)</Label>
+              <Input id="edit_distributor_discount_percent" type="number" step="0.01" min="0" max="100" {...register('distributor_discount_percent')} placeholder="e.g. 5.5" />
+              {errors.distributor_discount_percent && <p className="text-sm text-red-500">{errors.distributor_discount_percent.message}</p>}
             </div>
           </div>
 

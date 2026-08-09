@@ -44,6 +44,30 @@ export class UpdateOrderDto {
   @Min(0)
   @ApiPropertyOptional({ description: 'Special Discount Percent' })
   specialDiscountPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiPropertyOptional({ description: 'Distributor Discount Percent' })
+  distributorDiscountPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiPropertyOptional({ description: 'Distributor Margin Percent' })
+  distributorMarginPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiPropertyOptional({ description: 'Freight Discount Percent' })
+  freightDiscountPercent?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @ApiPropertyOptional({ description: 'Cash Discount Percent' })
+  cashDiscountPercent?: number;
 }
 
 export class CancelOrderDto {

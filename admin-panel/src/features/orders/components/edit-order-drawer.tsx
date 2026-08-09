@@ -33,6 +33,10 @@ type FormValues = {
   }[];
   standardDiscountPercent: number;
   specialDiscountPercent: number;
+  distributorDiscountPercent: number;
+  distributorMarginPercent: number;
+  freightDiscountPercent: number;
+  cashDiscountPercent: number;
   transportMode: string;
   reason: string;
   manufacturerId?: string;
@@ -66,6 +70,10 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
       products: [],
       standardDiscountPercent: 0,
       specialDiscountPercent: 0,
+      distributorDiscountPercent: 0,
+      distributorMarginPercent: 0,
+      freightDiscountPercent: 0,
+      cashDiscountPercent: 0,
       transportMode: '',
       reason: '',
       manufacturerId: ''
@@ -90,6 +98,10 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
         })),
         standardDiscountPercent: Number(order.standard_discount_percent || 0),
         specialDiscountPercent: Number(order.special_discount_percent || 0),
+        distributorDiscountPercent: order.distributor_discount_percent !== null && order.distributor_discount_percent !== undefined ? Number(order.distributor_discount_percent) : Number(order.distributor?.distributor_discount_percent || 0),
+        distributorMarginPercent: Number(order.distributor_margin_percent || 0),
+        freightDiscountPercent: Number(order.freight_discount_percent || 0),
+        cashDiscountPercent: Number(order.cash_discount_percent || 0),
         transportMode: order.transport_mode || '',
         reason: '',
         manufacturerId: order.manufacturer_id || ''
@@ -100,17 +112,52 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
   const watchedProducts = watch('products') || [];
   const watchedStdDisc = watch('standardDiscountPercent') || 0;
   const watchedSpecDisc = watch('specialDiscountPercent') || 0;
+  const watchedDistDisc = watch('distributorDiscountPercent') || 0;
+  const watchedDistMargin = watch('distributorMarginPercent') || 0;
+  const watchedFreightDisc = watch('freightDiscountPercent') || 0;
+  const watchedCashDisc = watch('cashDiscountPercent') || 0;
   const watchedTransportMode = watch('transportMode') || '';
 
   // Real-time calculations
   const grossAmount = watchedProducts.reduce((sum, p) => sum + (p.mrp_snapshot * (p.quantity || 0)), 0);
   const netAfterProductDiscount = grossAmount;
 
-  const standardDiscountAmount = netAfterProductDiscount * (watchedStdDisc / 100);
-  const afterStdDisc = netAfterProductDiscount - standardDiscountAmount;
-  const specialDiscountAmount = afterStdDisc * (watchedSpecDisc / 100);
+  let totalDiscount = 0;
+  let runningBalance = netAfterProductDiscount;
 
-  const totalDiscount = standardDiscountAmount + specialDiscountAmount;
+  let distDiscAmount = 0;
+  let distMarginAmount = 0;
+  let freightDiscAmount = 0;
+  let cashDiscAmount = 0;
+  let stdDiscAmount = 0;
+  let specDiscAmount = 0;
+
+  if (isPurchaseOrder) {
+    distDiscAmount = runningBalance * (watchedDistDisc / 100);
+    runningBalance -= distDiscAmount;
+
+    distMarginAmount = runningBalance * (watchedDistMargin / 100);
+    runningBalance -= distMarginAmount;
+
+    freightDiscAmount = runningBalance * (watchedFreightDisc / 100);
+    runningBalance -= freightDiscAmount;
+
+    specDiscAmount = runningBalance * (watchedSpecDisc / 100);
+    runningBalance -= specDiscAmount;
+
+    cashDiscAmount = runningBalance * (watchedCashDisc / 100);
+    runningBalance -= cashDiscAmount;
+
+    totalDiscount = distDiscAmount + distMarginAmount + freightDiscAmount + specDiscAmount + cashDiscAmount;
+  } else {
+    stdDiscAmount = runningBalance * (watchedStdDisc / 100);
+    runningBalance -= stdDiscAmount;
+    
+    specDiscAmount = runningBalance * (watchedSpecDisc / 100);
+    runningBalance -= specDiscAmount;
+
+    totalDiscount = stdDiscAmount + specDiscAmount;
+  }
 
   let totalGstAmount = 0;
   watchedProducts.forEach(p => {
@@ -136,12 +183,19 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
         productId: p.productId,
         quantity: Number(p.quantity),
       })),
-      ...(canEditStandardDiscount
-        ? { standardDiscountPercent: Number(data.standardDiscountPercent || 0) }
-        : {}),
-      ...(canEditSpecialDiscount
-        ? { specialDiscountPercent: Number(data.specialDiscountPercent || 0) }
-        : {}),
+      ...(isPurchaseOrder 
+        ? {
+            distributorDiscountPercent: Number(data.distributorDiscountPercent || 0),
+            distributorMarginPercent: Number(data.distributorMarginPercent || 0),
+            freightDiscountPercent: Number(data.freightDiscountPercent || 0),
+            cashDiscountPercent: Number(data.cashDiscountPercent || 0),
+            specialDiscountPercent: Number(data.specialDiscountPercent || 0),
+          }
+        : {
+            ...(canEditStandardDiscount ? { standardDiscountPercent: Number(data.standardDiscountPercent || 0) } : {}),
+            ...(canEditSpecialDiscount ? { specialDiscountPercent: Number(data.specialDiscountPercent || 0) } : {}),
+          }
+      ),
       transportMode: data.transportMode || undefined,
       reason: data.reason || 'Edited by Admin',
       manufacturerId: data.manufacturerId || undefined
@@ -312,17 +366,44 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                   />
                 )}
               </div>
-              {canEditStandardDiscount && (
-                <div>
-                  <Label htmlFor="stdDisc">Standard Discount (%)</Label>
-                  <Input id="stdDisc" type="number" min="0" max="100" step="0.01" {...register('standardDiscountPercent')} className="mt-1" />
-                </div>
-              )}
-              {canEditSpecialDiscount && (
-                <div>
-                  <Label htmlFor="specDisc">Special Discount (%)</Label>
-                  <Input id="specDisc" type="number" min="0" max="100" step="0.01" {...register('specialDiscountPercent')} className="mt-1" />
-                </div>
+              {isPurchaseOrder ? (
+                <>
+                  <div>
+                    <Label htmlFor="distDisc">Distributor Discount (%)</Label>
+                    <Input id="distDisc" type="number" min="0" max="100" step="0.01" {...register('distributorDiscountPercent')} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label htmlFor="distMargin">Distributor Margin (%)</Label>
+                    <Input id="distMargin" type="number" min="0" max="100" step="0.01" {...register('distributorMarginPercent')} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label htmlFor="freightDisc">Freight Discount (%)</Label>
+                    <Input id="freightDisc" type="number" min="0" max="100" step="0.01" {...register('freightDiscountPercent')} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label htmlFor="specDisc">Special Discount (%)</Label>
+                    <Input id="specDisc" type="number" min="0" max="100" step="0.01" {...register('specialDiscountPercent')} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label htmlFor="cashDisc">Cash Discount (%)</Label>
+                    <Input id="cashDisc" type="number" min="0" max="100" step="0.01" {...register('cashDiscountPercent')} className="mt-1" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {canEditStandardDiscount && (
+                    <div>
+                      <Label htmlFor="stdDisc">Standard Discount (%)</Label>
+                      <Input id="stdDisc" type="number" min="0" max="100" step="0.01" {...register('standardDiscountPercent')} className="mt-1" />
+                    </div>
+                  )}
+                  {canEditSpecialDiscount && (
+                    <div>
+                      <Label htmlFor="specDisc">Special Discount (%)</Label>
+                      <Input id="specDisc" type="number" min="0" max="100" step="0.01" {...register('specialDiscountPercent')} className="mt-1" />
+                    </div>
+                  )}
+                </>
               )}
             </section>
 
@@ -334,25 +415,62 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                   <span>Gross Amount</span>
                   <span>₹{Number(grossAmount).toFixed(2)}</span>
                 </div>
-                {standardDiscountAmount > 0 && (
+                {isPurchaseOrder ? (
                   <>
-                    <div className="flex justify-between items-center text-slate-600">
-                      <span>Standard Discount</span>
-                      <span className="text-red-500">- ₹{Number(standardDiscountAmount).toFixed(2)}</span>
-                    </div>
-                    {specialDiscountAmount > 0 && (
-                      <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
-                        <span>Amount after Standard Discount</span>
-                        <span>₹{Number(afterStdDisc).toFixed(2)}</span>
+                    {distDiscAmount > 0 && (
+                      <div className="flex justify-between items-center text-slate-600">
+                        <span>Distributor Discount</span>
+                        <span className="text-red-500">- ₹{Number(distDiscAmount).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {distMarginAmount > 0 && (
+                      <div className="flex justify-between items-center text-slate-600">
+                        <span>Distributor Margin</span>
+                        <span className="text-red-500">- ₹{Number(distMarginAmount).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {freightDiscAmount > 0 && (
+                      <div className="flex justify-between items-center text-slate-600">
+                        <span>Freight Discount</span>
+                        <span className="text-red-500">- ₹{Number(freightDiscAmount).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {specDiscAmount > 0 && (
+                      <div className="flex justify-between items-center text-slate-600">
+                        <span>Special Discount</span>
+                        <span className="text-red-500">- ₹{Number(specDiscAmount).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {cashDiscAmount > 0 && (
+                      <div className="flex justify-between items-center text-slate-600">
+                        <span>Cash Discount</span>
+                        <span className="text-red-500">- ₹{Number(cashDiscAmount).toFixed(2)}</span>
                       </div>
                     )}
                   </>
-                )}
-                {specialDiscountAmount > 0 && (
-                  <div className="flex justify-between items-center text-slate-600">
-                    <span>Special Discount</span>
-                    <span className="text-red-500">- ₹{Number(specialDiscountAmount).toFixed(2)}</span>
-                  </div>
+                ) : (
+                  <>
+                    {stdDiscAmount > 0 && (
+                      <>
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span>Standard Discount</span>
+                          <span className="text-red-500">- ₹{Number(stdDiscAmount).toFixed(2)}</span>
+                        </div>
+                        {specDiscAmount > 0 && (
+                          <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                            <span>Amount after Standard Discount</span>
+                            <span>₹{Number(grossAmount - stdDiscAmount).toFixed(2)}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {specDiscAmount > 0 && (
+                      <div className="flex justify-between items-center text-slate-600">
+                        <span>Special Discount</span>
+                        <span className="text-red-500">- ₹{Number(specDiscAmount).toFixed(2)}</span>
+                      </div>
+                    )}
+                  </>
                 )}
                 <div className="flex justify-between items-center text-slate-600">
                   <span>Total GST Amount</span>

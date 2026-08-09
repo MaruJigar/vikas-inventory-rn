@@ -634,13 +634,55 @@ export class OrderService {
         totalQuantity += Number(p.quantity);
       }
 
-      let standardDiscountPercent: number;
-      let specialDiscountPercent: number;
+      let standardDiscountPercent = 0;
+      let standardDiscountAmount = 0;
+      let specialDiscountPercent = 0;
+      let specialDiscountAmount = 0;
+      let distributorDiscountPercent = 0;
+      let distributorDiscountAmount = 0;
+      let distributorMarginPercent = 0;
+      let distributorMarginAmount = 0;
+      let freightDiscountPercent = 0;
+      let freightDiscountAmount = 0;
+      let cashDiscountPercent = 0;
+      let cashDiscountAmount = 0;
+      let totalOrderDiscount = 0;
 
-      if (role === 'DISTRIBUTOR_ADMIN' && order.salesman_id === null) {
-        // Distributors cannot add or edit discounts on purchase orders (order to manufacturer)
-        standardDiscountPercent = Number(order.standard_discount_percent || 0);
-        specialDiscountPercent = Number(order.special_discount_percent || 0);
+      const isPurchaseOrder = order.salesman_id === null;
+
+      if (isPurchaseOrder) {
+        if (role === 'DISTRIBUTOR_ADMIN') {
+          distributorDiscountPercent = Number(order.distributor_discount_percent || 0);
+          distributorMarginPercent = Number(order.distributor_margin_percent || 0);
+          freightDiscountPercent = Number(order.freight_discount_percent || 0);
+          specialDiscountPercent = Number(order.special_discount_percent || 0);
+          cashDiscountPercent = Number(order.cash_discount_percent || 0);
+        } else {
+          distributorDiscountPercent = dto.distributorDiscountPercent !== undefined ? Number(dto.distributorDiscountPercent) : Number(order.distributor_discount_percent || 0);
+          distributorMarginPercent = dto.distributorMarginPercent !== undefined ? Number(dto.distributorMarginPercent) : Number(order.distributor_margin_percent || 0);
+          freightDiscountPercent = dto.freightDiscountPercent !== undefined ? Number(dto.freightDiscountPercent) : Number(order.freight_discount_percent || 0);
+          specialDiscountPercent = dto.specialDiscountPercent !== undefined ? Number(dto.specialDiscountPercent) : Number(order.special_discount_percent || 0);
+          cashDiscountPercent = dto.cashDiscountPercent !== undefined ? Number(dto.cashDiscountPercent) : Number(order.cash_discount_percent || 0);
+        }
+
+        let currentBalance = grossOrderAmount;
+
+        distributorDiscountAmount = currentBalance * (distributorDiscountPercent / 100);
+        currentBalance -= distributorDiscountAmount;
+
+        distributorMarginAmount = currentBalance * (distributorMarginPercent / 100);
+        currentBalance -= distributorMarginAmount;
+
+        freightDiscountAmount = currentBalance * (freightDiscountPercent / 100);
+        currentBalance -= freightDiscountAmount;
+
+        specialDiscountAmount = currentBalance * (specialDiscountPercent / 100);
+        currentBalance -= specialDiscountAmount;
+
+        cashDiscountAmount = currentBalance * (cashDiscountPercent / 100);
+        currentBalance -= cashDiscountAmount;
+
+        totalOrderDiscount = distributorDiscountAmount + distributorMarginAmount + freightDiscountAmount + specialDiscountAmount + cashDiscountAmount;
       } else {
         standardDiscountPercent = dto.standardDiscountPercent !== undefined
           ? Number(dto.standardDiscountPercent)
@@ -648,12 +690,12 @@ export class OrderService {
         specialDiscountPercent = dto.specialDiscountPercent !== undefined
           ? Number(dto.specialDiscountPercent)
           : Number(order.special_discount_percent || 0);
+          
+        standardDiscountAmount = grossOrderAmount * (standardDiscountPercent / 100);
+        const afterDistDiscount = grossOrderAmount - standardDiscountAmount;
+        specialDiscountAmount = afterDistDiscount * (specialDiscountPercent / 100);
+        totalOrderDiscount = standardDiscountAmount + specialDiscountAmount;
       }
-
-      const standardDiscountAmount = grossOrderAmount * (standardDiscountPercent / 100);
-      const afterDistDiscount = grossOrderAmount - standardDiscountAmount;
-      const specialDiscountAmount = afterDistDiscount * (specialDiscountPercent / 100);
-      const totalOrderDiscount = standardDiscountAmount + specialDiscountAmount;
 
       let totalGstAmount = 0;
 
@@ -673,7 +715,7 @@ export class OrderService {
 
         // Prorate order-level discount to this item for GST calculation
         const itemProportion = grossOrderAmount > 0 ? netLineAmount / grossOrderAmount : 0;
-        const itemOrderDiscount = itemProportion * (standardDiscountAmount + specialDiscountAmount);
+        const itemOrderDiscount = itemProportion * totalOrderDiscount;
         const itemTaxableAmount = netLineAmount - itemOrderDiscount;
         
         const gstPercent = Number(product.gst_percent) || 0;
@@ -708,8 +750,16 @@ export class OrderService {
         gross_order_amount: grossOrderAmount,
         standard_discount_percent: standardDiscountPercent,
         standard_discount_amount: standardDiscountAmount,
+        distributor_discount_percent: distributorDiscountPercent,
+        distributor_discount_amount: distributorDiscountAmount,
+        distributor_margin_percent: distributorMarginPercent,
+        distributor_margin_amount: distributorMarginAmount,
+        freight_discount_percent: freightDiscountPercent,
+        freight_discount_amount: freightDiscountAmount,
         special_discount_percent: specialDiscountPercent,
         special_discount_amount: specialDiscountAmount,
+        cash_discount_percent: cashDiscountPercent,
+        cash_discount_amount: cashDiscountAmount,
         total_gst_amount: totalGstAmount,
         final_order_amount: finalOrderAmount,
         total_quantity: totalQuantity,

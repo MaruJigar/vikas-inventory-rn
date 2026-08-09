@@ -12,6 +12,7 @@ export const createDistributorSchema = z.object({
   state: z.union([z.literal(''), z.string()]).optional(),
   country: z.union([z.literal(''), z.string()]).optional(),
   pincode: z.union([z.literal(''), z.string()]).optional(),
+  distributor_discount_percent: z.union([z.literal(''), z.number(), z.string().transform(Number)]).optional(),
   manufacturer_ids: z.array(z.string()).min(1, 'Please select at least one manufacturer'),
 });
 
@@ -26,6 +27,7 @@ export const updateDistributorSchema = z.object({
   state: z.union([z.literal(''), z.string()]).optional(),
   country: z.union([z.literal(''), z.string()]).optional(),
   pincode: z.union([z.literal(''), z.string()]).optional(),
+  distributor_discount_percent: z.union([z.literal(''), z.number(), z.string().transform(Number)]).optional(),
   is_active: z.boolean().optional(),
   manufacturer_ids: z.array(z.string()).min(1, 'Please select at least one manufacturer'),
 });

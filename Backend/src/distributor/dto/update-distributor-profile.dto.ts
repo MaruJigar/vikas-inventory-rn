@@ -51,4 +51,8 @@ export class UpdateDistributorProfileDto {
   @IsString()
   @ApiPropertyOptional({ description: 'Pincode' })
   pincode?: string;
+
+  @IsOptional()
+  @ApiPropertyOptional({ description: 'Distributor discount percent' })
+  distributor_discount_percent?: number;
 }

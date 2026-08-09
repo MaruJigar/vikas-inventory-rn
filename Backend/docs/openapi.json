@@ -6141,6 +6141,10 @@
           "pincode": {
             "type": "string",
             "description": "Pincode"
+          },
+          "distributor_discount_percent": {
+            "type": "number",
+            "description": "Distributor discount percent"
           }
         }
       },
@@ -6195,6 +6199,10 @@
             "type": "string",
             "description": "Pincode"
           },
+          "distributor_discount_percent": {
+            "type": "number",
+            "description": "Distributor discount percent"
+          },
           "approval_status": {
             "type": "string",
             "description": "Approval status"
@@ -6240,6 +6248,7 @@
           "id",
           "business_name",
           "country",
+          "distributor_discount_percent",
           "approval_status",
           "is_active",
           "is_internal_distributor",
@@ -6309,6 +6318,10 @@
           "pincode": {
             "type": "string",
             "description": "Pincode"
+          },
+          "distributor_discount_percent": {
+            "type": "number",
+            "description": "Distributor discount percent"
           }
         },
         "required": [
@@ -6361,6 +6374,10 @@
           "pincode": {
             "type": "string",
             "description": "Pincode"
+          },
+          "distributor_discount_percent": {
+            "type": "number",
+            "description": "Distributor discount percent"
           },
           "is_active": {
             "type": "boolean",
@@ -7603,6 +7620,38 @@
             "type": "number",
             "description": "Standard discount amount"
           },
+          "distributor_discount_percent": {
+            "type": "number",
+            "description": "Distributor discount percent"
+          },
+          "distributor_discount_amount": {
+            "type": "number",
+            "description": "Distributor discount amount"
+          },
+          "distributor_margin_percent": {
+            "type": "number",
+            "description": "Distributor margin percent"
+          },
+          "distributor_margin_amount": {
+            "type": "number",
+            "description": "Distributor margin amount"
+          },
+          "freight_discount_percent": {
+            "type": "number",
+            "description": "Freight discount percent"
+          },
+          "freight_discount_amount": {
+            "type": "number",
+            "description": "Freight discount amount"
+          },
+          "cash_discount_percent": {
+            "type": "number",
+            "description": "Cash discount percent"
+          },
+          "cash_discount_amount": {
+            "type": "number",
+            "description": "Cash discount amount"
+          },
           "special_discount_percent": {
             "type": "number",
             "description": "Special discount percent"
@@ -7681,6 +7730,14 @@
           "total_gst_amount",
           "standard_discount_percent",
           "standard_discount_amount",
+          "distributor_discount_percent",
+          "distributor_discount_amount",
+          "distributor_margin_percent",
+          "distributor_margin_amount",
+          "freight_discount_percent",
+          "freight_discount_amount",
+          "cash_discount_percent",
+          "cash_discount_amount",
           "special_discount_percent",
           "special_discount_amount",
           "final_order_amount",
@@ -7739,6 +7796,22 @@
           "specialDiscountPercent": {
             "type": "number",
             "description": "Special Discount Percent"
+          },
+          "distributorDiscountPercent": {
+            "type": "number",
+            "description": "Distributor Discount Percent"
+          },
+          "distributorMarginPercent": {
+            "type": "number",
+            "description": "Distributor Margin Percent"
+          },
+          "freightDiscountPercent": {
+            "type": "number",
+            "description": "Freight Discount Percent"
+          },
+          "cashDiscountPercent": {
+            "type": "number",
+            "description": "Cash Discount Percent"
           }
         },
         "required": [

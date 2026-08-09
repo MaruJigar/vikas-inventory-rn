@@ -103,6 +103,38 @@ export class Order {
   standard_discount_amount: number;
 
   @Column({ type: 'numeric', precision: 5, scale: 2, default: 0 })
+  @ApiProperty({ description: 'Distributor discount percent' })
+  distributor_discount_percent: number;
+
+  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
+  @ApiProperty({ description: 'Distributor discount amount' })
+  distributor_discount_amount: number;
+
+  @Column({ type: 'numeric', precision: 5, scale: 2, default: 0 })
+  @ApiProperty({ description: 'Distributor margin percent' })
+  distributor_margin_percent: number;
+
+  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
+  @ApiProperty({ description: 'Distributor margin amount' })
+  distributor_margin_amount: number;
+
+  @Column({ type: 'numeric', precision: 5, scale: 2, default: 0 })
+  @ApiProperty({ description: 'Freight discount percent' })
+  freight_discount_percent: number;
+
+  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
+  @ApiProperty({ description: 'Freight discount amount' })
+  freight_discount_amount: number;
+
+  @Column({ type: 'numeric', precision: 5, scale: 2, default: 0 })
+  @ApiProperty({ description: 'Cash discount percent' })
+  cash_discount_percent: number;
+
+  @Column({ type: 'numeric', precision: 12, scale: 2, default: 0 })
+  @ApiProperty({ description: 'Cash discount amount' })
+  cash_discount_amount: number;
+
+  @Column({ type: 'numeric', precision: 5, scale: 2, default: 0 })
   @ApiProperty({ description: 'Special discount percent' })
   special_discount_percent: number;
 

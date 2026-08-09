@@ -222,25 +222,62 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
                 <span>Gross Amount</span>
                 <span>₹{Number(order.gross_order_amount || 0).toFixed(2)}</span>
               </div>
-              {Number(order.standard_discount_amount || 0) > 0 && (
+              {!order.manufacturer_id ? (
                 <>
-                  <div className="flex justify-between items-center text-slate-600">
-                    <span>Standard Discount ({Number(order.standard_discount_percent || 0)}%)</span>
-                    <span className="text-red-500">- ₹{Number(order.standard_discount_amount || 0).toFixed(2)}</span>
-                  </div>
+                  {Number(order.standard_discount_amount || 0) > 0 && (
+                    <>
+                      <div className="flex justify-between items-center text-slate-600">
+                        <span>Standard Discount ({Number(order.standard_discount_percent || 0)}%)</span>
+                        <span className="text-red-500">- ₹{Number(order.standard_discount_amount || 0).toFixed(2)}</span>
+                      </div>
+                      {Number(order.special_discount_amount || 0) > 0 && (
+                        <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                          <span>Amount after Standard Discount</span>
+                          <span>₹{Number((order.gross_order_amount || 0) - (order.standard_discount_amount || 0)).toFixed(2)}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
                   {Number(order.special_discount_amount || 0) > 0 && (
-                    <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
-                      <span>Amount after Standard Discount</span>
-                      <span>₹{Number((order.gross_order_amount || 0) - (order.standard_discount_amount || 0)).toFixed(2)}</span>
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Special Discount ({Number(order.special_discount_percent || 0)}%)</span>
+                      <span className="text-red-500">- ₹{Number(order.special_discount_amount || 0).toFixed(2)}</span>
                     </div>
                   )}
                 </>
-              )}
-              {Number(order.special_discount_amount || 0) > 0 && (
-                <div className="flex justify-between items-center text-slate-600">
-                  <span>Special Discount ({Number(order.special_discount_percent || 0)}%)</span>
-                  <span className="text-red-500">- ₹{Number(order.special_discount_amount || 0).toFixed(2)}</span>
-                </div>
+              ) : (
+                <>
+                  {Number(order.distributor_discount_amount || 0) > 0 && (
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Distributor Discount ({Number(order.distributor_discount_percent || 0)}%)</span>
+                      <span className="text-red-500">- ₹{Number(order.distributor_discount_amount || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {Number(order.distributor_margin_amount || 0) > 0 && (
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Distributor Margin ({Number(order.distributor_margin_percent || 0)}%)</span>
+                      <span className="text-red-500">- ₹{Number(order.distributor_margin_amount || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {Number(order.freight_discount_amount || 0) > 0 && (
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Freight Discount ({Number(order.freight_discount_percent || 0)}%)</span>
+                      <span className="text-red-500">- ₹{Number(order.freight_discount_amount || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {Number(order.special_discount_amount || 0) > 0 && (
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Special Discount ({Number(order.special_discount_percent || 0)}%)</span>
+                      <span className="text-red-500">- ₹{Number(order.special_discount_amount || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {Number(order.cash_discount_amount || 0) > 0 && (
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span>Cash Discount ({Number(order.cash_discount_percent || 0)}%)</span>
+                      <span className="text-red-500">- ₹{Number(order.cash_discount_amount || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                </>
               )}
               {Number(order.total_gst_amount || 0) > 0 && (
                 <div className="flex justify-between items-center text-slate-600">
