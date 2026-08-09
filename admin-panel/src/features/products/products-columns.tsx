@@ -21,6 +21,7 @@ import {
 type ProductRowData = ProductDto & {
   created_at?: string;
   category?: { name: string };
+  manufacturer?: { company_name: string };
 };
 
 interface ProductsColumnsProps {
@@ -70,6 +71,14 @@ export function getProductColumns({ onEdit, onDelete }: ProductsColumnsProps): C
       cell: ({ row }) => {
         const data = row.original as ProductRowData;
         return <span className="text-sm">{data.category?.name || 'Uncategorized'}</span>;
+      },
+    },
+    {
+      id: 'manufacturer',
+      header: 'Manufacturer',
+      cell: ({ row }) => {
+        const data = row.original as ProductRowData;
+        return <span className="text-sm">{data.manufacturer?.company_name || data.external_manufacturer_name || '—'}</span>;
       },
     },
     {
