@@ -159,6 +159,11 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
     totalDiscount = stdDiscAmount + specDiscAmount;
   }
 
+  const balanceAfterDistDisc = grossAmount - distDiscAmount;
+  const balanceAfterDistMargin = balanceAfterDistDisc - distMarginAmount;
+  const balanceAfterFreightDisc = balanceAfterDistMargin - freightDiscAmount;
+  const balanceAfterSpecDisc = balanceAfterFreightDisc - specDiscAmount;
+
   let totalGstAmount = 0;
   watchedProducts.forEach(p => {
     const product = allProducts.find(ap => ap.id === p.productId);
@@ -418,28 +423,52 @@ export function EditOrderDrawer({ orderId, isOpen, onClose }: EditOrderDrawerPro
                 {isPurchaseOrder ? (
                   <>
                     {distDiscAmount > 0 && (
-                      <div className="flex justify-between items-center text-slate-600">
-                        <span>Distributor Discount</span>
-                        <span className="text-red-500">- ₹{Number(distDiscAmount).toFixed(2)}</span>
-                      </div>
+                      <>
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span>Distributor Discount</span>
+                          <span className="text-red-500">- ₹{Number(distDiscAmount).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                          <span>Total after Distributor Discount</span>
+                          <span>₹{Number(balanceAfterDistDisc).toFixed(2)}</span>
+                        </div>
+                      </>
                     )}
                     {distMarginAmount > 0 && (
-                      <div className="flex justify-between items-center text-slate-600">
-                        <span>Distributor Margin</span>
-                        <span className="text-red-500">- ₹{Number(distMarginAmount).toFixed(2)}</span>
-                      </div>
+                      <>
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span>Distributor Margin</span>
+                          <span className="text-red-500">- ₹{Number(distMarginAmount).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                          <span>Total after Distributor Margin</span>
+                          <span>₹{Number(balanceAfterDistMargin).toFixed(2)}</span>
+                        </div>
+                      </>
                     )}
                     {freightDiscAmount > 0 && (
-                      <div className="flex justify-between items-center text-slate-600">
-                        <span>Freight Discount</span>
-                        <span className="text-red-500">- ₹{Number(freightDiscAmount).toFixed(2)}</span>
-                      </div>
+                      <>
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span>Freight Discount</span>
+                          <span className="text-red-500">- ₹{Number(freightDiscAmount).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                          <span>Total after Freight Discount</span>
+                          <span>₹{Number(balanceAfterFreightDisc).toFixed(2)}</span>
+                        </div>
+                      </>
                     )}
                     {specDiscAmount > 0 && (
-                      <div className="flex justify-between items-center text-slate-600">
-                        <span>Special Discount</span>
-                        <span className="text-red-500">- ₹{Number(specDiscAmount).toFixed(2)}</span>
-                      </div>
+                      <>
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span>Special Discount</span>
+                          <span className="text-red-500">- ₹{Number(specDiscAmount).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                          <span>Total after Special Discount</span>
+                          <span>₹{Number(balanceAfterSpecDisc).toFixed(2)}</span>
+                        </div>
+                      </>
                     )}
                     {cashDiscAmount > 0 && (
                       <div className="flex justify-between items-center text-slate-600">

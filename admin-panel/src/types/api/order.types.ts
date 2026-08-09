@@ -46,6 +46,14 @@ export interface OrderDto {
   special_discount_percent?: number;
   standard_discount_amount?: number;
   special_discount_amount?: number;
+  distributor_discount_percent?: number;
+  distributor_discount_amount?: number;
+  distributor_margin_percent?: number;
+  distributor_margin_amount?: number;
+  freight_discount_percent?: number;
+  freight_discount_amount?: number;
+  cash_discount_percent?: number;
+  cash_discount_amount?: number;
   transport_mode?: string;
   manufacturer_id?: string;
   final_order_amount: number;

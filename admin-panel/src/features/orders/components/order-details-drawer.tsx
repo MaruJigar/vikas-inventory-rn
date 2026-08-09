@@ -34,7 +34,21 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
   const nextStatus = currentStatusName ? STATUS_PROGRESSION[currentStatusName] : null;
 
   const { user } = useAuthStore();
-  const isCreator = order && order.salesman_id === null && user?.role === 'DISTRIBUTOR_ADMIN';
+  const isCreator = user?.id === order?.salesman_id || user?.id === order?.distributor_id;
+
+  const gross = Number(order?.gross_order_amount || 0);
+  const dDisc = Number(order?.distributor_discount_amount || 0);
+  const dMargin = Number(order?.distributor_margin_amount || 0);
+  const fDisc = Number(order?.freight_discount_amount || 0);
+  const sDisc = Number(order?.special_discount_amount || 0);
+  const cDisc = Number(order?.cash_discount_amount || 0);
+  const stdDisc = Number(order?.standard_discount_amount || 0);
+
+  const balAfterDDisc = gross - dDisc;
+  const balAfterDMargin = balAfterDDisc - dMargin;
+  const balAfterFDisc = balAfterDMargin - fDisc;
+  const balAfterSDisc = balAfterFDisc - sDisc;
+  const balAfterStdDisc = gross - stdDisc;
 
   const handleAdvanceStatus = () => {
     if (nextStatus && orderId) {
@@ -224,57 +238,81 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
               </div>
               {!order.manufacturer_id ? (
                 <>
-                  {Number(order.standard_discount_amount || 0) > 0 && (
+                  {stdDisc > 0 && (
                     <>
                       <div className="flex justify-between items-center text-slate-600">
                         <span>Standard Discount ({Number(order.standard_discount_percent || 0)}%)</span>
-                        <span className="text-red-500">- ₹{Number(order.standard_discount_amount || 0).toFixed(2)}</span>
+                        <span className="text-red-500">- ₹{stdDisc.toFixed(2)}</span>
                       </div>
-                      {Number(order.special_discount_amount || 0) > 0 && (
+                      {sDisc > 0 && (
                         <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
-                          <span>Amount after Standard Discount</span>
-                          <span>₹{Number((order.gross_order_amount || 0) - (order.standard_discount_amount || 0)).toFixed(2)}</span>
+                          <span>Total after Standard Discount</span>
+                          <span>₹{balAfterStdDisc.toFixed(2)}</span>
                         </div>
                       )}
                     </>
                   )}
-                  {Number(order.special_discount_amount || 0) > 0 && (
+                  {sDisc > 0 && (
                     <div className="flex justify-between items-center text-slate-600">
                       <span>Special Discount ({Number(order.special_discount_percent || 0)}%)</span>
-                      <span className="text-red-500">- ₹{Number(order.special_discount_amount || 0).toFixed(2)}</span>
+                      <span className="text-red-500">- ₹{sDisc.toFixed(2)}</span>
                     </div>
                   )}
                 </>
               ) : (
                 <>
-                  {Number(order.distributor_discount_amount || 0) > 0 && (
-                    <div className="flex justify-between items-center text-slate-600">
-                      <span>Distributor Discount ({Number(order.distributor_discount_percent || 0)}%)</span>
-                      <span className="text-red-500">- ₹{Number(order.distributor_discount_amount || 0).toFixed(2)}</span>
-                    </div>
+                  {dDisc > 0 && (
+                    <>
+                      <div className="flex justify-between items-center text-slate-600">
+                        <span>Distributor Discount ({Number(order.distributor_discount_percent || 0)}%)</span>
+                        <span className="text-red-500">- ₹{dDisc.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                        <span>Total after Distributor Discount</span>
+                        <span>₹{balAfterDDisc.toFixed(2)}</span>
+                      </div>
+                    </>
                   )}
-                  {Number(order.distributor_margin_amount || 0) > 0 && (
-                    <div className="flex justify-between items-center text-slate-600">
-                      <span>Distributor Margin ({Number(order.distributor_margin_percent || 0)}%)</span>
-                      <span className="text-red-500">- ₹{Number(order.distributor_margin_amount || 0).toFixed(2)}</span>
-                    </div>
+                  {dMargin > 0 && (
+                    <>
+                      <div className="flex justify-between items-center text-slate-600">
+                        <span>Distributor Margin ({Number(order.distributor_margin_percent || 0)}%)</span>
+                        <span className="text-red-500">- ₹{dMargin.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                        <span>Total after Distributor Margin</span>
+                        <span>₹{balAfterDMargin.toFixed(2)}</span>
+                      </div>
+                    </>
                   )}
-                  {Number(order.freight_discount_amount || 0) > 0 && (
-                    <div className="flex justify-between items-center text-slate-600">
-                      <span>Freight Discount ({Number(order.freight_discount_percent || 0)}%)</span>
-                      <span className="text-red-500">- ₹{Number(order.freight_discount_amount || 0).toFixed(2)}</span>
-                    </div>
+                  {fDisc > 0 && (
+                    <>
+                      <div className="flex justify-between items-center text-slate-600">
+                        <span>Freight Discount ({Number(order.freight_discount_percent || 0)}%)</span>
+                        <span className="text-red-500">- ₹{fDisc.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                        <span>Total after Freight Discount</span>
+                        <span>₹{balAfterFDisc.toFixed(2)}</span>
+                      </div>
+                    </>
                   )}
-                  {Number(order.special_discount_amount || 0) > 0 && (
-                    <div className="flex justify-between items-center text-slate-600">
-                      <span>Special Discount ({Number(order.special_discount_percent || 0)}%)</span>
-                      <span className="text-red-500">- ₹{Number(order.special_discount_amount || 0).toFixed(2)}</span>
-                    </div>
+                  {sDisc > 0 && (
+                    <>
+                      <div className="flex justify-between items-center text-slate-600">
+                        <span>Special Discount ({Number(order.special_discount_percent || 0)}%)</span>
+                        <span className="text-red-500">- ₹{sDisc.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-600 font-medium border-t border-slate-200 mt-1 pt-1">
+                        <span>Total after Special Discount</span>
+                        <span>₹{balAfterSDisc.toFixed(2)}</span>
+                      </div>
+                    </>
                   )}
-                  {Number(order.cash_discount_amount || 0) > 0 && (
+                  {cDisc > 0 && (
                     <div className="flex justify-between items-center text-slate-600">
                       <span>Cash Discount ({Number(order.cash_discount_percent || 0)}%)</span>
-                      <span className="text-red-500">- ₹{Number(order.cash_discount_amount || 0).toFixed(2)}</span>
+                      <span className="text-red-500">- ₹{cDisc.toFixed(2)}</span>
                     </div>
                   )}
                 </>
