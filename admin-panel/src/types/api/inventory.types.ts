@@ -11,6 +11,8 @@ export interface InventoryDto {
   created_at: string;
   updated_at: string;
   product?: ProductDto;
+  stock_status?: string;
+  low_stock_threshold?: number | null;
 }
 
 export type MovementType =

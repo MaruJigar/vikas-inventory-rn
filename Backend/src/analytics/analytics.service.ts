@@ -9,6 +9,8 @@ import { ApprovalRequest } from '../approval/approval-request.entity';
 import { WorkingDay } from '../working-day/working-day.entity';
 import { Notification } from '../notification/notification.entity';
 import { InventoryMovement } from '../inventory/inventory-movement.entity';
+import { Distributor } from '../distributor/distributor.entity';
+import { Manufacturer } from '../manufacturer/manufacturer.entity';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import { applyOwnership } from './shared/utils/report-builder.util';
 
@@ -26,6 +28,8 @@ export class AnalyticsService {
     @InjectRepository(Notification) private notifRepo: Repository<Notification>,
     @InjectRepository(InventoryMovement)
     private movementRepo: Repository<InventoryMovement>,
+    @InjectRepository(Distributor) private distRepo: Repository<Distributor>,
+    @InjectRepository(Manufacturer) private mfrRepo: Repository<Manufacturer>,
   ) {}
 
   async getDashboard(userRole: string, userId: string) {
@@ -280,10 +284,21 @@ export class AnalyticsService {
   }
 
   async getInventoryAnalytics(userRole: string, userId: string) {
+    let threshold: number | null = null;
+    if (userRole === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.distRepo.findOne({ where: { user_id: userId } });
+      if (dist) threshold = dist.low_stock_threshold;
+    } else if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
+      if (mfr) threshold = mfr.low_stock_threshold;
+    }
+
     const qb = this.invRepo
       .createQueryBuilder('inv')
       .select(
-        'SUM(CASE WHEN inv.available_quantity <= 10 THEN 1 ELSE 0 END)',
+        threshold !== null && threshold !== undefined
+          ? `SUM(CASE WHEN inv.available_quantity <= ${threshold} THEN 1 ELSE 0 END)`
+          : '0',
         'low_stock',
       )
       .addSelect(

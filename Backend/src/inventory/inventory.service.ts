@@ -13,8 +13,10 @@ import { InventoryMovement } from './inventory-movement.entity';
 import { ManufacturerInventory } from './manufacturer-inventory.entity';
 import { ManufacturerInventoryMovement } from './manufacturer-inventory-movement.entity';
 import { AdjustInventoryDto } from './dto/adjust-inventory.dto';
+import { UpdateInventorySettingsDto } from './dto/update-inventory-settings.dto';
 import { NotificationService } from '../notification/notification.service';
 import { Distributor } from '../distributor/distributor.entity';
+import { Manufacturer } from '../manufacturer/manufacturer.entity';
 import { Product } from '../product/product.entity';
 
 @Injectable()
@@ -29,6 +31,7 @@ export class InventoryService {
     @InjectRepository(ManufacturerInventoryMovement)
     private mfrMovementRepo: Repository<ManufacturerInventoryMovement>,
     @InjectRepository(Distributor) private distRepo: Repository<Distributor>,
+    @InjectRepository(Manufacturer) private mfrRepo: Repository<Manufacturer>,
     @InjectRepository(Product) private productRepo: Repository<Product>,
     private dataSource: DataSource,
     private readonly notificationService: NotificationService,
@@ -98,8 +101,34 @@ export class InventoryService {
     const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
     const totalPages = Math.ceil(total / limit);
 
+    let low_stock_threshold: number | null = null;
+    if (userRole === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.distRepo.findOne({ where: { user_id: userId } });
+      if (dist) low_stock_threshold = dist.low_stock_threshold ?? null;
+    } else if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfrResult = await this.mfrRepo.findOne({ where: { user_id: userId } });
+      if (mfrResult) low_stock_threshold = mfrResult.low_stock_threshold ?? null;
+    }
+
+    const enhancedData = data.map(item => {
+      let stock_status = 'NORMAL';
+      const available = Number(item.available_quantity) || 0;
+      
+      if (available <= 0) {
+        stock_status = 'OUT_OF_STOCK';
+      } else if (low_stock_threshold !== null && available <= low_stock_threshold) {
+        stock_status = 'LOW_STOCK';
+      }
+
+      return {
+        ...item,
+        low_stock_threshold,
+        stock_status
+      };
+    });
+
     return {
-      data,
+      data: enhancedData,
       meta: {
         page: Number(page),
         limit: Number(limit),
@@ -109,6 +138,36 @@ export class InventoryService {
         hasPreviousPage: page > 1,
       },
     };
+  }
+
+  async getSettings(userId: string, userRole: string) {
+    if (userRole === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.distRepo.findOne({ where: { user_id: userId } });
+      if (!dist) throw new ForbiddenException('Distributor profile not found');
+      return { low_stock_threshold: dist.low_stock_threshold ?? null };
+    } else if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
+      if (!mfr) throw new ForbiddenException('Manufacturer profile not found');
+      return { low_stock_threshold: mfr.low_stock_threshold ?? null };
+    }
+    throw new ForbiddenException('Cannot view settings');
+  }
+
+  async updateSettings(dto: UpdateInventorySettingsDto, userId: string, userRole: string) {
+    if (userRole === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.distRepo.findOne({ where: { user_id: userId } });
+      if (!dist) throw new ForbiddenException('Distributor profile not found');
+      dist.low_stock_threshold = dto.low_stock_threshold === undefined ? dist.low_stock_threshold : (dto.low_stock_threshold || null);
+      await this.distRepo.save(dist);
+      return { low_stock_threshold: dist.low_stock_threshold };
+    } else if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
+      if (!mfr) throw new ForbiddenException('Manufacturer profile not found');
+      mfr.low_stock_threshold = dto.low_stock_threshold === undefined ? mfr.low_stock_threshold : (dto.low_stock_threshold || null);
+      await this.mfrRepo.save(mfr);
+      return { low_stock_threshold: mfr.low_stock_threshold };
+    }
+    throw new ForbiddenException('Cannot update settings');
   }
 
   async adjustManualStock(
@@ -200,6 +259,20 @@ export class InventoryService {
 
         await queryRunner.manager.save(movement);
         await queryRunner.commitTransaction();
+
+        const dist = await this.distRepo.findOne({ where: { id: dto.distributor_id } });
+        if (dist && dist.low_stock_threshold !== null && previous_available > dist.low_stock_threshold && new_available <= dist.low_stock_threshold) {
+          await this.notificationService.createNotification(
+            dist.user_id,
+            'DISTRIBUTOR_ADMIN',
+            'Low Stock Alert',
+            `Product ${product.name} is low on stock (${new_available} remaining).`,
+            'LOW_STOCK',
+            'PRODUCT',
+            dto.product_id
+          );
+        }
+
         return inv;
       } else if (dto.manufacturer_id) {
         let inv = await queryRunner.manager.findOne(ManufacturerInventory, {
@@ -242,6 +315,20 @@ export class InventoryService {
 
         await queryRunner.manager.save(movement);
         await queryRunner.commitTransaction();
+
+        const mfr = await this.mfrRepo.findOne({ where: { id: dto.manufacturer_id } });
+        if (mfr && mfr.low_stock_threshold !== null && previous_available > mfr.low_stock_threshold && new_available <= mfr.low_stock_threshold) {
+          await this.notificationService.createNotification(
+            mfr.user_id,
+            'MANUFACTURER_ADMIN',
+            'Low Stock Alert',
+            `Product ${product.name} is low on stock (${new_available} remaining).`,
+            'LOW_STOCK',
+            'PRODUCT',
+            dto.product_id
+          );
+        }
+
         return inv;
       }
     } catch (err) {

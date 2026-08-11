@@ -1,7 +1,9 @@
 import { InventoryList } from '@/features/inventory/components/InventoryList';
+import { InventorySettings } from '@/features/inventory/components/InventorySettings';
 import { Metadata } from 'next';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RoleGuard } from '@/components/auth/RoleGuard';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export const metadata: Metadata = {
   title: 'Inventory | Vikas Inventory',
@@ -23,7 +25,20 @@ export default function InventoryPage() {
             </div>
           </div>
           
-          <InventoryList />
+          <Tabs defaultValue="stock" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="stock">Stock</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="stock" className="space-y-6">
+              <InventoryList />
+            </TabsContent>
+            
+            <TabsContent value="settings" className="space-y-6">
+              <InventorySettings />
+            </TabsContent>
+          </Tabs>
         </div>
       </RoleGuard>
     </AppLayout>

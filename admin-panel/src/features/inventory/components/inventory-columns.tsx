@@ -37,6 +37,34 @@ export const getInventoryColumns = ({ onAdjustStock, currentRole }: GetColumnsPr
     },
   },
   {
+    id: 'status',
+    header: 'Status',
+    cell: ({ row }) => {
+      const status = row.original.stock_status || 'NORMAL';
+      const threshold = row.original.low_stock_threshold;
+      
+      let variant: "default" | "destructive" | "secondary" | "outline" = "default";
+      let label = 'Normal';
+      
+      if (status === 'OUT_OF_STOCK') {
+        variant = 'destructive';
+        label = 'Out of Stock';
+      } else if (status === 'LOW_STOCK') {
+        variant = 'secondary';
+        label = 'Low Stock';
+      }
+      
+      return (
+        <div className="flex flex-col gap-1 items-start">
+          <Badge variant={variant}>{label}</Badge>
+          {threshold !== null && threshold !== undefined && (
+            <span className="text-xs text-slate-500">Threshold: {threshold}</span>
+          )}
+        </div>
+      );
+    }
+  },
+  {
     accessorKey: 'reserved_quantity',
     header: 'Reserved',
     cell: ({ row }) => row.original.reserved_quantity || 0,

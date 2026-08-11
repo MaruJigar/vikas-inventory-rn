@@ -6,10 +6,12 @@ import {
   Param,
   UseGuards,
   Request,
+  Patch,
   Query,
 } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { AdjustInventoryDto } from './dto/adjust-inventory.dto';
+import { UpdateInventorySettingsDto } from './dto/update-inventory-settings.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
@@ -77,6 +79,26 @@ export class InventoryController {
       req.user.userId,
       query,
       isManufacturer,
+    );
+  }
+
+  @Roles('MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Get('settings')
+  @ApiOperation({ summary: 'Get Inventory Settings' })
+  @ApiBearerAuth('bearer')
+  getSettings(@Request() req) {
+    return this.inventoryService.getSettings(req.user.userId, req.user.role);
+  }
+
+  @Roles('MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @Patch('settings')
+  @ApiOperation({ summary: 'Update Inventory Settings' })
+  @ApiBearerAuth('bearer')
+  updateSettings(@Body() dto: UpdateInventorySettingsDto, @Request() req) {
+    return this.inventoryService.updateSettings(
+      dto,
+      req.user.userId,
+      req.user.role,
     );
   }
 }
