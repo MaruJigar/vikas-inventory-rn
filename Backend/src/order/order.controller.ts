@@ -49,6 +49,20 @@ export class OrdersController {
     return this.orderService.createOrder(req.user.userId, dto);
   }
 
+  @Post('distributor-to-manufacturer/preview')
+  @Roles('DISTRIBUTOR_ADMIN')
+  @ApiOperation({
+    summary: 'Preview Distributor Order (DISTRIBUTOR_ADMIN only)',
+    description: 'Returns a calculated preview of the purchase order pricing without creating the order in the database. Groups by manufacturer and applies the configured distributor discount.',
+  })
+  @ApiBearerAuth('bearer')
+  previewDistributorManufacturerOrder(
+    @Request() req,
+    @Body() dto: CreateDistributorManufacturerOrderDto,
+  ) {
+    return this.orderService.previewDistributorManufacturerOrder(req.user.userId, dto);
+  }
+
   @Post('distributor-to-manufacturer')
   @Roles('DISTRIBUTOR_ADMIN')
   @ApiOperation({

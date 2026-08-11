@@ -226,6 +226,76 @@ export class OrderService {
     };
   }
 
+  // ─── previewDistributorManufacturerOrder ─────────────────────────
+  async previewDistributorManufacturerOrder(userId: string, dto: CreateDistributorManufacturerOrderDto) {
+    const distributor = await this.getDistributorOrFail(userId);
+    const configuredDiscountPercent = Number(distributor.distributor_discount_percent) || 0;
+
+    if (!dto.products || dto.products.length === 0) {
+      throw new BadRequestException('At least one product is required');
+    }
+
+    const groupedProducts = new Map<string | null, any[]>();
+    for (let i = 0; i < dto.products.length; i++) {
+      const p = dto.products[i];
+      const product = await this.productRepo.findOne({
+        where: { id: p.productId },
+      });
+      if (!product) throw new NotFoundException(`Product ${p.productId} not found`);
+
+      const mfrId = product.manufacturer_id || null;
+      if (!groupedProducts.has(mfrId)) {
+        groupedProducts.set(mfrId, []);
+      }
+      groupedProducts.get(mfrId)!.push({ p, product });
+    }
+
+    const previews: any[] = [];
+
+    for (const [mfrId, items] of groupedProducts.entries()) {
+      let grossOrderAmount = 0; // Sum of mrp * quantity
+      let distributorDiscountAmount = 0; // Sum of item discounts
+      let totalQuantity = 0;
+      const itemsData: any[] = [];
+
+      for (const item of items) {
+        const { p, product } = item;
+        const grossLineAmount = Number(product.mrp) * Number(p.quantity);
+        const itemDiscountAmount = this.calcItemDiscount('PERCENTAGE', configuredDiscountPercent, grossLineAmount);
+        const netLineAmount = grossLineAmount - itemDiscountAmount;
+
+        grossOrderAmount += grossLineAmount;
+        distributorDiscountAmount += itemDiscountAmount;
+        totalQuantity += Number(p.quantity);
+
+        itemsData.push({
+          product_id: p.productId,
+          product_name_snapshot: product.name,
+          sku_snapshot: (product as any).sku || null,
+          manufacturer_name_snapshot: (product as any).manufacturer_name || null,
+          quantity: Number(p.quantity),
+          mrp: Number(product.mrp),
+          gross_line_amount: grossLineAmount,
+          net_line_amount: netLineAmount,
+        });
+      }
+
+      const finalOrderAmount = grossOrderAmount - distributorDiscountAmount;
+
+      previews.push({
+        manufacturer_id: mfrId,
+        gross_order_amount: grossOrderAmount,
+        distributor_discount_percent: configuredDiscountPercent,
+        distributor_discount_amount: distributorDiscountAmount,
+        final_order_amount: finalOrderAmount,
+        total_quantity: totalQuantity,
+        items: itemsData,
+      });
+    }
+
+    return previews;
+  }
+
   // ─── createDistributorManufacturerOrder ──────────────────────────────────
   async createDistributorManufacturerOrder(userId: string, dto: CreateDistributorManufacturerOrderDto) {
     const distributor = await this.getDistributorOrFail(userId);
@@ -257,6 +327,7 @@ export class OrderService {
         }
 
         const createdOrders: Order[] = [];
+        const configuredDiscountPercent = Number(distributor.distributor_discount_percent) || 0;
 
         for (const [mfrId, items] of groupedProducts.entries()) {
           if (mfrId) {
@@ -269,15 +340,16 @@ export class OrderService {
           }
 
           let grossOrderAmount = 0;
-          let totalProductDiscountAmount = 0;
+          let distributorDiscountAmount = 0;
           let totalQuantity = 0;
           const itemsData: Partial<OrderItem>[] = [];
 
           for (const item of items) {
             const { p, product } = item;
             const grossLineAmount = Number(product.mrp) * Number(p.quantity);
-            const discountType = p.itemDiscountType || 'NONE';
-            const discountValue = p.itemDiscountValue || 0;
+            // Distributor orders ignore any discount sent in request. We strictly use configured discount.
+            const discountType = 'PERCENTAGE';
+            const discountValue = configuredDiscountPercent;
             const itemDiscountAmount = this.calcItemDiscount(
               discountType,
               discountValue,
@@ -285,8 +357,8 @@ export class OrderService {
             );
             const netLineAmount = grossLineAmount - itemDiscountAmount;
 
-            grossOrderAmount += netLineAmount;
-            totalProductDiscountAmount += itemDiscountAmount;
+            grossOrderAmount += grossLineAmount;
+            distributorDiscountAmount += itemDiscountAmount;
             totalQuantity += Number(p.quantity);
 
             itemsData.push({
@@ -309,11 +381,10 @@ export class OrderService {
 
           const standardDiscountPercent = 0;
           const specDiscountPercent = 0;
-
           const standardDiscountAmount = 0;
           const specialDiscountAmount = 0;
 
-          const finalOrderAmount = grossOrderAmount;
+          const finalOrderAmount = grossOrderAmount - distributorDiscountAmount;
 
           const idempotencyKey = dto.idempotencyKey ? `${dto.idempotencyKey}-${mfrId || 'self'}` : undefined;
           
@@ -337,6 +408,8 @@ export class OrderService {
             manufacturer_id: mfrId as any,
             status_id: draftStatus.id,
             gross_order_amount: grossOrderAmount,
+            distributor_discount_percent: configuredDiscountPercent,
+            distributor_discount_amount: distributorDiscountAmount,
             standard_discount_percent: standardDiscountPercent,
             standard_discount_amount: standardDiscountAmount,
             special_discount_percent: specDiscountPercent,

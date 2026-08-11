@@ -5,8 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 import { useCreateDistributorOrderMutation } from '@/hooks/orders/useCreateDistributorOrderMutation';
+import { usePreviewDistributorOrderMutation } from '@/hooks/orders/usePreviewDistributorOrderMutation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Trash2, PlusCircle } from 'lucide-react';
+import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ProductSearchSelector } from './ProductSearchSelector';
@@ -33,6 +35,9 @@ type FormValues = {
 
 export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }: CreatePurchaseOrderDrawerProps) {
   const { mutate: createOrder, isPending } = useCreateDistributorOrderMutation();
+  const { mutate: previewOrder, isPending: isPreviewing } = usePreviewDistributorOrderMutation();
+
+  const [previewData, setPreviewData] = useState<any[]>([]);
 
   const { register, control, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
     defaultValues: {
@@ -60,18 +65,45 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
         })),
         transportMode: ''
       });
+      setPreviewData([]);
     }
   }, [isOpen, initialItems, reset]);
 
   const watchedProducts = watch('products') || [];
   const watchedTransportMode = watch('transportMode') || '';
 
-  const grossAmount = watchedProducts.reduce((sum, p) => sum + (p.mrp_snapshot * (p.quantity || 0)), 0);
+  useEffect(() => {
+    if (watchedProducts.length > 0) {
+      const timeoutId = setTimeout(() => {
+        previewOrder({
+          products: watchedProducts.map(p => ({
+            productId: p.productId,
+            quantity: Number(p.quantity || 1),
+          })),
+        }, {
+          onSuccess: (data) => {
+            setPreviewData(data);
+          }
+        });
+      }, 500); // debounce
+      return () => clearTimeout(timeoutId);
+    } else {
+      setPreviewData([]);
+    }
+  }, [watchedProducts, previewOrder]);
 
-  let totalGstAmount = 0; // Not perfectly calculating GST here if we don't have allProducts, but this is simulated logic anyway.
-  // We can just set it to 0 for now since the backend will recalculate it. Or if we really need it, we could include gst_percent in the product payload.
+  let grossAmount = 0;
+  let distributorDiscountAmount = 0;
+  let finalAmount = 0;
 
-  const finalAmount = grossAmount + totalGstAmount;
+  if (previewData && previewData.length > 0) {
+    grossAmount = previewData.reduce((sum, p) => sum + Number(p.gross_order_amount), 0);
+    distributorDiscountAmount = previewData.reduce((sum, p) => sum + Number(p.distributor_discount_amount), 0);
+    finalAmount = previewData.reduce((sum, p) => sum + Number(p.final_order_amount), 0);
+  } else {
+    grossAmount = watchedProducts.reduce((sum, p) => sum + (p.mrp_snapshot * (p.quantity || 0)), 0);
+    finalAmount = grossAmount;
+  }
 
   const onSubmit = (data: FormValues) => {
     if (!data.products.length) return;
@@ -130,15 +162,34 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
                   <TableRow>
                     <TableHead>Product</TableHead>
                     <TableHead className="w-[120px]">MRP</TableHead>
+                    <TableHead className="w-[120px]">Your Price</TableHead>
                     <TableHead className="w-[150px]">Quantity</TableHead>
-                    <TableHead className="w-[150px] text-right">Gross</TableHead>
+                    <TableHead className="w-[150px] text-right">Line Total</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {fields.map((field, index) => {
                     const watchedItem = watchedProducts[index];
-                    const itemGross = (watchedItem?.mrp_snapshot || 0) * (watchedItem?.quantity || 0);
+                    
+                    let previewItem = null;
+                    if (previewData && previewData.length > 0) {
+                      for (const order of previewData) {
+                        const found = order.items?.find((i: any) => i.product_id === watchedItem?.productId);
+                        if (found) {
+                          previewItem = found;
+                          break;
+                        }
+                      }
+                    }
+
+                    const itemMrp = watchedItem?.mrp_snapshot || 0;
+                    const itemQuantity = watchedItem?.quantity || 0;
+                    const itemGross = itemMrp * itemQuantity;
+
+                    // Use preview data if available, fallback to un-discounted calculation
+                    const displayYourPrice = previewItem ? (previewItem.net_line_amount / (previewItem.quantity || 1)) : itemMrp;
+                    const displayLineTotal = previewItem ? previewItem.net_line_amount : itemGross;
 
                     return (
                       <TableRow key={field.id}>
@@ -158,7 +209,10 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
                           </div>
                         </TableCell>
                         <TableCell>
-                          ₹{(field.mrp_snapshot || 0).toFixed(2)}
+                          <span className={previewItem && displayYourPrice < itemMrp ? "line-through text-slate-400" : ""}>₹{itemMrp.toFixed(2)}</span>
+                        </TableCell>
+                        <TableCell>
+                          ₹{displayYourPrice.toFixed(2)}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -197,8 +251,8 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
                             </Button>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          ₹{itemGross.toFixed(2)}
+                        <TableCell className="text-right font-medium">
+                          ₹{displayLineTotal.toFixed(2)}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -270,15 +324,24 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
           {/* Financial Summary (Real-time Recalculated) */}
           <section className="border rounded-md bg-slate-50 p-4">
             <h3 className="text-sm font-semibold text-slate-900 mb-4 border-b border-slate-200 pb-2">Financial Totals</h3>
+            
+            {isPreviewing && (
+              <div className="text-xs text-blue-600 mb-2 animate-pulse">Recalculating pricing...</div>
+            )}
+            
             <div className="space-y-2 text-sm">
               <div className="flex justify-between items-center text-slate-600">
-                <span>Gross Amount</span>
+                <span>Subtotal (MRP)</span>
                 <span>₹{Number(grossAmount).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between items-center text-slate-600">
-                <span>Total GST Amount</span>
-                <span className="text-emerald-600">+ ₹{Number(totalGstAmount).toFixed(2)}</span>
-              </div>
+              
+              {distributorDiscountAmount > 0 && (
+                <div className="flex justify-between items-center text-slate-600">
+                  <span>Distributor Discount</span>
+                  <span className="text-red-600">- ₹{Number(distributorDiscountAmount).toFixed(2)}</span>
+                </div>
+              )}
+              
               <div className="flex justify-between items-center font-bold text-slate-900 pt-2 border-t border-slate-200 mt-2">
                 <span>Final Amount</span>
                 <span className="text-base">₹{Number(finalAmount).toFixed(2)}</span>
