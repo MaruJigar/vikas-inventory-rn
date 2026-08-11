@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/store/useAuthStore";
 import { Loader2 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 
 const settingsSchema = z.object({
@@ -27,7 +27,7 @@ type SettingsValues = {
 };
 
 export function InventorySettings() {
-  const { data: session } = useSession();
+  const { user } = useAuthStore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -58,12 +58,12 @@ export function InventorySettings() {
       }
     }
 
-    if (session?.user?.role === 'MANUFACTURER_ADMIN' || session?.user?.role === 'DISTRIBUTOR_ADMIN') {
+    if (user?.role === 'MANUFACTURER_ADMIN' || user?.role === 'DISTRIBUTOR_ADMIN') {
       fetchSettings();
     } else {
       setIsLoading(false);
     }
-  }, [session, form, toast]);
+  }, [user, form, toast]);
 
   const onSubmit = async (data: z.infer<typeof settingsSchema>) => {
     setIsSaving(true);
@@ -87,7 +87,7 @@ export function InventorySettings() {
     }
   };
 
-  if (session?.user?.role === 'SUPER_ADMIN') {
+  if (user?.role === 'SUPER_ADMIN') {
     return (
       <Card>
         <CardHeader>
