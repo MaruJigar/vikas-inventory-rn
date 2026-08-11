@@ -16,7 +16,7 @@ import { CancelOrderDialog } from '@/features/orders/components/cancel-order-dia
 import { UpdateOrderStatusDialog } from '@/features/orders/components/update-order-status-dialog';
 import { OrderHistoryDrawer } from '@/features/orders/components/order-history-drawer';
 import { OrderFulfillmentLogsDrawer } from '@/features/orders/components/order-fulfillment-logs-drawer';
-import { useGeneratePurchaseRequestMutation } from '@/hooks/orders/useGeneratePurchaseRequestMutation';
+
 import { CreatePurchaseOrderDrawer } from '@/features/orders/components/create-purchase-order-drawer';
 import { useState, useEffect } from 'react';
 import { OrderDto } from '@/types/api/order.types';
@@ -44,7 +44,7 @@ function OrdersPageContent() {
   const [discountPromptOrder, setDiscountPromptOrder] = useState<{order: OrderDto; preSelectedStatus?: string} | null>(null);
   const [historyOrder, setHistoryOrder] = useState<OrderDto | null>(null);
   const [fulfillmentOrder, setFulfillmentOrder] = useState<OrderDto | null>(null);
-  const [generatedPRItems, setGeneratedPRItems] = useState<any[] | null>(null);
+  const [isCreatePOOpen, setIsCreatePOOpen] = useState(false);
 
   const { data: activeStatuses, isLoading: isLoadingStatuses } = useGetActiveOrderStatusesQuery();
 
@@ -67,15 +67,6 @@ function OrdersPageContent() {
     }
   }, [activeStatuses, queryState.status, setFilter]);
 
-  const generatePRMutation = useGeneratePurchaseRequestMutation();
-
-  const handleGeneratePR = () => {
-    generatePRMutation.mutate(undefined, {
-      onSuccess: (res) => {
-        setGeneratedPRItems((res as any).data.items);
-      }
-    });
-  };
 
   const columns = getOrdersColumns({
     userRole: user?.role,
@@ -111,15 +102,10 @@ function OrdersPageContent() {
           
           {user?.role === 'DISTRIBUTOR_ADMIN' && (
             <Button 
-              onClick={handleGeneratePR}
-              disabled={generatePRMutation.isPending}
+              onClick={() => setIsCreatePOOpen(true)}
             >
-              {generatePRMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <PlusCircle className="mr-2 h-4 w-4" />
-              )}
-              Generate Purchase Request
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create Purchase Order
             </Button>
           )}
         </div>
@@ -236,9 +222,9 @@ function OrdersPageContent() {
 
         {/* Create Purchase Request Cart Drawer */}
         <CreatePurchaseOrderDrawer
-          isOpen={!!generatedPRItems}
-          initialItems={generatedPRItems || []}
-          onClose={() => setGeneratedPRItems(null)}
+          isOpen={isCreatePOOpen}
+          initialItems={[]}
+          onClose={() => setIsCreatePOOpen(false)}
         />
       </div>
     </AppLayout>
