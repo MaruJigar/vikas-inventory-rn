@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'; // Ensure this exists, or use native inputs
 import { Input } from '@/components/ui/input';
 
-export type ReportPeriod = 'day' | 'week' | 'month' | 'custom';
+export type ReportPeriod = 'day' | 'week' | 'month' | 'year' | 'custom';
 
 interface Props {
   period: ReportPeriod;
@@ -24,6 +24,7 @@ export function ReportPeriodSelector({ period, onPeriodChange, date, onDateChang
     if (period === 'day') d.setDate(d.getDate() + amount);
     if (period === 'week') d.setDate(d.getDate() + (amount * 7));
     if (period === 'month') d.setMonth(d.getMonth() + amount);
+    if (period === 'year') d.setFullYear(d.getFullYear() + amount);
     onDateChange(d);
   };
 
@@ -33,6 +34,9 @@ export function ReportPeriodSelector({ period, onPeriodChange, date, onDateChang
     }
     if (period === 'month') {
       return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date);
+    }
+    if (period === 'year') {
+      return date.getFullYear().toString();
     }
     if (period === 'week') {
       // Find monday of the week
@@ -49,8 +53,8 @@ export function ReportPeriodSelector({ period, onPeriodChange, date, onDateChang
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-4 rounded-md border shadow-sm">
-      <div className="flex bg-slate-100 p-1 rounded-md">
-        {(['day', 'week', 'month', 'custom'] as ReportPeriod[]).map((p) => (
+      <div className="flex bg-slate-100 p-1 rounded-md overflow-x-auto">
+        {(['day', 'week', 'month', 'year', 'custom'] as ReportPeriod[]).map((p) => (
           <button
             key={p}
             onClick={() => onPeriodChange(p)}

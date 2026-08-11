@@ -84,12 +84,11 @@ export function MonthCalendarView({ data, isLoading, onCellClick, onSalesmanClic
                     badge = <div className="w-3 h-3 bg-amber-500 rotate-45 shrink-0" title="Holiday" />;
                     displayCount = '—';
                   } else {
-                    // NON_WORKING_DAY
-                    badge = <div className="w-4 h-0.5 bg-slate-300 shrink-0" title="Non-working day" />;
+                    badge = <div className="w-4 h-0.5 bg-slate-300 shrink-0" title="Non-working day / Unknown" />;
                     displayCount = '—';
                   }
 
-                  const clickable = day.status === 'PRESENT';
+                  const clickable = true; // Every day is reportable and viewable
 
                   return (
                     <td key={i} className="px-1 py-2 text-center border-r align-middle">

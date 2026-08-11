@@ -70,6 +70,10 @@ export class Manufacturer {
   @ApiProperty({ description: 'Updated at' })
   updated_at: Date;
 
+  @Column({ type: 'integer', nullable: true })
+  @ApiPropertyOptional({ description: 'Low stock threshold for inventory' })
+  low_stock_threshold: number | null;
+
   @DeleteDateColumn()
   @ApiProperty({ description: 'Deleted at' })
   deleted_at: Date;

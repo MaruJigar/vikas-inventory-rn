@@ -71,10 +71,8 @@ export class WorkingDayCalculatorService {
       // getUTCDay() matches the YYYY-MM-DD day because time is 00:00:00Z
       const dayOfWeek = current.getUTCDay();
 
-      // Check if it's a working day and not a holiday
-      if (workingDaysConfig.includes(dayOfWeek) && !holidayDateSet.has(dateStr)) {
-        applicableDates.push(dateStr);
-      }
+      // Treat every calendar date as an applicable attendance day
+      applicableDates.push(dateStr);
 
       // Advance by 1 day (UTC)
       current.setUTCDate(current.getUTCDate() + 1);

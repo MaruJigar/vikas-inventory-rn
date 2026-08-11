@@ -47,54 +47,44 @@ describe('WorkingDayCalculatorService', () => {
     });
   };
 
-  it('CASE 1 & 2: Monday configured as working (no holidays)', async () => {
+  it('CASE 1: Monday should be reportable', async () => {
     // Aug 3 2026 is Monday
     setupMocks([1, 2, 3, 4, 5, 6], []); 
-    
     const result = await service.getApplicableAttendanceDays('dist-1', '2026-08-03', '2026-08-03');
-    
-    expect(result).toEqual(['2026-08-03']); // Should be present in applicable dates
+    expect(result).toEqual(['2026-08-03']); 
   });
 
-  it('CASE 3 & 4: Sunday configured as non-working / working', async () => {
+  it('CASE 2: Sunday should be reportable even if working_days config is default (excluding 0)', async () => {
     // Aug 2 2026 is Sunday
-    setupMocks([1, 2, 3, 4, 5, 6], []); // Non-working
-    
-    let result = await service.getApplicableAttendanceDays('dist-1', '2026-08-02', '2026-08-02');
-    expect(result).toEqual([]); // Not applicable
-    
-    setupMocks([0, 1, 2, 3, 4, 5, 6], []); // Working
-    result = await service.getApplicableAttendanceDays('dist-1', '2026-08-02', '2026-08-02');
-    expect(result).toEqual(['2026-08-02']); // Applicable
+    setupMocks([1, 2, 3, 4, 5, 6], []); 
+    const result = await service.getApplicableAttendanceDays('dist-1', '2026-08-02', '2026-08-02');
+    expect(result).toEqual(['2026-08-02']); // Applicable because EVERY day is applicable
   });
 
-  it('CASE 5 & 6: Monday is working but configured as holiday', async () => {
+  it('CASE 3: Monday is configured as holiday, but it should still be applicable (returned in applicable days)', async () => {
     // Aug 3 2026 is Monday
     setupMocks([1, 2, 3, 4, 5, 6], ['2026-08-03']); 
     
     const result = await service.getApplicableAttendanceDays('dist-1', '2026-08-03', '2026-08-03');
     
-    expect(result).toEqual([]); // Not applicable because it's a holiday
+    expect(result).toEqual(['2026-08-03']); // Still applicable!
   });
 
-  it('CASE 7 & 8: Correct Indian calendar date / Crosses UTC/IST boundary', async () => {
+  it('CASE 4: Correct Indian calendar date / Crosses UTC/IST boundary', async () => {
     setupMocks([1, 2, 3, 4, 5, 6], []); 
-    
-    // Testing boundary around month transitions
     const result = await service.getApplicableAttendanceDays('dist-1', '2026-08-31', '2026-09-01');
-    
-    // 2026-08-31 is Monday, 2026-09-01 is Tuesday, both are working days (1 and 2)
     expect(result).toEqual(['2026-08-31', '2026-09-01']);
   });
 
-  it('CASE 9: Custom date range inclusive start/end behavior', async () => {
+  it('CASE 5: Custom date range inclusive start/end behavior', async () => {
     // Aug 2 2026 (Sun) to Aug 8 2026 (Sat)
     setupMocks([1, 2, 3, 4, 5, 6], []); 
     
     const result = await service.getApplicableAttendanceDays('dist-1', '2026-08-02', '2026-08-08');
     
-    // Should exclude Sunday (Aug 2)
+    // Should INCLUDE Sunday (Aug 2)
     expect(result).toEqual([
+      '2026-08-02', // Sun
       '2026-08-03', // Mon
       '2026-08-04', // Tue
       '2026-08-05', // Wed
@@ -104,7 +94,7 @@ describe('WorkingDayCalculatorService', () => {
     ]);
   });
 
-  it('CASE 10: Validation on format', async () => {
+  it('CASE 6: Validation on format', async () => {
     setupMocks([1, 2, 3, 4, 5, 6], []); 
     await expect(service.getApplicableAttendanceDays('dist-1', '2026-8-1', '2026-8-2'))
       .rejects.toThrow(BadRequestException);

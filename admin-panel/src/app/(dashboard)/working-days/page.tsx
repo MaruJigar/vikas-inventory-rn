@@ -21,6 +21,7 @@ import { DayView } from '@/features/attendance/views/DayView';
 import { WeekView } from '@/features/attendance/views/WeekView';
 import { MonthCalendarView } from '@/features/attendance/views/MonthCalendarView';
 import { CustomRangeView } from '@/features/attendance/views/CustomRangeView';
+import { YearView } from '@/features/attendance/views/YearView';
 import { DailyActivityDrawer } from '@/features/attendance/DailyActivityDrawer';
 import { SalesmanMonthlyDrawer } from '@/features/attendance/SalesmanMonthlyDrawer';
 
@@ -69,6 +70,10 @@ function AttendancePageContent() {
       const endD = new Date(d);
       endD.setDate(d.getDate() + 6); // Sunday
       end = toKolkataDateString(endD);
+    } else if (period === 'year') {
+      year = date.getFullYear().toString();
+      start = toKolkataDateString(new Date(date.getFullYear(), 0, 1));
+      end = toKolkataDateString(new Date(date.getFullYear(), 11, 31));
     } else if (period === 'custom') {
       start = toKolkataDateString(customStart);
       end = toKolkataDateString(customEnd);
@@ -154,6 +159,20 @@ function AttendancePageContent() {
              isLoading={isLoadingMonthly} 
              onCellClick={(id, name, d) => setTimelineSalesman({ id, name, date: d })}
              onSalesmanClick={(id, name) => setMonthlySalesman({ id, name })}
+          />
+        )}
+
+        {period === 'year' && (
+          <YearView
+             data={monthlyData}
+             isLoading={isLoadingMonthly}
+             year={date.getFullYear()}
+             onMonthClick={(monthIndex) => {
+               const newDate = new Date(date);
+               newDate.setMonth(monthIndex);
+               setDate(newDate);
+               setPeriod('month');
+             }}
           />
         )}
 

@@ -16,6 +16,7 @@ import { WorkingDay } from '../working-day/working-day.entity';
 import { Salesman } from '../salesman/salesman.entity';
 import { Notification } from '../notification/notification.entity';
 import { InventoryMovement } from '../inventory/inventory-movement.entity';
+import { Distributor } from '../distributor/distributor.entity';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
 import { ManufacturerDistributor } from '../distributor/manufacturer-distributor.entity';
 import { SocketGatewayModule } from '../socket-gateway/socket-gateway.module';
@@ -36,6 +37,8 @@ import { WorkingDayModule } from '../working-day/working-day.module';
       Salesman,
       Notification,
       InventoryMovement,
+      Manufacturer,
+      Distributor,
     ]),
     SocketGatewayModule,
     WorkingDayModule,

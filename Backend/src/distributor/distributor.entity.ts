@@ -98,6 +98,10 @@ export class Distributor {
   @ApiProperty({ description: 'Weekly working days schedule (0=Sun, 1=Mon, ..., 6=Sat)', type: [Number] })
   working_days: number[];
 
+  @Column({ type: 'integer', nullable: true })
+  @ApiPropertyOptional({ description: 'Low stock threshold for inventory' })
+  low_stock_threshold: number | null;
+
   @DeleteDateColumn()
   @ApiProperty({ description: 'Deleted at' })
   deleted_at: Date;

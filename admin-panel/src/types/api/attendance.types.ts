@@ -117,7 +117,7 @@ export interface DailyActivityTimelineResponse {
   visits: TimelineVisit[];
 }
 
-export interface AttendanceQueryParams {
+export type AttendanceQueryParams = {
   startDate?: string;
   endDate?: string;
   date?: string;
@@ -129,4 +129,4 @@ export interface AttendanceQueryParams {
   search?: string;
   page?: number;
   limit?: number;
-}
+};

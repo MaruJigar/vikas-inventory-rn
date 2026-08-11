@@ -103,7 +103,7 @@ describe('AttendanceAnalyticsService', () => {
       
       expect(res.data.find(d => d.salesman.id === 's1').status).toBe('PRESENT');
       expect(res.data.find(d => d.salesman.id === 's2').status).toBe('ABSENT');
-      expect(res.data.find(d => d.salesman.id === 's3').status).toBe('NON_WORKING_DAY');
+      expect(res.data.find(d => d.salesman.id === 's3').status).toBe('ABSENT');
     });
   });
 
