@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 import { useCreateDistributorOrderMutation } from '@/hooks/orders/useCreateDistributorOrderMutation';
 import { usePreviewDistributorOrderMutation } from '@/hooks/orders/usePreviewDistributorOrderMutation';
+import { getImageUrl } from '@/lib/utils/image';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Trash2, PlusCircle } from 'lucide-react';
 import { useState } from 'react';
@@ -212,7 +213,7 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded border bg-slate-50 flex-shrink-0 flex items-center justify-center overflow-hidden">
                               {watchedItem.product_image_url ? (
-                                <img src={watchedItem.product_image_url} alt={watchedItem.product_name_snapshot} className="w-full h-full object-cover" />
+                                <img src={getImageUrl(watchedItem.product_image_url)} alt={watchedItem.product_name_snapshot} className="w-full h-full object-cover" />
                               ) : (
                                 <Package className="h-5 w-5 text-slate-300" />
                               )}

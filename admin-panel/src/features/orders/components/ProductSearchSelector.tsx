@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Search, Package, Check } from 'lucide-react';
 import { useProductsQuery } from '@/hooks/products/useProductsQuery';
+import { getImageUrl } from '@/lib/utils/image';
 import toast from 'react-hot-toast';
 
 interface ProductSearchSelectorProps {
@@ -82,7 +83,7 @@ export function ProductSearchSelector({ onSelect, selectedIds }: ProductSearchSe
                   >
                     <div className="w-10 h-10 rounded border bg-slate-50 overflow-hidden flex-shrink-0 flex items-center justify-center">
                       {product.product_image_url ? (
-                        <img src={product.product_image_url} alt={product.name} className="w-full h-full object-cover" />
+                        <img src={getImageUrl(product.product_image_url)} alt={product.name} className="w-full h-full object-cover" />
                       ) : (
                         <Package className="h-5 w-5 text-slate-300" />
                       )}
