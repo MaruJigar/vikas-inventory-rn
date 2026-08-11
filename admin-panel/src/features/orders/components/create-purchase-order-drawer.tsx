@@ -96,14 +96,29 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
   let distributorDiscountAmount = 0;
   let finalAmount = 0;
 
-  if (previewData && previewData.length > 0) {
-    grossAmount = previewData.reduce((sum, p) => sum + Number(p.gross_order_amount), 0);
-    distributorDiscountAmount = previewData.reduce((sum, p) => sum + Number(p.distributor_discount_amount), 0);
-    finalAmount = previewData.reduce((sum, p) => sum + Number(p.final_order_amount), 0);
-  } else {
-    grossAmount = watchedProducts.reduce((sum, p) => sum + (p.mrp_snapshot * (p.quantity || 0)), 0);
-    finalAmount = grossAmount;
-  }
+  watchedProducts.forEach((watchedItem) => {
+    let previewItem = null;
+    if (previewData && previewData.length > 0) {
+      for (const order of previewData) {
+        const found = order.items?.find((i: any) => i.product_id === watchedItem?.productId);
+        if (found) {
+          previewItem = found;
+          break;
+        }
+      }
+    }
+
+    const itemMrp = watchedItem?.mrp_snapshot || 0;
+    const itemQuantity = watchedItem?.quantity || 0;
+    const itemGross = itemMrp * itemQuantity;
+
+    const displayYourPrice = previewItem ? (previewItem.net_line_amount / (previewItem.quantity || 1)) : itemMrp;
+    const displayLineTotal = displayYourPrice * itemQuantity;
+
+    grossAmount += itemGross;
+    finalAmount += displayLineTotal;
+    distributorDiscountAmount += (itemGross - displayLineTotal);
+  });
 
   const onSubmit = (data: FormValues) => {
     if (!data.products.length) return;
@@ -189,7 +204,7 @@ export function CreatePurchaseOrderDrawer({ isOpen, onClose, initialItems = [] }
 
                     // Use preview data if available, fallback to un-discounted calculation
                     const displayYourPrice = previewItem ? (previewItem.net_line_amount / (previewItem.quantity || 1)) : itemMrp;
-                    const displayLineTotal = previewItem ? previewItem.net_line_amount : itemGross;
+                    const displayLineTotal = displayYourPrice * itemQuantity;
 
                     return (
                       <TableRow key={field.id}>
