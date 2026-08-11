@@ -196,12 +196,9 @@ export class AttendanceAnalyticsService {
            completed++;
            wd.status = 'COMPLETED';
         }
-      } else if (isApplicable) {
+      } else {
         attnStatus = 'ABSENT';
         absent++;
-      } else {
-        attnStatus = 'NON_WORKING_DAY';
-        // Need to check if holiday, but summary doesn't require strict split, though detail does.
       }
       
       salesmanData.push({
@@ -307,14 +304,13 @@ export class AttendanceAnalyticsService {
          let status = '';
          if (wd) {
            status = 'PRESENT';
-           if (isApplicable) present++;
-         } else if (isApplicable) {
-           status = 'ABSENT';
-           absent++;
+           present++;
          } else if (isHol) {
            status = 'HOLIDAY';
+           absent++;
          } else {
-           status = 'NON_WORKING_DAY';
+           status = 'ABSENT';
+           absent++;
          }
 
          days.push({
