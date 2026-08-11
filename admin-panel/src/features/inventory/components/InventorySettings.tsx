@@ -8,11 +8,11 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { Loader2 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import api from "@/lib/api";
+import { handleSuccessToast, handleUnexpectedToast } from "@/lib/utils/toast-helpers";
+import { api } from "@/lib/api/axios";
 
 const settingsSchema = z.object({
   low_stock_threshold: z.union([
@@ -22,17 +22,14 @@ const settingsSchema = z.object({
   ]).optional(),
 });
 
-type SettingsValues = {
-  low_stock_threshold: number | null;
-};
+type SettingsValues = z.infer<typeof settingsSchema>;
 
 export function InventorySettings() {
   const { user } = useAuthStore();
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  const form = useForm<SettingsValues>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<SettingsValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
       low_stock_threshold: null,
@@ -43,16 +40,12 @@ export function InventorySettings() {
     async function fetchSettings() {
       try {
         const response = await api.get('/inventory/settings');
-        form.reset({
+        reset({
           low_stock_threshold: response.data?.low_stock_threshold ?? null,
         });
       } catch (error) {
         console.error("Failed to load settings", error);
-        toast({
-          title: "Error",
-          description: "Failed to load inventory settings.",
-          variant: "destructive",
-        });
+        handleUnexpectedToast(error);
       } finally {
         setIsLoading(false);
       }
@@ -63,25 +56,18 @@ export function InventorySettings() {
     } else {
       setIsLoading(false);
     }
-  }, [user, form, toast]);
+  }, [user, reset]);
 
-  const onSubmit = async (data: z.infer<typeof settingsSchema>) => {
+  const onSubmit = async (data: SettingsValues) => {
     setIsSaving(true);
     try {
       await api.patch('/inventory/settings', {
         low_stock_threshold: data.low_stock_threshold,
       });
-      toast({
-        title: "Success",
-        description: "Inventory settings updated successfully.",
-      });
+      handleSuccessToast("Inventory settings updated successfully.");
     } catch (error) {
       console.error("Failed to update settings", error);
-      toast({
-        title: "Error",
-        description: "Failed to update inventory settings.",
-        variant: "destructive",
-      });
+      handleUnexpectedToast(error);
     } finally {
       setIsSaving(false);
     }
@@ -115,36 +101,30 @@ export function InventorySettings() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="low_stock_threshold"
-              render={({ field }) => (
-                <FormItem className="max-w-md">
-                  <FormLabel>Low Stock Threshold</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      placeholder="e.g. 10" 
-                      min={0}
-                      {...field} 
-                      value={field.value ?? ''} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Enter the minimum quantity at which inventory should be considered low stock. Leave empty to disable low stock warnings.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-6">
+          <div className="space-y-2 max-w-md">
+            <Label htmlFor="low_stock_threshold">Low Stock Threshold</Label>
+            <Input 
+              id="low_stock_threshold"
+              type="number" 
+              placeholder="e.g. 10" 
+              min={0}
+              {...register('low_stock_threshold')} 
             />
-            <Button type="submit" disabled={isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Settings
-            </Button>
-          </form>
-        </Form>
+            <p className="text-[0.8rem] text-muted-foreground">
+              Enter the minimum quantity at which inventory should be considered low stock. Leave empty to disable low stock warnings.
+            </p>
+            {errors.low_stock_threshold && (
+              <p className="text-[0.8rem] font-medium text-destructive">
+                {errors.low_stock_threshold.message as string}
+              </p>
+            )}
+          </div>
+          <Button type="submit" disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Settings
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );
