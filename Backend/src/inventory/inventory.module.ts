@@ -9,6 +9,7 @@ import { InventoryService } from './inventory.service';
 import { BackordersController } from './backorders.controller';
 import { BackordersService } from './backorders.service';
 import { Distributor } from '../distributor/distributor.entity';
+import { Manufacturer } from '../manufacturer/manufacturer.entity';
 import { Product } from '../product/product.entity';
 import { Backorder } from '../order/backorder.entity';
 import { OrderItem } from '../order/order-item.entity';
@@ -25,6 +26,7 @@ import { NotificationModule } from '../notification/notification.module';
       ManufacturerInventory,
       ManufacturerInventoryMovement,
       Distributor,
+      Manufacturer,
       Product,
       Backorder,
       OrderItem,
