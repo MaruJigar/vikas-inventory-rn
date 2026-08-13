@@ -118,7 +118,7 @@ export class InvoiceService implements OnApplicationBootstrap {
       throw new NotFoundException('Distributor not found for this order');
     }
 
-    return this.mapToInvoiceData(order, manufacturer, distributor);
+    return await this.mapToInvoiceData(order, manufacturer, distributor);
   }
 
   /**
@@ -154,12 +154,12 @@ export class InvoiceService implements OnApplicationBootstrap {
 
   // ─── Private helpers ───────────────────────────────────────────────────────
 
-  private mapToInvoiceData(
+  private async mapToInvoiceData(
     order: Order,
     manufacturer: Manufacturer | null,
     distributor: Distributor,
-  ): InvoiceData {
-    const items = this.mapItems(order);
+  ): Promise<InvoiceData> {
+    const items = await this.mapItems(order);
     const financials = this.mapFinancials(order);
 
     const mfr: InvoiceManufacturer = {
@@ -193,17 +193,38 @@ export class InvoiceService implements OnApplicationBootstrap {
     };
   }
 
-  private mapItems(order: Order): InvoiceItem[] {
+  private async mapItems(order: Order): Promise<InvoiceItem[]> {
     if (!order.items || order.items.length === 0) return [];
 
-    return order.items.map((item: OrderItem, index: number) => {
+    const items = await Promise.all(order.items.map(async (item: OrderItem, index: number) => {
       const quantity = Number(item.quantity) || 0;
       const gross = Number(item.gross_line_amount) || 0;
       // Unit price = gross_line_amount / quantity (= MRP at order time)
       const unitPrice = quantity > 0 ? gross / quantity : Number(item.mrp) || 0;
 
-      // Determine unit from the product if available
       const unit = (item.product as any)?.unit || 'KG';
+      let imageUrl: string | null = (item.product as any)?.product_image_url || null;
+      let imageBase64: string | null = null;
+
+      if (imageUrl) {
+        // If image URL is a relative path, convert to absolute using app URL
+        if (imageUrl.startsWith('/')) {
+            const baseUrl = this.configService.get<string>('app.appBaseUrl') || 'http://localhost:3001';
+            imageUrl = `${baseUrl.replace(/\/$/, '')}${imageUrl}`;
+        }
+        
+        try {
+          const res = await fetch(imageUrl);
+          if (res.ok) {
+            const arrayBuffer = await res.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const contentType = res.headers.get('content-type') || 'image/jpeg';
+            imageBase64 = `data:${contentType};base64,${buffer.toString('base64')}`;
+          }
+        } catch (e) {
+          this.logger.warn(`Failed to fetch image for item ${item.id} from ${imageUrl}: ${e.message}`);
+        }
+      }
 
       return {
         no: index + 1,
@@ -214,8 +235,11 @@ export class InvoiceService implements OnApplicationBootstrap {
         mrp: Number(item.mrp) || 0,
         unitPrice,
         amount: gross,
+        imageUrl,
+        imageBase64,
       };
-    });
+    }));
+    return items;
   }
 
   private mapFinancials(order: Order): InvoiceFinancials {

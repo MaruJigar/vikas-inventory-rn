@@ -29,6 +29,8 @@ export interface InvoiceItem {
   mrp: number;
   unitPrice: number;    // gross_line_amount / quantity
   amount: number;       // gross_line_amount (authoritative backend value)
+  imageUrl?: string | null;
+  imageBase64?: string | null;
 }
 
 export interface InvoiceFinancials {

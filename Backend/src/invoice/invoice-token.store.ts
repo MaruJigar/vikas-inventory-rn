@@ -1,6 +1,8 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
+import * as path from 'path';
+import { tmpdir } from 'os';
 
 interface TokenEntry {
   filePath: string;
@@ -9,22 +11,33 @@ interface TokenEntry {
 
 /** TTL for temporary invoice tokens and their PDF files: 15 minutes */
 const TOKEN_TTL_MS = 15 * 60 * 1000;
+const tempDir = process.env.TEMP_INVOICE_DIR || path.join(tmpdir(), 'vikas-invoices');
 
 /**
- * In-memory store for single-use, short-lived invoice download tokens.
+ * File-backed store for single-use, short-lived invoice download tokens.
  *
  * Design decisions:
- * - No Redis dependency — fits the existing architecture.
+ * - Uses the filesystem instead of an in-memory map to support PM2 cluster mode
+ *   where multiple processes handle requests in round-robin fashion.
  * - Tokens are UUID v4 — cryptographically random, not guessable.
  * - Each token maps to exactly one temp PDF file.
  * - `consume()` atomically returns + deletes the entry (single-use guarantee).
- * - Server restart: the in-memory store is empty after restart, but
- *   InvoiceService.cleanTempDirOnStartup() handles file cleanup.
  */
 @Injectable()
 export class InvoiceTokenStore {
   private readonly logger = new Logger(InvoiceTokenStore.name);
-  private readonly store = new Map<string, TokenEntry>();
+
+  constructor() {
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+  }
+
+  private getTokenFilePath(token: string): string {
+    // Ensure token is just a uuid, prevent path traversal
+    const safeToken = token.replace(/[^a-zA-Z0-9-]/g, '');
+    return path.join(tempDir, `${safeToken}.json`);
+  }
 
   /**
    * Create a new single-use token for the given temp PDF file.
@@ -33,10 +46,14 @@ export class InvoiceTokenStore {
    */
   create(filePath: string): string {
     const token = uuidv4();
-    this.store.set(token, {
+    const tokenPath = this.getTokenFilePath(token);
+    
+    const entry: TokenEntry = {
       filePath,
       expiresAt: Date.now() + TOKEN_TTL_MS,
-    });
+    };
+    
+    fs.writeFileSync(tokenPath, JSON.stringify(entry), 'utf8');
     return token;
   }
 
@@ -46,20 +63,33 @@ export class InvoiceTokenStore {
    * Returns null if the token is not found or has expired.
    */
   consume(token: string): string | null {
-    const entry = this.store.get(token);
-    if (!entry) return null;
-
-    // Remove immediately — single-use
-    this.store.delete(token);
-
-    // Reject expired tokens
-    if (Date.now() > entry.expiresAt) {
-      this.logger.warn(`Token expired: ${token}`);
-      this.safeDeleteFile(entry.filePath);
+    const tokenPath = this.getTokenFilePath(token);
+    
+    if (!fs.existsSync(tokenPath)) {
       return null;
     }
 
-    return entry.filePath;
+    try {
+      const data = fs.readFileSync(tokenPath, 'utf8');
+      const entry: TokenEntry = JSON.parse(data);
+
+      // Remove immediately — single-use
+      fs.unlinkSync(tokenPath);
+
+      // Reject expired tokens
+      if (Date.now() > entry.expiresAt) {
+        this.logger.warn(`Token expired: ${token}`);
+        this.safeDeleteFile(entry.filePath);
+        return null;
+      }
+
+      return entry.filePath;
+    } catch (err) {
+      this.logger.error(`Failed to consume token: ${err.message}`);
+      // Try to clean up corrupted token file
+      try { fs.unlinkSync(tokenPath); } catch {}
+      return null;
+    }
   }
 
   /**
@@ -67,33 +97,60 @@ export class InvoiceTokenStore {
    * Used only for health/debug purposes.
    */
   has(token: string): boolean {
-    const entry = this.store.get(token);
-    if (!entry) return false;
-    if (Date.now() > entry.expiresAt) {
-      this.store.delete(token);
+    const tokenPath = this.getTokenFilePath(token);
+    if (!fs.existsSync(tokenPath)) return false;
+    
+    try {
+      const data = fs.readFileSync(tokenPath, 'utf8');
+      const entry: TokenEntry = JSON.parse(data);
+      if (Date.now() > entry.expiresAt) {
+        fs.unlinkSync(tokenPath);
+        return false;
+      }
+      return true;
+    } catch {
       return false;
     }
-    return true;
   }
 
   /**
-   * Delete all expired in-memory entries and their corresponding temp files.
+   * Delete all expired token files and their corresponding temp files.
    * Called periodically by InvoiceService cron job.
    */
   cleanExpired(): void {
     const now = Date.now();
-    for (const [token, entry] of this.store.entries()) {
-      if (now > entry.expiresAt) {
-        this.store.delete(token);
-        this.safeDeleteFile(entry.filePath);
-        this.logger.debug(`Cleaned expired token entry and file: ${entry.filePath}`);
+    try {
+      const files = fs.readdirSync(tempDir);
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          const tokenPath = path.join(tempDir, file);
+          try {
+            const data = fs.readFileSync(tokenPath, 'utf8');
+            const entry: TokenEntry = JSON.parse(data);
+            if (now > entry.expiresAt) {
+              fs.unlinkSync(tokenPath);
+              this.safeDeleteFile(entry.filePath);
+              this.logger.debug(`Cleaned expired token entry and file: ${entry.filePath}`);
+            }
+          } catch (err) {
+            // Corrupted JSON or read error, just delete it
+            try { fs.unlinkSync(tokenPath); } catch {}
+          }
+        }
       }
+    } catch (err) {
+      this.logger.warn(`Failed to clean expired tokens: ${err.message}`);
     }
   }
 
   /** Returns the number of live entries in the store (for diagnostics). */
   size(): number {
-    return this.store.size;
+    try {
+      const files = fs.readdirSync(tempDir);
+      return files.filter(f => f.endsWith('.json')).length;
+    } catch {
+      return 0;
+    }
   }
 
   private safeDeleteFile(filePath: string): void {

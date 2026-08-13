@@ -60,11 +60,11 @@ export class InvoicePdfService {
   private buildDocDefinition(data: InvoiceData): Record<string, unknown> {
     const { manufacturer, distributor, items, financials } = data;
 
-    // ─── Product table rows ───────────────────────────────────────────────────
     const tableBody: unknown[][] = [
       // Header row
       [
         { text: 'No', style: 'tableHeader', alignment: 'center' },
+        { text: 'PICTURE', style: 'tableHeader', alignment: 'center' },
         { text: 'ITEM NO', style: 'tableHeader', alignment: 'center' },
         { text: 'DESCRIPTION', style: 'tableHeader', alignment: 'center' },
         { text: 'ORDER QTY (KG)', style: 'tableHeader', alignment: 'center' },
@@ -75,8 +75,14 @@ export class InvoicePdfService {
     ];
 
     for (const item of items) {
+      // Add image if available, otherwise just text
+      const pictureCell = item.imageBase64 
+        ? { image: item.imageBase64, width: 30, height: 30, alignment: 'center', margin: [0, 2, 0, 2] } 
+        : { text: 'N/A', alignment: 'center', style: 'tableCell' };
+
       tableBody.push([
         { text: String(item.no), alignment: 'center', style: 'tableCell' },
+        pictureCell,
         { text: item.itemNo || 'N/A', style: 'tableCell' },
         { text: item.description || 'N/A', style: 'tableCell' },
         { text: this.fmt(item.quantity), alignment: 'center', style: 'tableCell' },
@@ -234,7 +240,7 @@ export class InvoicePdfService {
         {
           table: {
             headerRows: 1,
-            widths: ['6%', '12%', '28%', '14%', '10%', '15%', '15%'],
+            widths: ['5%', '10%', '13%', '25%', '12%', '10%', '12%', '13%'],
             body: tableBody,
           },
           layout: {
