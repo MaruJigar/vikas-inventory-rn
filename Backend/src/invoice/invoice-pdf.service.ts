@@ -3,7 +3,7 @@ import { InvoiceData } from './invoice.types';
 
 // Use require to bypass any strict type issues with pdfmake v0.3
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfmake = require('pdfmake');
+const pdfmake = require('pdfmake/build/pdfmake');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const vfsFonts = require('pdfmake/build/vfs_fonts');
 
@@ -17,48 +17,23 @@ export class InvoicePdfService {
   private readonly logger = new Logger(InvoicePdfService.name);
 
   constructor() {
-    // pdfmake is a singleton in v0.3
-    const fonts = {
-      Roboto: {
-        normal: 'Roboto-Regular.ttf',
-        bold: 'Roboto-Medium.ttf',
-        italics: 'Roboto-Italic.ttf',
-        bolditalics: 'Roboto-MediumItalic.ttf',
-      },
-    };
-    pdfmake.addFonts(fonts);
-
-    // Disable external access for security
-    pdfmake.setUrlAccessPolicy(() => false);
-    pdfmake.setLocalAccessPolicy(() => false);
-
     // Load fonts into virtual file system
-    const vfs = vfsFonts.pdfMake?.vfs ?? vfsFonts;
-    if (vfs) {
-      for (const key of Object.keys(vfs)) {
-        if (typeof vfs[key] === 'string') {
-          pdfmake.virtualfs.writeFileSync(key, Buffer.from(vfs[key], 'base64'));
-        }
-      }
-    }
+    pdfmake.vfs = vfsFonts.pdfMake?.vfs ?? vfsFonts;
   }
 
   /**
    * Generates a PDF Buffer for the given InvoiceData.
    * Supports multi-page — pdfmake automatically paginates large tables.
    */
-  generatePdf(data: InvoiceData): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      try {
-        const docDefinition = this.buildDocDefinition(data);
-        const pdfDoc = pdfmake.createPdf(docDefinition, {});
-        pdfDoc.getBuffer((buffer: Buffer) => {
-          resolve(buffer);
-        });
-      } catch (err) {
-        reject(err);
-      }
-    });
+  async generatePdf(data: InvoiceData): Promise<Buffer> {
+    try {
+      const docDefinition = this.buildDocDefinition(data);
+      const pdfDoc = pdfmake.createPdf(docDefinition);
+      return await pdfDoc.getBuffer();
+    } catch (err) {
+      this.logger.error('Failed to generate PDF', err);
+      throw err;
+    }
   }
 
   private fmt(value: number): string {
