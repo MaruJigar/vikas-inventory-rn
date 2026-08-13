@@ -274,7 +274,7 @@ export class InvoicePdfService {
         // ─── Bottom section: Remarks (left) + Financial breakdown (right) ──
         {
           table: {
-            widths: ['*', '200'],
+            widths: ['*', 200],
             body: [
               [
                 // Remarks
