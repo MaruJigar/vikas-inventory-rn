@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, In } from 'typeorm';
 import { Product } from './product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -78,16 +78,21 @@ export class ProductService {
     const savedProduct = await this.productRepo.save(product);
 
     if (savedProduct.product_image_url) {
-      const file = await this.fileRepo.findOne({
-        where: {
-          entity_type: 'PRODUCT',
-          entity_id: IsNull(),
-          file_url: savedProduct.product_image_url,
-        },
-      });
-      if (file) {
-        file.entity_id = savedProduct.id;
-        await this.fileRepo.save(file);
+      const urls = savedProduct.product_image_url.split(',').filter(Boolean).map(u => u.trim());
+      if (urls.length > 0) {
+        const files = await this.fileRepo.find({
+          where: {
+            entity_type: 'PRODUCT',
+            entity_id: IsNull(),
+            file_url: In(urls),
+          },
+        });
+        if (files.length > 0) {
+          for (const file of files) {
+            file.entity_id = savedProduct.id;
+          }
+          await this.fileRepo.save(files);
+        }
       }
     }
 
@@ -326,18 +331,48 @@ export class ProductService {
       dto.product_image_url !== oldImageUrl &&
       oldImageUrl
     ) {
-      const oldFile = await this.fileRepo.findOne({
-        where: {
-          entity_type: 'PRODUCT',
-          entity_id: product.id,
-          file_url: oldImageUrl,
-        },
-      });
-      if (oldFile) {
-        const cleanupDate = new Date();
-        cleanupDate.setDate(cleanupDate.getDate() + 7);
-        oldFile.cleanup_after = cleanupDate;
-        await this.fileRepo.save(oldFile);
+      const oldUrls = oldImageUrl.split(',').filter(Boolean).map(u => u.trim());
+      const newUrls = (dto.product_image_url || '').split(',').filter(Boolean).map(u => u.trim());
+      const removedUrls = oldUrls.filter(u => !newUrls.includes(u));
+      
+      if (removedUrls.length > 0) {
+        const oldFiles = await this.fileRepo.find({
+          where: {
+            entity_type: 'PRODUCT',
+            entity_id: product.id,
+            file_url: In(removedUrls),
+          },
+        });
+        if (oldFiles.length > 0) {
+          const cleanupDate = new Date();
+          cleanupDate.setDate(cleanupDate.getDate() + 7);
+          for (const oldFile of oldFiles) {
+            oldFile.cleanup_after = cleanupDate;
+          }
+          await this.fileRepo.save(oldFiles);
+        }
+      }
+    }
+
+    if (
+      dto.product_image_url !== undefined &&
+      dto.product_image_url !== oldImageUrl
+    ) {
+      const newUrls = (dto.product_image_url || '').split(',').filter(Boolean).map(u => u.trim());
+      if (newUrls.length > 0) {
+        const newFiles = await this.fileRepo.find({
+          where: {
+            entity_type: 'PRODUCT',
+            entity_id: IsNull(),
+            file_url: In(newUrls),
+          },
+        });
+        if (newFiles.length > 0) {
+          for (const newFile of newFiles) {
+            newFile.entity_id = product.id;
+          }
+          await this.fileRepo.save(newFiles);
+        }
       }
     }
 
