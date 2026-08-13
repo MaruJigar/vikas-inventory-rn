@@ -17,7 +17,7 @@ export class ImageCleanupService {
     private readonly fileRepo: Repository<UploadedFile>,
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  // @Cron(CronExpression.EVERY_DAY_AT_2AM) // Disabled per user request to prevent automatic image deletion
   async handleCron() {
     this.logger.log('Starting scheduled image cleanup job...');
     await this.cleanupExpiredFiles();

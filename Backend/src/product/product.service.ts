@@ -17,6 +17,10 @@ import { Salesman } from '../salesman/salesman.entity';
 import { ManufacturerDistributor } from '../distributor/manufacturer-distributor.entity';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { UploadedFile } from '../shop-image/uploaded-file.entity';
+import * as fs from 'fs';
+import { join } from 'path';
+import { promises as fsPromises } from 'fs';
+import { getUploadRoot } from '../common/utils/upload-path.util';
 
 @Injectable()
 export class ProductService {
@@ -94,6 +98,10 @@ export class ProductService {
           await this.fileRepo.save(files);
         }
       }
+    }
+
+    if (savedProduct.product_image_url) {
+      await this.renameProductImages(savedProduct);
     }
 
     return savedProduct;
@@ -376,6 +384,10 @@ export class ProductService {
       }
     }
 
+    if (product.product_image_url) {
+      await this.renameProductImages(product);
+    }
+
     return savedProduct;
   }
 
@@ -426,5 +438,76 @@ export class ProductService {
     }
 
     return { message: 'Product deleted successfully' };
+  }
+  private async renameProductImages(product: Product): Promise<void> {
+    if (!product.product_image_url) return;
+    
+    const safeName = (product.name || 'Product').replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const shortId = product.id.split('-')[0];
+    const baseName = `${safeName}-${shortId}`;
+    
+    const urls = product.product_image_url.split(',').filter(Boolean).map(u => u.trim());
+    if (urls.length === 0) return;
+    
+    const files = await this.fileRepo.find({
+      where: {
+        entity_type: 'PRODUCT',
+        entity_id: product.id,
+      },
+    });
+    
+    const newUrls: string[] = [];
+    let updated = false;
+    
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
+      const fileRecord = files.find(f => f.file_url === url);
+      
+      if (fileRecord && fileRecord.file_url) {
+        const oldRelativePath = fileRecord.file_url.replace('/uploads/', '');
+        const oldFilePath = join(getUploadRoot(), oldRelativePath);
+        
+        const extMatch = fileRecord.original_file_name?.match(/\.([^\.]+)$/) || fileRecord.file_url.match(/\.([^\.]+)$/);
+        const ext = extMatch ? extMatch[1] : 'jpg';
+        
+        const newFilename = `${baseName}-${i + 1}.${ext}`;
+        const newRelativePath = join('products', newFilename);
+        const newFilePath = join(getUploadRoot(), newRelativePath);
+        const newFileUrl = `/uploads/${newRelativePath.replace(/\\/g, '/')}`;
+        
+        if (newFileUrl === url) {
+          newUrls.push(url);
+          continue;
+        }
+        
+        try {
+          if (fs.existsSync(oldFilePath)) {
+             if (fs.existsSync(newFilePath) && oldFilePath !== newFilePath) {
+                await fsPromises.unlink(newFilePath);
+             }
+             await fsPromises.rename(oldFilePath, newFilePath);
+          }
+          
+          fileRecord.file_url = newFileUrl;
+          if (fileRecord.compressed_file_url === url) {
+             fileRecord.compressed_file_url = newFileUrl;
+          }
+          await this.fileRepo.save(fileRecord);
+          
+          newUrls.push(newFileUrl);
+          updated = true;
+        } catch (err) {
+          console.error(`Failed to rename file ${oldFilePath} to ${newFilePath}`, err);
+          newUrls.push(url);
+        }
+      } else {
+        newUrls.push(url);
+      }
+    }
+    
+    if (updated) {
+       product.product_image_url = newUrls.join(',');
+       await this.productRepo.save(product);
+    }
   }
 }
