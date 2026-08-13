@@ -1,6 +1,6 @@
 import { api } from '@/lib/api/axios';
 import { ApiResponse, PaginatedResponse, QueryParams } from '@/types/api/common.types';
-import { OrderDto, CreateOrderDto, UpdateOrderDto, CancelOrderDto, UpdateOrderStatusDto, OrderRevisionDto, OrderStatusHistoryDto, FulfillmentLogsResponse, BackordersResponse, BackorderDto, BackorderResolutionDto } from '@/types/api/order.types';
+import { OrderDto, CreateOrderDto, UpdateOrderDto, CancelOrderDto, UpdateOrderStatusDto, OrderRevisionDto, OrderStatusHistoryDto, FulfillmentLogsResponse, BackordersResponse, BackorderDto, BackorderResolutionDto, InvoicePdfResponseDto } from '@/types/api/order.types';
 
 export const orderService = {
   createOrder: (data: CreateOrderDto) => api.post<ApiResponse<OrderDto>>('/orders', data).then(res => res.data),
@@ -16,4 +16,11 @@ export const orderService = {
   getBackorders: (params?: QueryParams) => api.get<BackordersResponse>('/orders/backorders', { params }).then(res => res.data),
   getBackorderById: (id: string) => api.get<ApiResponse<BackorderDto>>(`/orders/backorders/${id}`).then(res => res.data),
   resolveBackorder: (id: string, data: BackorderResolutionDto) => api.patch<ApiResponse<BackorderDto>>(`/orders/backorders/${id}/resolve`, data).then(res => res.data),
+  /**
+   * Request generation of a Proforma Invoice PDF for the given order.
+   * Returns a secure single-use downloadUrl valid for 15 minutes.
+   * The backend owns all invoice data — no financial values are sent from the frontend.
+   */
+  getInvoicePdf: (orderId: string) => api.get<ApiResponse<InvoicePdfResponseDto>>(`/orders/${orderId}/invoice/pdf`).then(res => res.data),
 };
+

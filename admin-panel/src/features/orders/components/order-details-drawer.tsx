@@ -9,8 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { getImageUrl } from '@/lib/utils/image';
 import Image from 'next/image';
 import { useUpdateOrderStatusMutation } from '@/hooks/orders/useUpdateOrderStatusMutation';
+import { useInvoicePdfMutation } from '@/hooks/orders/useInvoicePdfMutation';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Package } from 'lucide-react';
+import { ArrowRight, Package, Download, Printer, Loader2 } from 'lucide-react';
 
 const STATUS_PROGRESSION: Record<string, string> = {
   'PENDING': 'ORDERED',
@@ -29,6 +30,9 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
   const order = response && 'data' in response ? response.data : response;
   
   const updateStatusMutation = useUpdateOrderStatusMutation(orderId);
+  const downloadInvoiceMutation = useInvoicePdfMutation('download');
+  const printInvoiceMutation = useInvoicePdfMutation('print');
+  const isInvoiceLoading = downloadInvoiceMutation.isPending || printInvoiceMutation.isPending;
   
   const currentStatusName = typeof order?.status === 'object' ? (order.status as any)?.name : order?.status;
   const nextStatus = currentStatusName ? STATUS_PROGRESSION[currentStatusName] : null;
@@ -85,16 +89,54 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
           <section className="border rounded-md bg-white p-4 shadow-sm">
             <div className="flex justify-between items-center mb-3 border-b pb-2">
               <h3 className="text-sm font-semibold text-slate-900">Order Summary</h3>
-              {nextStatus && !isCreator && (
-                <Button 
-                  size="sm" 
-                  onClick={handleAdvanceStatus} 
-                  disabled={updateStatusMutation.isPending}
-                  className="h-8"
-                >
-                  Move to {nextStatus} <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {/* Invoice actions — available to anyone who can view this order */}
+                {orderId && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => downloadInvoiceMutation.mutate(orderId)}
+                      disabled={isInvoiceLoading}
+                      className="h-8 text-xs"
+                      title="Download Proforma Invoice as PDF"
+                    >
+                      {downloadInvoiceMutation.isPending ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="mr-1.5 h-3.5 w-3.5" />
+                      )}
+                      {downloadInvoiceMutation.isPending ? 'Generating…' : 'Download Invoice'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => printInvoiceMutation.mutate(orderId)}
+                      disabled={isInvoiceLoading}
+                      className="h-8 text-xs"
+                      title="Print Proforma Invoice"
+                    >
+                      {printInvoiceMutation.isPending ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Printer className="mr-1.5 h-3.5 w-3.5" />
+                      )}
+                      {printInvoiceMutation.isPending ? 'Generating…' : 'Print Invoice'}
+                    </Button>
+                  </>
+                )}
+                {/* Status advance button — only for non-creators */}
+                {nextStatus && !isCreator && (
+                  <Button
+                    size="sm"
+                    onClick={handleAdvanceStatus}
+                    disabled={updateStatusMutation.isPending}
+                    className="h-8"
+                  >
+                    Move to {nextStatus} <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
               <div>

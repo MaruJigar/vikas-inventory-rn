@@ -20,6 +20,7 @@ export const envSchema = z.object({
   ADMIN_PANEL_URL: z.string().url().optional(),
   REACT_NATIVE_WEB_URL: z.string().url().optional(),
   UPLOAD_ROOT: z.string().default('storage/uploads'),
+  APP_BASE_URL: z.string().url().optional(), // Used to construct invoice download URLs (e.g. https://api.avchousehold.com)
 
   RATE_LIMIT_TTL: z.coerce.number().default(60000),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
