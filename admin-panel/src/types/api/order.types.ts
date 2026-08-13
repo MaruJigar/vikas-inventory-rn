@@ -183,3 +183,12 @@ export interface BackorderResolutionDto {
 }
 
 export type BackordersResponse = PaginatedResponse<BackorderDto>;
+
+export interface InvoicePdfResponseDto {
+  invoiceId: string;
+  invoiceNumber: string;
+  fileName: string;
+  mimeType: string;
+  downloadUrl: string;
+}
+
