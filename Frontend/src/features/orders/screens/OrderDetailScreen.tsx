@@ -408,13 +408,6 @@ export function OrderDetailScreen({
           value={formatINR(toNum(order.final_order_amount))}
           strong
         />
-        {/* An unpriced PO: the manufacturer hasn't reviewed it yet, so the
-         * total is still the bare gross. Mirrors the note on the PO cart. */}
-        {isPurchaseOrder && discountRows.length === 0 && gstAmount === 0 ? (
-          <Text style={styles.pricingNote}>
-            {t('purchaseOrders.cart.pricingNote')}
-          </Text>
-        ) : null}
       </Card>
 
       {isCancelled && order.cancellation_reason ? (
@@ -573,7 +566,6 @@ const styles = StyleSheet.create({
   neg: { color: colors.success },
   strong: { ...typography.title, color: colors.text },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
-  pricingNote: { ...typography.caption, color: colors.textMuted },
   cancelCard: { marginTop: spacing.lg, gap: spacing.xs },
   cancelLabel: { ...typography.label, color: colors.danger },
   timeline: { gap: spacing.md },

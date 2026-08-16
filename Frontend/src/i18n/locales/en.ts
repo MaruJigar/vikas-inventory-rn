@@ -377,7 +377,22 @@ export const en = {
     },
     summary: {
       products: 'Products stocked',
+      lowStock: 'Low stock',
       outOfStock: 'Out of stock',
+    },
+    lowStock: {
+      title: 'Low stock alerts',
+      unset: 'No threshold set — nothing is flagged as low stock.',
+      current: 'Products at or below {{value}} units are flagged.',
+      set: 'Set threshold',
+      change: 'Change threshold',
+      placeholder: 'e.g. 10',
+      save: 'Save threshold',
+      clear: 'Turn off alerts',
+      clearConfirm: 'Turn off low stock alerts?',
+      clearMessage: 'Products will no longer be flagged as low on stock.',
+      invalid: 'Enter a whole number of 1 or more.',
+      saveError: 'Could not save the threshold. Please try again.',
     },
     movement: {
       OPENING_STOCK: 'Opening stock',
@@ -646,8 +661,9 @@ export const en = {
       browse: 'Browse products',
       subtotal: 'Subtotal (MRP)',
       orderValue: 'Order value',
-      pricingNote:
-        'Discounts and GST are applied by the manufacturer when they review this order.',
+      distributorDiscount: 'Distributor discount ({{percent}}%)',
+      pricingLoading: 'Calculating order value…',
+      pricingError: 'Could not calculate the order value.',
       splitNote:
         'These items will be split into {{count}} orders — one per manufacturer.',
       submit: 'Create purchase order',

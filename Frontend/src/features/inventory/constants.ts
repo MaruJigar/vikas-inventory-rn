@@ -51,17 +51,19 @@ export function formatDelta(quantityChange: number): string {
 /**
  * Stock health for a row's badge.
  *
- * `low_stock_threshold` is never written by any backend DTO (always 0), so a
- * real "low stock" rule isn't possible yet. We report what the data can support:
- * out of stock, or reserved stock exceeding what's on hand.
+ * `stock_status` is the backend's own verdict against the org-level low-stock
+ * threshold — trust it for out/low. `oversold` has no server equivalent and is
+ * layered on top: reserved stock exceeding what's on hand is a local warning
+ * the backend doesn't model.
  */
-export type StockTone = 'out' | 'oversold' | 'ok';
+export type StockTone = 'out' | 'low' | 'oversold' | 'ok';
 
 export function stockTone(item: InventoryItem): StockTone {
   const available = toNum(item.available_quantity);
   const reserved = toNum(item.reserved_quantity);
-  if (available <= 0) return 'out';
+  if (item.stock_status === 'OUT_OF_STOCK' || available <= 0) return 'out';
   if (reserved > available) return 'oversold';
+  if (item.stock_status === 'LOW_STOCK') return 'low';
   return 'ok';
 }
 
@@ -69,6 +71,7 @@ export function stockToneColor(tone: StockTone): string {
   switch (tone) {
     case 'out':
       return colors.danger;
+    case 'low':
     case 'oversold':
       return colors.warning;
     default:
@@ -82,6 +85,8 @@ export function stockToneIcon(
   switch (tone) {
     case 'out':
       return 'alert-circle-outline';
+    case 'low':
+      return 'trending-down-outline';
     case 'oversold':
       return 'warning-outline';
     default:

@@ -4,7 +4,9 @@ import type {
   AdjustStockPayload,
   InventoryItem,
   InventoryMovementRecord,
+  InventorySettings,
   InventoryValuationRow,
+  UpdateInventorySettingsPayload,
 } from '@/types/inventory';
 
 /**
@@ -60,6 +62,18 @@ export const inventoryApi = {
   adjust: (payload: AdjustStockPayload) =>
     apiClient
       .post<InventoryItem>('/inventory/adjust', payload)
+      .then((r) => r.data),
+
+  /** GET /v1/inventory/settings — the org-level low-stock threshold. */
+  settings: () =>
+    apiClient
+      .get<InventorySettings>('/inventory/settings')
+      .then((r) => r.data),
+
+  /** PATCH /v1/inventory/settings — returns the saved settings. */
+  updateSettings: (payload: UpdateInventorySettingsPayload) =>
+    apiClient
+      .patch<InventorySettings>('/inventory/settings', payload)
       .then((r) => r.data),
 
   /** GET /v1/analytics/inventory/reports/inventory-valuation — plain array. */

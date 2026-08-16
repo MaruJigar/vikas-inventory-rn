@@ -6,7 +6,10 @@ import {
 } from '@tanstack/react-query';
 
 import { inventoryApi, type InventorySortBy } from '@/features/inventory/api';
-import type { AdjustStockPayload } from '@/types/inventory';
+import type {
+  AdjustStockPayload,
+  UpdateInventorySettingsPayload,
+} from '@/types/inventory';
 
 const PAGE_SIZE = 20;
 
@@ -17,6 +20,7 @@ export const inventoryKeys = {
   movements: (id: string, type: string | null) =>
     ['inventory', 'movements', id, type ?? 'ALL'] as const,
   valuation: ['inventory', 'valuation'] as const,
+  settings: ['inventory', 'settings'] as const,
 };
 
 /**
@@ -71,6 +75,33 @@ export function useAdjustStock() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: inventoryKeys.all });
       void qc.invalidateQueries({ queryKey: ['products'] });
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+/** The org-level low-stock threshold. Rarely changes, so cache it a while. */
+export function useInventorySettings() {
+  return useQuery({
+    queryKey: inventoryKeys.settings,
+    queryFn: () => inventoryApi.settings(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Save the low-stock threshold. Every inventory row carries the threshold and
+ * its derived `stock_status`, so the whole list is stale once this changes —
+ * and so is the dashboard's low-stock count.
+ */
+export function useUpdateInventorySettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateInventorySettingsPayload) =>
+      inventoryApi.updateSettings(payload),
+    onSuccess: (settings) => {
+      qc.setQueryData(inventoryKeys.settings, settings);
+      void qc.invalidateQueries({ queryKey: inventoryKeys.all });
       void qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });

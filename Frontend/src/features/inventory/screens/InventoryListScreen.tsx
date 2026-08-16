@@ -22,6 +22,7 @@ import {
   stockTone,
   stockToneColor,
 } from '@/features/inventory/constants';
+import { LowStockSettingsCard } from '@/features/inventory/components/LowStockSettingsCard';
 import type { InventoryItem } from '@/types/inventory';
 import type { AccountScreenProps } from '@/navigation/types';
 
@@ -103,7 +104,10 @@ export function InventoryListScreen({
   }, [search, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const total = data?.pages[0]?.meta.total ?? 0;
+  // Counted over the pages loaded so far, not the whole table — the backend
+  // exposes no aggregate for either.
   const outOfStock = all.filter((i) => stockTone(i) === 'out').length;
+  const lowStock = all.filter((i) => stockTone(i) === 'low').length;
 
   const renderItem = ({ item }: { item: InventoryItem }) => {
     const available = toNum(item.available_quantity);
@@ -216,6 +220,19 @@ export function InventoryListScreen({
                   <Text
                     style={[
                       styles.summaryValue,
+                      lowStock > 0 && styles.summaryValueWarn,
+                    ]}
+                  >
+                    {lowStock}
+                  </Text>
+                  <Text style={styles.summaryLabel}>
+                    {t('inventory.summary.lowStock')}
+                  </Text>
+                </Card>
+                <Card style={styles.summaryCard}>
+                  <Text
+                    style={[
+                      styles.summaryValue,
                       outOfStock > 0 && styles.summaryValueAlert,
                     ]}
                   >
@@ -226,6 +243,8 @@ export function InventoryListScreen({
                   </Text>
                 </Card>
               </View>
+
+              <LowStockSettingsCard />
 
               <Pressable
                 onPress={() => navigation.navigate('InventoryValuation')}
@@ -296,6 +315,7 @@ const styles = StyleSheet.create({
   summaryCard: { flex: 1, alignItems: 'center', gap: spacing.xs },
   summaryValue: { ...typography.h2 },
   summaryValueAlert: { color: colors.danger },
+  summaryValueWarn: { color: colors.warning },
   summaryLabel: { ...typography.caption, textAlign: 'center' },
 
   valuationCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

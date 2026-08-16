@@ -371,7 +371,22 @@ export const hi: TranslationResources = {
     },
     summary: {
       products: 'स्टॉक वाले उत्पाद',
+      lowStock: 'कम स्टॉक',
       outOfStock: 'स्टॉक खत्म',
+    },
+    lowStock: {
+      title: 'कम स्टॉक अलर्ट',
+      unset: 'कोई सीमा तय नहीं — किसी उत्पाद को कम स्टॉक नहीं दिखाया जाएगा।',
+      current: '{{value}} या उससे कम यूनिट वाले उत्पाद चिह्नित होंगे।',
+      set: 'सीमा तय करें',
+      change: 'सीमा बदलें',
+      placeholder: 'जैसे 10',
+      save: 'सीमा सहेजें',
+      clear: 'अलर्ट बंद करें',
+      clearConfirm: 'कम स्टॉक अलर्ट बंद करें?',
+      clearMessage: 'अब उत्पादों को कम स्टॉक के रूप में चिह्नित नहीं किया जाएगा।',
+      invalid: '1 या उससे बड़ी पूर्ण संख्या दर्ज करें।',
+      saveError: 'सीमा सहेजी नहीं जा सकी। कृपया पुनः प्रयास करें।',
     },
     movement: {
       OPENING_STOCK: 'शुरुआती स्टॉक',
@@ -639,8 +654,9 @@ export const hi: TranslationResources = {
       browse: 'उत्पाद देखें',
       subtotal: 'उप-योग (MRP)',
       orderValue: 'ऑर्डर मूल्य',
-      pricingNote:
-        'छूट और जीएसटी निर्माता द्वारा इस ऑर्डर की समीक्षा करते समय लागू किए जाते हैं।',
+      distributorDiscount: 'वितरक छूट ({{percent}}%)',
+      pricingLoading: 'ऑर्डर मूल्य की गणना हो रही है…',
+      pricingError: 'ऑर्डर मूल्य की गणना नहीं हो सकी।',
       splitNote:
         'इन वस्तुओं को {{count}} ऑर्डर में विभाजित किया जाएगा — प्रति निर्माता एक।',
       submit: 'खरीद ऑर्डर बनाएं',

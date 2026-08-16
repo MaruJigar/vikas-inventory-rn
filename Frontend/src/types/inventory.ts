@@ -39,6 +39,29 @@ export interface InventoryProductRef {
   is_active: boolean;
 }
 
+/**
+ * Stock health computed server-side on every `GET /inventory` row: out of stock
+ * first, then at-or-below the configured low-stock threshold, else normal.
+ */
+export type StockStatus = 'OUT_OF_STOCK' | 'LOW_STOCK' | 'NORMAL';
+
+/**
+ * `GET`/`PATCH /v1/inventory/settings`. The threshold is org-level (stored on
+ * the distributor row), so it applies to every product they stock.
+ */
+export interface InventorySettings {
+  low_stock_threshold: number | null;
+}
+
+/**
+ * `PATCH /v1/inventory/settings` body. The backend validates `IsInt, Min(1)` and
+ * then stores `dto.low_stock_threshold || null` — so send `null` to clear the
+ * threshold. 0 is rejected by validation, never treated as "no threshold".
+ */
+export interface UpdateInventorySettingsPayload {
+  low_stock_threshold: number | null;
+}
+
 /** A `distributor_inventory` row (one per product the distributor stocks). */
 export interface InventoryItem {
   id: string;
@@ -49,11 +72,19 @@ export interface InventoryItem {
   reserved_quantity: Num;
   backordered_quantity: Num;
   /**
-   * Present on the entity but NO backend DTO ever writes it, so it is always 0.
-   * Kept for shape parity; don't build a "low stock" rule on it until the
-   * backend exposes a way to set it.
+   * On a `GET /inventory` row this is the caller's ORG-level threshold
+   * (`distributors.low_stock_threshold`), stamped onto every row by
+   * `getInventory` — `null` until the distributor configures one, and then no
+   * row is ever LOW_STOCK.
+   *
+   * Both this and `stock_status` are computed in that one list handler.
+   * `POST /inventory/adjust` returns the bare entity instead, where this is the
+   * per-row column of the same name that no DTO ever writes (always 0) and
+   * `stock_status` is absent — hence optional. Only trust these on list rows.
    */
-  low_stock_threshold: Num;
+  low_stock_threshold?: Num | null;
+  /** Derived by the backend from `available_quantity` vs the threshold above. */
+  stock_status?: StockStatus;
   created_at: string;
   updated_at: string;
 }
