@@ -7,7 +7,11 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { SafeAreaView, Edge } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+  Edge,
+} from 'react-native-safe-area-context';
 
 import { colors, spacing } from '@/theme';
 
@@ -33,11 +37,12 @@ export function Screen({
   floatingAction,
 }: ScreenProps) {
   const inner = padded ? styles.padded : undefined;
+  const insets = useSafeAreaInsets();
 
   return (
     <SafeAreaView style={styles.safe} edges={edges}>
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {scroll ? (
@@ -48,7 +53,7 @@ export function Screen({
             // rendered after it (a `floatingAction` bar) gets pushed off the
             // bottom of the screen. It survives on short pages, which is why
             // this only showed up on a tall one.
-            style={styles.flex}
+            style={styles.content}
             contentContainerStyle={[styles.scrollContent, inner, style]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -59,7 +64,25 @@ export function Screen({
           <View style={[styles.flex, inner, style]}>{children}</View>
         )}
       </KeyboardAvoidingView>
-      {floatingAction}
+      {floatingAction ? (
+        // Two things this wrapper guarantees, both of which bit us on phones
+        // and not on desktop (where the content fits and the insets are zero):
+        //   · `flexShrink: 0` — the bar keeps its height no matter how tall the
+        //     content above it gets, instead of being squeezed to nothing or
+        //     pushed past the bottom of the screen.
+        //   · bottom inset — with `edges` not covering 'bottom' nothing else
+        //     pads for the Android gesture bar / iOS home indicator, so the bar
+        //     rendered underneath them. Inside a tab navigator the inset is
+        //     already 0, so this is a no-op there.
+        <View
+          style={[
+            styles.floating,
+            !edges.includes('bottom') && { paddingBottom: insets.bottom },
+          ]}
+        >
+          {floatingAction}
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -67,6 +90,8 @@ export function Screen({
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
+  content: { flex: 1, minHeight: 0 },
+  floating: { flexShrink: 0 },
   scrollContent: { flexGrow: 1 },
   padded: { paddingHorizontal: spacing.lg },
 });

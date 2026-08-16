@@ -80,7 +80,19 @@ export function ProductDetailScreen({
   const stockCap = isDistributor ? stock : null;
   const outOfStock = stockCap != null && stockCap < 1;
 
-  const addBar = !canAdd ? null : (
+  // Without a visit there's nothing to add to, so the controls can't show. Say
+  // so rather than rendering an empty strip — the list screen carries the same
+  // hint, and silently omitting it here reads as a broken screen.
+  const addBar = !canAdd ? (
+    <View style={[styles.actionBar, styles.hintBar]}>
+      <Ionicons
+        name="information-circle-outline"
+        size={16}
+        color={colors.textMuted}
+      />
+      <Text style={styles.hintText}>{t('products.visitToAdd')}</Text>
+    </View>
+  ) : (
     <View style={styles.actionBar}>
       {cartQty === 0 ? (
         <Button
@@ -252,5 +264,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   actionBarRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  hintBar: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  hintText: { ...typography.caption, color: colors.textMuted, flex: 1 },
   flex1: { flex: 1 },
 });
