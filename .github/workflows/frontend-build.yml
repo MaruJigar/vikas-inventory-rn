@@ -100,10 +100,16 @@ jobs:
             REPO=/var/www/vikas-inventory-rn
 
             # ── 1. Pull latest code ──────────────────────────────────────
+            # The backend regenerates tracked files in this same working copy
+            # (e.g. Backend/docs/openapi.json), which makes a plain `git
+            # checkout` abort. Discard tracked local changes first, and use
+            # `checkout -f` so the switch can't be blocked. Untracked/ignored
+            # files (node_modules, uploads, .env) are deliberately left alone —
+            # no `git clean` here.
             cd "$REPO"
             git fetch origin
-            git checkout frontend
-            git fetch origin
+            git reset --hard
+            git checkout -f frontend
             git reset --hard origin/frontend
 
             # ── 2. Install deps ─────────────────────────────────────────
