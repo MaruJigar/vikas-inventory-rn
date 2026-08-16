@@ -82,6 +82,14 @@ export function SalesmanDashboardScreen() {
   };
 
   const runCheckOut = async () => {
+    // A visit still open at check-out would be orphaned: the backend's
+    // check-out closes the working day without touching visits, so that visit
+    // stays ACTIVE with no way back to it. Send the salesman through the
+    // no-order flow first — the reason is what lets the visit close.
+    if (activeVisit) {
+      setEnding(true);
+      return notify(t('visit.endBeforeCheckout'));
+    }
     setLocating(true);
     const res = await getCurrentCoords();
     setLocating(false);

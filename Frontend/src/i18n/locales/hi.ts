@@ -583,6 +583,7 @@ export const hi: TranslationResources = {
     activeVisit: 'सक्रिय विज़िट',
     addProducts: 'उत्पाद जोड़ें',
     endNoOrder: 'विज़िट समाप्त करें (कोई ऑर्डर नहीं)',
+    endBeforeCheckout: 'चेक आउट से पहले विज़िट समाप्त करें — कोई ऑर्डर न होने का कारण जोड़ें।',
     noOrderReason: 'कारण (अधिकतम 20 अक्षर)',
     confirmNoOrder: 'पुष्टि करें: कोई ऑर्डर नहीं',
     gps: {

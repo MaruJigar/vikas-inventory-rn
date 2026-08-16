@@ -590,6 +590,7 @@ export const en = {
     activeVisit: 'Active visit',
     addProducts: 'Add products',
     endNoOrder: 'End visit (no order)',
+    endBeforeCheckout: 'End your visit before checking out — add a reason for no order.',
     noOrderReason: 'Reason (max 20 chars)',
     confirmNoOrder: 'Confirm no order',
     gps: {
