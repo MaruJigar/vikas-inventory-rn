@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system';
+import { documentDirectory, downloadAsync } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -78,8 +78,8 @@ export function OrderDetailScreen({
         throw new Error('No download URL returned');
       }
 
-      const fileUri = FileSystem.documentDirectory + fileName;
-      const { uri } = await FileSystem.downloadAsync(downloadUrl, fileUri);
+      const fileUri = (documentDirectory || '') + fileName;
+      const { uri } = await downloadAsync(downloadUrl, fileUri);
 
       const isAvailable = await Sharing.isAvailableAsync();
       if (isAvailable) {
