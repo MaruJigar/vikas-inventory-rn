@@ -16,8 +16,17 @@ export const ORDER_STATUSES: OrderStatus[] = [
   'CANCELLED',
 ];
 
+/** Helper to extract raw status string whether backend sends string or object */
+export function getRawStatus(statusRaw: any): string {
+  if (typeof statusRaw === 'object' && statusRaw !== null) {
+    return statusRaw.name || String(statusRaw);
+  }
+  return String(statusRaw || '');
+}
+
 /** Badge colour per status (monochrome palette + restrained semantics). */
-export function statusColor(status: string): string {
+export function statusColor(statusRaw: any): string {
+  const status = getRawStatus(statusRaw);
   switch (status) {
     case 'DELIVERED':
     case 'APPROVED':
@@ -36,7 +45,8 @@ export function statusColor(status: string): string {
  * Translate a status, falling back to the raw value for any status the backend
  * sends that we haven't mapped — never render a raw i18n key.
  */
-export function statusLabel(t: TFunction, status: string): string {
+export function statusLabel(t: TFunction, statusRaw: any): string {
+  const status = getRawStatus(statusRaw);
   return t(`orders.status.${status}`, { defaultValue: status });
 }
 
