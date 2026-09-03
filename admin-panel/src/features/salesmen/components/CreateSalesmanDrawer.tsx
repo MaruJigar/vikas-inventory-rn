@@ -81,18 +81,18 @@ export function CreateSalesmanDrawer({ isOpen, onClose }: CreateSalesmanDrawerPr
       const stateName = states?.find(s => s.id === data.state_id)?.name;
       const cityName = cities?.find(c => c.id === data.city_id)?.name;
       
-      const payload: CreateSalesmanInput & { city?: string | null; city_id?: string | null; state: string } = {
+      const payload: CreateSalesmanInput & { city?: string; city_id?: string; state: string } = {
         ...data,
         state: stateName || '',
-        city_id: data.city_id === 'none' ? null : (data.city_id || undefined),
-        city: data.city_id === 'none' ? null : (cityName || undefined),
+        city_id: data.city_id === 'none' ? undefined : (data.city_id || undefined),
+        city: data.city_id === 'none' ? undefined : (cityName || undefined),
       };
 
       if (!payload.distributor_id) {
         delete payload.distributor_id;
       }
 
-      await createSalesmanMutation.mutateAsync(payload);
+      await createSalesmanMutation.mutateAsync(payload as any);
       setSuccessMsg('Salesman registered successfully.');
       setTimeout(() => {
         onClose();

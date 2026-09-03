@@ -16,7 +16,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 const AdjustStockSchema = z.object({
   product_id: z.string().optional(),
   movement_type: z.enum(['OPENING_STOCK', 'STOCK_ADDED', 'STOCK_REMOVED', 'STOCK_CORRECTED', 'MANUAL_ADJUSTMENT']),
-  quantity_change: z.coerce.number().min(1, 'Quantity must be at least 1'),
+  quantity_change: z.number().min(1, 'Quantity must be at least 1'),
   reason: z.string().optional(),
 });
 
@@ -42,7 +42,7 @@ export function AdjustStockDialog({ open, onOpenChange, inventory }: AdjustStock
     reset,
     formState: { errors },
   } = useForm<AdjustStockFormValues>({
-    resolver: zodResolver(AdjustStockSchema),
+    resolver: zodResolver(AdjustStockSchema) as any,
     defaultValues: {
       movement_type: 'STOCK_ADDED',
       quantity_change: 1,

@@ -22,7 +22,7 @@ interface PricingHistoryModalProps {
 
 export function PricingHistoryModal({ open, onOpenChange, product }: PricingHistoryModalProps) {
   const { data, isLoading, isError } = usePricingHistoryQuery(product?.id ?? '');
-  const history = data?.data ?? [];
+  const history = (Array.isArray(data) ? data : (data as any)?.data ?? []) as import('@/types/api/product.types').PricingHistoryDto[];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -51,7 +51,7 @@ export function PricingHistoryModal({ open, onOpenChange, product }: PricingHist
             </p>
           ) : (
             <div className="space-y-2">
-              {history.map((entry) => (
+              {history.map((entry: import('@/types/api/product.types').PricingHistoryDto) => (
                 <div
                   key={entry.id}
                   className="rounded-lg border p-3 text-sm grid grid-cols-2 gap-x-4 gap-y-1"

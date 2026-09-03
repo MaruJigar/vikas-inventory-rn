@@ -20,7 +20,7 @@ export function SalesmanDetailsDrawer({ salesmanId, isOpen, onClose }: SalesmanD
   // Use the query to fetch full details if we want, or just display what's passed if we passed the full object.
   // The requirements say "fetch full details via useSalesmanQuery".
   const { data: response, isLoading, isError } = useSalesmanQuery(salesmanId || '');
-  const salesman = response?.data || response; // Handle both nested {data: ...} and flat object structures
+  const salesman = (response?.data ?? response) as SalesmanDto | null | undefined;
 
   return (
     <EntityFormDrawer

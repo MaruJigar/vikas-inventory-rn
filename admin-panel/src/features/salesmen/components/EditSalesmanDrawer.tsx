@@ -33,7 +33,7 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const { data: response, isLoading: isFetching } = useSalesmanQuery(salesmanId || '');
-  const salesman = response?.data || response; // Handle both nested {data: ...} and flat object structures
+  const salesman = (response?.data ?? response) as import('@/types/api/salesman.types').SalesmanDto | null | undefined;
 
   const updateSalesmanMutation = useUpdateSalesmanMutation();
 
@@ -100,7 +100,7 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
       email: data.email || undefined,
       phone: data.phone || undefined,
       state_id: data.state_id || undefined,
-      city_id: data.city_id === 'none' ? null : (data.city_id || undefined),
+      city_id: data.city_id === 'none' ? undefined : (data.city_id || undefined),
       is_active: data.is_active,
     };
 
@@ -110,7 +110,7 @@ export function EditSalesmanDrawer({ salesmanId, isOpen, onClose }: EditSalesman
     if (data.city_id && data.city_id !== 'none') {
       payload.city = cities?.find(c => c.id === data.city_id)?.name || '';
     } else if (data.city_id === 'none') {
-      payload.city = null;
+      payload.city = undefined;
     }
 
     try {

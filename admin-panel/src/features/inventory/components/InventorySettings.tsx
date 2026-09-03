@@ -15,11 +15,7 @@ import { handleSuccessToast, handleUnexpectedToast } from "@/lib/utils/toast-hel
 import { api } from "@/lib/api/axios";
 
 const settingsSchema = z.object({
-  low_stock_threshold: z.union([
-    z.number(),
-    z.null(),
-    z.string().transform(val => (val === '' ? null : Number(val)))
-  ]).optional(),
+  low_stock_threshold: z.coerce.number().nullable().optional(),
 });
 
 type SettingsValues = z.infer<typeof settingsSchema>;
@@ -30,7 +26,7 @@ export function InventorySettings() {
   const [isSaving, setIsSaving] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<SettingsValues>({
-    resolver: zodResolver(settingsSchema),
+    resolver: zodResolver(settingsSchema) as any,
     defaultValues: {
       low_stock_threshold: null,
     },

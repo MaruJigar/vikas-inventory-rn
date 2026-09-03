@@ -111,3 +111,6 @@ export interface OrdersAnalyticsDto {
   topSalesmen: OrdersAnalyticsLeaderboardItem[];
   topDistributors: OrdersAnalyticsLeaderboardItem[];
 }
+
+/** Alias used by analyticsService.getOrdersAnalytics */
+export type AnalyticsSnapshot = OrdersAnalyticsDto;
