@@ -527,10 +527,10 @@ export class OrderService {
         let standardDiscountPercent = dto.standardDiscountPercent || 0;
         let specDiscountPercent = dto.specialDiscountPercent || 0;
 
-        if (role === 'SALESMAN') {
-          specDiscountPercent += standardDiscountPercent;
-          standardDiscountPercent = 0;
-        }
+        // createOrder is SALESMAN-only (enforced by @Roles guard in the controller).
+        // Merge standard discount into special discount so invoice calculations are correct.
+        specDiscountPercent += standardDiscountPercent;
+        standardDiscountPercent = 0;
 
         const standardDiscountAmount = (standardDiscountPercent / 100) * grossOrderAmount;
         const afterDistDiscount = grossOrderAmount - standardDiscountAmount;
