@@ -524,8 +524,13 @@ export class OrderService {
           });
         }
 
-        const standardDiscountPercent = dto.standardDiscountPercent || 0;
-        const specDiscountPercent = dto.specialDiscountPercent || 0;
+        let standardDiscountPercent = dto.standardDiscountPercent || 0;
+        let specDiscountPercent = dto.specialDiscountPercent || 0;
+
+        if (role === 'SALESMAN') {
+          specDiscountPercent += standardDiscountPercent;
+          standardDiscountPercent = 0;
+        }
 
         const standardDiscountAmount = (standardDiscountPercent / 100) * grossOrderAmount;
         const afterDistDiscount = grossOrderAmount - standardDiscountAmount;
@@ -763,6 +768,11 @@ export class OrderService {
         specialDiscountPercent = dto.specialDiscountPercent !== undefined
           ? Number(dto.specialDiscountPercent)
           : Number(order.special_discount_percent || 0);
+
+        if (role === 'SALESMAN') {
+          specialDiscountPercent += standardDiscountPercent;
+          standardDiscountPercent = 0;
+        }
           
         standardDiscountAmount = grossOrderAmount * (standardDiscountPercent / 100);
         const afterDistDiscount = grossOrderAmount - standardDiscountAmount;

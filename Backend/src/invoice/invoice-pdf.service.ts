@@ -6,6 +6,7 @@ import { InvoiceData } from './invoice.types';
 const pdfmake = require('pdfmake/build/pdfmake');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const vfsFonts = require('pdfmake/build/vfs_fonts');
+import { customFonts } from './custom-fonts';
 
 /**
  * InvoicePdfService
@@ -19,6 +20,22 @@ export class InvoicePdfService {
   constructor() {
     // Load fonts into virtual file system
     pdfmake.vfs = vfsFonts.pdfMake?.vfs ?? vfsFonts;
+    pdfmake.vfs['NotoSansDevanagari-Regular.ttf'] = customFonts['NotoSansDevanagari-Regular.ttf'];
+
+    pdfmake.fonts = {
+      Roboto: {
+        normal: 'Roboto-Regular.ttf',
+        bold: 'Roboto-Medium.ttf',
+        italics: 'Roboto-Italic.ttf',
+        bolditalics: 'Roboto-MediumItalic.ttf',
+      },
+      NotoSansDevanagari: {
+        normal: 'NotoSansDevanagari-Regular.ttf',
+        bold: 'NotoSansDevanagari-Regular.ttf',
+        italics: 'NotoSansDevanagari-Regular.ttf',
+        bolditalics: 'NotoSansDevanagari-Regular.ttf',
+      },
+    };
   }
 
   /**
@@ -67,7 +84,7 @@ export class InvoicePdfService {
         { text: 'PICTURE', style: 'tableHeader', alignment: 'center' },
         { text: 'ITEM NO', style: 'tableHeader', alignment: 'center' },
         { text: 'DESCRIPTION', style: 'tableHeader', alignment: 'center' },
-        { text: 'ORDER QTY (KG)', style: 'tableHeader', alignment: 'center' },
+        { text: 'ORDER QTY', style: 'tableHeader', alignment: 'center' },
         { text: 'MRP', style: 'tableHeader', alignment: 'center' },
         { text: 'UNIT PRICE', style: 'tableHeader', alignment: 'center' },
         { text: 'AMOUNT', style: 'tableHeader', alignment: 'center' },
@@ -85,7 +102,7 @@ export class InvoicePdfService {
         pictureCell,
         { text: item.itemNo || 'N/A', style: 'tableCell' },
         { text: item.description || 'N/A', style: 'tableCell' },
-        { text: this.fmt(item.quantity), alignment: 'center', style: 'tableCell' },
+        { text: `${this.fmt(item.quantity)} ${item.unit || ''}`.trim(), alignment: 'center', style: 'tableCell' },
         { text: this.fmt(item.mrp), alignment: 'right', style: 'tableCell' },
         { text: this.fmt(item.unitPrice), alignment: 'right', style: 'tableCell' },
         { text: this.fmt(item.amount), alignment: 'right', style: 'tableCell' },
@@ -95,11 +112,11 @@ export class InvoicePdfService {
     // ─── Financial breakdown rows ─────────────────────────────────────────────
     const financialRows: unknown[] = [
       this.calcRow('Sub Total:', this.fmt(financials.subTotal)),
-      this.calcRow(`Dist. Discount (${this.pct(financials.distDiscountPercent)}):`, this.fmt(financials.distDiscountAmount)),
-      this.calcRow(`Dist. Margin (${this.pct(financials.distMarginPercent)}):`, this.fmt(financials.distMarginAmount)),
-      this.calcRow(`Freight Disc (${this.pct(financials.freightDiscPercent)}):`, this.fmt(financials.freightDiscAmount)),
-      this.calcRow(`Special Disc (${this.pct(financials.specialDiscPercent)}):`, this.fmt(financials.specialDiscAmount)),
-      this.calcRow(`Cash Disc (${this.pct(financials.cashDiscPercent)}):`, this.fmt(financials.cashDiscAmount)),
+      financials.distDiscountAmount ? this.calcRow(`Dist. Discount (${this.pct(financials.distDiscountPercent)}):`, this.fmt(financials.distDiscountAmount)) : null,
+      financials.distMarginAmount ? this.calcRow(`Dist. Margin (${this.pct(financials.distMarginPercent)}):`, this.fmt(financials.distMarginAmount)) : null,
+      financials.freightDiscAmount ? this.calcRow(`Freight Disc (${this.pct(financials.freightDiscPercent)}):`, this.fmt(financials.freightDiscAmount)) : null,
+      financials.specialDiscAmount ? this.calcRow(`Special Disc (${this.pct(financials.specialDiscPercent)}):`, this.fmt(financials.specialDiscAmount)) : null,
+      financials.cashDiscAmount ? this.calcRow(`Cash Disc (${this.pct(financials.cashDiscPercent)}):`, this.fmt(financials.cashDiscAmount)) : null,
       this.calcRow('Taxable Amount:', this.fmt(financials.taxableAmount)),
       this.calcRow('Total GST (+):', this.fmt(financials.totalGst)),
       {
@@ -110,7 +127,7 @@ export class InvoicePdfService {
         margin: [8, 5, 8, 5],
         fillColor: '#f9f9f9',
       },
-    ];
+    ].filter(Boolean);
 
     return {
       pageSize: 'A4',
@@ -125,6 +142,7 @@ export class InvoicePdfService {
 
       styles: {
         sanskritHeader: {
+          font: 'NotoSansDevanagari',
           fontSize: 13,
           bold: true,
           alignment: 'center',

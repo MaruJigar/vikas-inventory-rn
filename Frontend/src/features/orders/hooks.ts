@@ -67,3 +67,9 @@ export function useOrderStatusHistory(id: string) {
     select: (res) => res.data,
   });
 }
+
+export function useInvoicePdfMutation() {
+  return useMutation({
+    mutationFn: (id: string) => ordersApi.getInvoicePdf(id),
+  });
+}
