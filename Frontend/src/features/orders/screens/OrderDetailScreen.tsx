@@ -21,6 +21,7 @@ import {
   formatINR,
   statusColor,
   statusLabel,
+  getRawStatus,
   toNum,
 } from '@/features/orders/constants';
 import type { Order } from '@/types/order';
@@ -206,7 +207,7 @@ export function OrderDetailScreen({
         />
       </Card>
 
-      {order.status === 'CANCELLED' && order.cancellation_reason ? (
+      {getRawStatus(order.status) === 'CANCELLED' && order.cancellation_reason ? (
         <Card style={styles.cancelCard}>
           <Text style={styles.cancelLabel}>
             {t('orders.detail.cancellationReason')}
