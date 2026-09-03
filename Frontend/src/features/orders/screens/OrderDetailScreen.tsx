@@ -1,8 +1,15 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
+
+// Use conditionally inside the share handler to avoid crashing the web build
+let FileSystem: any;
+let Sharing: any;
+if (Platform.OS !== 'web') {
+  FileSystem = require('expo-file-system/legacy');
+  Sharing = require('expo-sharing');
+}
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
@@ -78,14 +85,24 @@ export function OrderDetailScreen({
         throw new Error('No download URL returned');
       }
 
-      const fileUri = (FileSystem.documentDirectory || '') + fileName;
-      const { uri } = await FileSystem.downloadAsync(downloadUrl, fileUri);
-
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+      if (Platform.OS === 'web') {
+        // On web, trigger a download using an anchor tag
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       } else {
-        notify('Sharing is not available on this device');
+        const fileUri = (FileSystem.documentDirectory || '') + fileName;
+        const { uri } = await FileSystem.downloadAsync(downloadUrl, fileUri);
+
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+        } else {
+          notify('Sharing is not available on this device');
+        }
       }
     } catch (e) {
       console.error(e);
