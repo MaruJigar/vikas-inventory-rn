@@ -97,6 +97,7 @@ jobs:
             # ── 1. Pull latest code ──────────────────────────────────────
             cd "$REPO"
             git fetch origin
+            git clean -fd
             git checkout devlopment
             git fetch origin
             git reset --hard origin/devlopment
