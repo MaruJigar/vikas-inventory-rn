@@ -80,7 +80,7 @@ export function OrderDetailScreen({
       notify('Generating PDF...');
       const response = await invoicePdfMutation.mutateAsync(id);
       const downloadUrl = response?.downloadUrl;
-      const fileName = response?.fileName ?? `${order.order_number || id}.pdf`;
+      const fileName = `${id}.pdf`;
 
       if (!downloadUrl) {
         throw new Error('No download URL returned');
