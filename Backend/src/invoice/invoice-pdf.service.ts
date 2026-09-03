@@ -130,7 +130,8 @@ export class InvoicePdfService {
     // ─── Financial breakdown rows ─────────────────────────────────────────────
     const financialRows: unknown[] = [
       this.calcRow('Sub Total:', this.fmt(financials.subTotal)),
-      financials.distDiscountAmount ? this.calcRow(`Dist. Discount (${this.pct(financials.distDiscountPercent)}):`, this.fmt(financials.distDiscountAmount)) : null,
+      financials.stdDiscountAmount ? this.calcRow(`Standard Discount (${this.pct(financials.stdDiscountPercent)}):`, this.fmt(financials.stdDiscountAmount)) : null,
+      financials.distDiscountAmount ? this.calcRow(`Distributor Discount (${this.pct(financials.distDiscountPercent)}):`, this.fmt(financials.distDiscountAmount)) : null,
       financials.distMarginAmount ? this.calcRow(`Dist. Margin (${this.pct(financials.distMarginPercent)}):`, this.fmt(financials.distMarginAmount)) : null,
       financials.freightDiscAmount ? this.calcRow(`Freight Disc (${this.pct(financials.freightDiscPercent)}):`, this.fmt(financials.freightDiscAmount)) : null,
       financials.specialDiscAmount ? this.calcRow(`Special Disc (${this.pct(financials.specialDiscPercent)}):`, this.fmt(financials.specialDiscAmount)) : null,

@@ -245,6 +245,9 @@ export class InvoiceService implements OnApplicationBootstrap {
   private mapFinancials(order: Order): InvoiceFinancials {
     const gross = Number(order.gross_order_amount) || 0;
 
+    const stdDiscPct = Number(order.standard_discount_percent) || 0;
+    const stdDiscAmt = Number(order.standard_discount_amount) || 0;
+
     const distDiscPct = Number(order.distributor_discount_percent) || 0;
     const distDiscAmt = Number(order.distributor_discount_amount) || 0;
 
@@ -268,6 +271,9 @@ export class InvoiceService implements OnApplicationBootstrap {
 
     return {
       subTotal: gross,
+
+      stdDiscountPercent: stdDiscPct,
+      stdDiscountAmount: stdDiscAmt,
 
       distDiscountPercent: distDiscPct,
       distDiscountAmount: distDiscAmt,

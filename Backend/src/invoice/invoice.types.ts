@@ -36,6 +36,9 @@ export interface InvoiceItem {
 export interface InvoiceFinancials {
   subTotal: number;
 
+  stdDiscountPercent: number;
+  stdDiscountAmount: number;
+
   distDiscountPercent: number;
   distDiscountAmount: number;
 
