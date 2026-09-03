@@ -19,9 +19,9 @@ export function useInvoicePdfMutation(action: InvoiceAction) {
   return useMutation({
     mutationFn: (orderId: string) => orderService.getInvoicePdf(orderId),
 
-    onSuccess: (response) => {
+    onSuccess: (response, orderId) => {
       const downloadUrl = response?.data?.downloadUrl;
-      const fileName = response?.data?.fileName ?? 'Proforma-Invoice.pdf';
+      const fileName = response?.data?.fileName ?? `${orderId}.pdf`;
 
       if (!downloadUrl) {
         toast.error('Invoice generated but no download URL was returned. Please try again.');

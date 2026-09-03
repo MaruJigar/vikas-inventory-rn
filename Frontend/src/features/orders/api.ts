@@ -29,4 +29,11 @@ export const ordersApi = {
         params: { limit: 50, sortOrder: 'ASC' },
       })
       .then((r) => r.data),
+
+  getInvoicePdf: (id: string) =>
+    apiClient
+      .get<{ data: { downloadUrl: string; fileName: string } }>(
+        `/orders/${id}/invoice/pdf`,
+      )
+      .then((r) => r.data.data),
 };

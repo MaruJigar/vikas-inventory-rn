@@ -3,9 +3,10 @@ import { InvoiceData } from './invoice.types';
 
 // Use require to bypass any strict type issues with pdfmake v0.3
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfmake = require('pdfmake');
+const pdfmake = require('pdfmake/build/pdfmake');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const vfsFonts = require('pdfmake/build/vfs_fonts');
+import { customFonts } from './custom-fonts';
 
 /**
  * InvoicePdfService
@@ -17,48 +18,39 @@ export class InvoicePdfService {
   private readonly logger = new Logger(InvoicePdfService.name);
 
   constructor() {
-    // pdfmake is a singleton in v0.3
-    const fonts = {
+    // Load fonts into virtual file system
+    pdfmake.vfs = vfsFonts.pdfMake?.vfs ?? vfsFonts;
+    pdfmake.vfs['NotoSansDevanagari-Regular.ttf'] = customFonts['NotoSansDevanagari-Regular.ttf'];
+
+    pdfmake.fonts = {
       Roboto: {
         normal: 'Roboto-Regular.ttf',
         bold: 'Roboto-Medium.ttf',
         italics: 'Roboto-Italic.ttf',
         bolditalics: 'Roboto-MediumItalic.ttf',
       },
+      NotoSansDevanagari: {
+        normal: 'NotoSansDevanagari-Regular.ttf',
+        bold: 'NotoSansDevanagari-Regular.ttf',
+        italics: 'NotoSansDevanagari-Regular.ttf',
+        bolditalics: 'NotoSansDevanagari-Regular.ttf',
+      },
     };
-    pdfmake.addFonts(fonts);
-
-    // Disable external access for security
-    pdfmake.setUrlAccessPolicy(() => false);
-    pdfmake.setLocalAccessPolicy(() => false);
-
-    // Load fonts into virtual file system
-    const vfs = vfsFonts.pdfMake?.vfs ?? vfsFonts;
-    if (vfs) {
-      for (const key of Object.keys(vfs)) {
-        if (typeof vfs[key] === 'string') {
-          pdfmake.virtualfs.writeFileSync(key, Buffer.from(vfs[key], 'base64'));
-        }
-      }
-    }
   }
 
   /**
    * Generates a PDF Buffer for the given InvoiceData.
    * Supports multi-page — pdfmake automatically paginates large tables.
    */
-  generatePdf(data: InvoiceData): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      try {
-        const docDefinition = this.buildDocDefinition(data);
-        const pdfDoc = pdfmake.createPdf(docDefinition, {});
-        pdfDoc.getBuffer((buffer: Buffer) => {
-          resolve(buffer);
-        });
-      } catch (err) {
-        reject(err);
-      }
-    });
+  async generatePdf(data: InvoiceData): Promise<Buffer> {
+    try {
+      const docDefinition = this.buildDocDefinition(data);
+      const pdfDoc = pdfmake.createPdf(docDefinition);
+      return await pdfDoc.getBuffer();
+    } catch (err) {
+      this.logger.error('Failed to generate PDF', err);
+      throw err;
+    }
   }
 
   private fmt(value: number): string {
@@ -85,14 +77,14 @@ export class InvoicePdfService {
   private buildDocDefinition(data: InvoiceData): Record<string, unknown> {
     const { manufacturer, distributor, items, financials } = data;
 
-    // ─── Product table rows ───────────────────────────────────────────────────
     const tableBody: unknown[][] = [
       // Header row
       [
         { text: 'No', style: 'tableHeader', alignment: 'center' },
+        { text: 'PICTURE', style: 'tableHeader', alignment: 'center' },
         { text: 'ITEM NO', style: 'tableHeader', alignment: 'center' },
         { text: 'DESCRIPTION', style: 'tableHeader', alignment: 'center' },
-        { text: 'ORDER QTY (KG)', style: 'tableHeader', alignment: 'center' },
+        { text: 'ORDER QTY', style: 'tableHeader', alignment: 'center' },
         { text: 'MRP', style: 'tableHeader', alignment: 'center' },
         { text: 'UNIT PRICE', style: 'tableHeader', alignment: 'center' },
         { text: 'AMOUNT', style: 'tableHeader', alignment: 'center' },
@@ -100,11 +92,17 @@ export class InvoicePdfService {
     ];
 
     for (const item of items) {
+      // Add image if available, otherwise just text
+      const pictureCell = item.imageBase64 
+        ? { image: item.imageBase64, width: 30, height: 30, alignment: 'center', margin: [0, 2, 0, 2] } 
+        : { text: 'N/A', alignment: 'center', style: 'tableCell' };
+
       tableBody.push([
         { text: String(item.no), alignment: 'center', style: 'tableCell' },
+        pictureCell,
         { text: item.itemNo || 'N/A', style: 'tableCell' },
         { text: item.description || 'N/A', style: 'tableCell' },
-        { text: this.fmt(item.quantity), alignment: 'center', style: 'tableCell' },
+        { text: `${this.fmt(item.quantity)} ${item.unit || ''}`.trim(), alignment: 'center', style: 'tableCell' },
         { text: this.fmt(item.mrp), alignment: 'right', style: 'tableCell' },
         { text: this.fmt(item.unitPrice), alignment: 'right', style: 'tableCell' },
         { text: this.fmt(item.amount), alignment: 'right', style: 'tableCell' },
@@ -114,11 +112,11 @@ export class InvoicePdfService {
     // ─── Financial breakdown rows ─────────────────────────────────────────────
     const financialRows: unknown[] = [
       this.calcRow('Sub Total:', this.fmt(financials.subTotal)),
-      this.calcRow(`Dist. Discount (${this.pct(financials.distDiscountPercent)}):`, this.fmt(financials.distDiscountAmount)),
-      this.calcRow(`Dist. Margin (${this.pct(financials.distMarginPercent)}):`, this.fmt(financials.distMarginAmount)),
-      this.calcRow(`Freight Disc (${this.pct(financials.freightDiscPercent)}):`, this.fmt(financials.freightDiscAmount)),
-      this.calcRow(`Special Disc (${this.pct(financials.specialDiscPercent)}):`, this.fmt(financials.specialDiscAmount)),
-      this.calcRow(`Cash Disc (${this.pct(financials.cashDiscPercent)}):`, this.fmt(financials.cashDiscAmount)),
+      financials.distDiscountAmount ? this.calcRow(`Dist. Discount (${this.pct(financials.distDiscountPercent)}):`, this.fmt(financials.distDiscountAmount)) : null,
+      financials.distMarginAmount ? this.calcRow(`Dist. Margin (${this.pct(financials.distMarginPercent)}):`, this.fmt(financials.distMarginAmount)) : null,
+      financials.freightDiscAmount ? this.calcRow(`Freight Disc (${this.pct(financials.freightDiscPercent)}):`, this.fmt(financials.freightDiscAmount)) : null,
+      financials.specialDiscAmount ? this.calcRow(`Special Disc (${this.pct(financials.specialDiscPercent)}):`, this.fmt(financials.specialDiscAmount)) : null,
+      financials.cashDiscAmount ? this.calcRow(`Cash Disc (${this.pct(financials.cashDiscPercent)}):`, this.fmt(financials.cashDiscAmount)) : null,
       this.calcRow('Taxable Amount:', this.fmt(financials.taxableAmount)),
       this.calcRow('Total GST (+):', this.fmt(financials.totalGst)),
       {
@@ -129,7 +127,7 @@ export class InvoicePdfService {
         margin: [8, 5, 8, 5],
         fillColor: '#f9f9f9',
       },
-    ];
+    ].filter(Boolean);
 
     return {
       pageSize: 'A4',
@@ -144,6 +142,7 @@ export class InvoicePdfService {
 
       styles: {
         sanskritHeader: {
+          font: 'NotoSansDevanagari',
           fontSize: 13,
           bold: true,
           alignment: 'center',
@@ -259,7 +258,7 @@ export class InvoicePdfService {
         {
           table: {
             headerRows: 1,
-            widths: ['6%', '12%', '28%', '14%', '10%', '15%', '15%'],
+            widths: ['5%', '10%', '13%', '25%', '12%', '10%', '12%', '13%'],
             body: tableBody,
           },
           layout: {
@@ -274,7 +273,7 @@ export class InvoicePdfService {
         // ─── Bottom section: Remarks (left) + Financial breakdown (right) ──
         {
           table: {
-            widths: ['*', '200'],
+            widths: ['*', 200],
             body: [
               [
                 // Remarks
