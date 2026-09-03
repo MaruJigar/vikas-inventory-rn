@@ -19,7 +19,25 @@ export class InvoicePdfService {
 
   constructor() {
     // Load fonts into virtual file system
-    pdfmake.vfs = vfsFonts.pdfMake?.vfs ?? vfsFonts;
+    const fonts = vfsFonts.pdfMake?.vfs ?? vfsFonts;
+
+    if (pdfmake.virtualfs && typeof pdfmake.virtualfs.writeFileSync === 'function') {
+      // In pdfmake v0.3 (Node), virtualfs is used and we must specify base64 encoding.
+      for (const [key, value] of Object.entries(fonts)) {
+        // Only write if value is a string (base64)
+        if (typeof value === 'string') {
+          pdfmake.virtualfs.writeFileSync(key, value, 'base64');
+        }
+      }
+      pdfmake.virtualfs.writeFileSync(
+        'NotoSansDevanagari-Regular.ttf',
+        customFonts['NotoSansDevanagari-Regular.ttf'],
+        'base64',
+      );
+    }
+
+    // Fallback for pdfmake v0.2.x or browser environments
+    pdfmake.vfs = fonts;
     pdfmake.vfs['NotoSansDevanagari-Regular.ttf'] = customFonts['NotoSansDevanagari-Regular.ttf'];
 
     pdfmake.fonts = {
