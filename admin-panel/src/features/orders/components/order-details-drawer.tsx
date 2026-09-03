@@ -235,12 +235,17 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
                       <TableHead>SKU</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
                       <TableHead className="text-right">MRP</TableHead>
-                      <TableHead className="text-right">Discount</TableHead>
+                      {order.items.some((it: OrderItemDto) => { const d = Number((it.gross_line_amount||0)) - Number((it.net_line_amount||0)) + Number((it.gst_amount||0)); return d > 0; }) && <TableHead className="text-right">Discount</TableHead>}
                       <TableHead className="text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {order.items.map((item: OrderItemDto) => {
+                    {(() => {
+                        const hasItemDiscounts = order.items.some((it: OrderItemDto) => {
+                          const disc = Number((it.gross_line_amount || 0)) - Number((it.net_line_amount || 0)) + Number((it.gst_amount || 0));
+                          return disc > 0;
+                        });
+                        return order.items.map((item: OrderItemDto) => {
                         let imageUrl = item.product?.product_image_url;
                         if (Array.isArray(imageUrl)) {
                           imageUrl = imageUrl[0];
@@ -268,11 +273,12 @@ export function OrderDetailsDrawer({ orderId, isOpen, onClose }: OrderDetailsDra
                           <TableCell className="text-slate-500">{item.sku_snapshot}</TableCell>
                           <TableCell className="text-right">{Number(item.quantity || 0)}</TableCell>
                           <TableCell className="text-right">₹{Number(item.mrp || 0).toFixed(2)}</TableCell>
-                          <TableCell className="text-right">₹{Number((item.gross_line_amount || 0) - (item.net_line_amount || 0) + (item.gst_amount || 0)).toFixed(2)}</TableCell>
+                          {hasItemDiscounts && <TableCell className="text-right">₹{Number((item.gross_line_amount || 0) - (item.net_line_amount || 0) + (item.gst_amount || 0)).toFixed(2)}</TableCell>}
                           <TableCell className="text-right font-medium">₹{Number(item.net_line_amount || 0).toFixed(2)}</TableCell>
                       </TableRow>
                         );
-                    })}
+                        });
+                    })()}
                   </TableBody>
                 </Table>
               </div>
