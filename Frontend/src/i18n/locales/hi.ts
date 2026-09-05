@@ -274,7 +274,6 @@ export const hi: TranslationResources = {
       cancellationReason: 'रद्दीकरण का कारण',
       share: 'साझा करें',
       shareError: 'ऑर्डर साझा नहीं किया जा सका।',
-      shareUnavailable: 'इस डिवाइस पर साझा करना उपलब्ध नहीं है।',
     },
     fulfillmentAction: {
       ORDER_RESERVED: 'स्टॉक आरक्षित',

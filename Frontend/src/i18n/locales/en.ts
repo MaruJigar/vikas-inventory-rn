@@ -277,7 +277,6 @@ export const en = {
       cancellationReason: 'Cancellation reason',
       share: 'Share',
       shareError: 'Could not share the order.',
-      shareUnavailable: 'Sharing is not available on this device.',
     },
     // Fulfillment-log action verbs (best-effort; unknown values shown raw).
     fulfillmentAction: {

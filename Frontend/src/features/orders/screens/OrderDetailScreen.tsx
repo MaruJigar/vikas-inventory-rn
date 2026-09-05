@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Linking,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 // v19 moved to a File/Paths API; downloadAsync + documentDirectory live here now.
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -117,25 +126,53 @@ export function OrderDetailScreen({
 
   const onShare = async () => {
     if (invoicePdfMutation.isPending) return;
+    const isWeb = Platform.OS === 'web';
     try {
-      // Check before generating: the PDF token is single-use and expires in
-      // 15 min, so burning one on a device that can't share is wasteful.
-      if (!(await Sharing.isAvailableAsync())) {
-        notify(t('orders.detail.shareUnavailable'));
-        return;
-      }
+      // Is a native share sheet actually usable here? On web this is always
+      // false: expo-sharing needs `navigator.share`, which is HTTPS-only and
+      // absent on desktop browsers.
+      const canShareNatively = !isWeb && (await Sharing.isAvailableAsync());
 
       const { downloadUrl, fileName } = await invoicePdfMutation.mutateAsync(id);
       const href = resolveBackendUrl(downloadUrl);
       if (!href) throw new Error('No download URL returned');
 
-      const target = `${FileSystem.documentDirectory}${fileName || `${order.order_number}.pdf`}`;
-      const { uri, status } = await FileSystem.downloadAsync(href, target);
+      // Web: the file-system web shim has no documentDirectory, so there is
+      // nothing to download *to*. The response carries `Content-Disposition:
+      // attachment`, so pointing the tab at it saves the file without
+      // navigating away from the app.
+      if (isWeb) {
+        window.location.href = href;
+        return;
+      }
+
+      // Native without a share sheet — hand off to the browser rather than
+      // dead-ending, so the invoice is still reachable.
+      if (!canShareNatively) {
+        await Linking.openURL(href);
+        return;
+      }
+
+      // `fileName` comes from the server; a stray separator would make this an
+      // unwritable path, so flatten it before joining.
+      const safeName = (fileName || `${order.order_number}.pdf`).replace(
+        /[/\\]/g,
+        '-',
+      );
+      const { uri, status } = await FileSystem.downloadAsync(
+        href,
+        `${FileSystem.documentDirectory}${safeName}`,
+      );
       if (status !== 200) {
         throw new Error(`Invoice download failed with HTTP ${status}`);
       }
 
-      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+      // UTI is the iOS type identifier, mimeType the Android one — both are
+      // needed for the sheet to offer PDF-capable targets.
+      await Sharing.shareAsync(uri, {
+        UTI: 'com.adobe.pdf',
+        mimeType: 'application/pdf',
+      });
     } catch (e) {
       // Surface the cause — a silent catch here made the cleartext-URL failure
       // indistinguishable from a server error.
