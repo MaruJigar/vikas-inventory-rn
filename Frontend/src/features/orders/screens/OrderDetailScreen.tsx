@@ -12,7 +12,7 @@ import { colors, radius, spacing, typography } from '@/theme';
 import { confirmAction, notify } from '@/lib/dialog';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { formatDateTime } from '@/lib/date';
-import { resolveFirstMediaUrl } from '@/lib/media';
+import { resolveFirstMediaUrl, resolveBackendUrl } from '@/lib/media';
 import { useManufacturerNames } from '@/features/manufacturers/hooks';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
@@ -118,18 +118,28 @@ export function OrderDetailScreen({
   const onShare = async () => {
     if (invoicePdfMutation.isPending) return;
     try {
-      const { downloadUrl, fileName } = await invoicePdfMutation.mutateAsync(id);
-      if (!downloadUrl) throw new Error('No download URL returned');
-
-      const target = `${FileSystem.documentDirectory}${fileName || `${order.order_number}.pdf`}`;
-      const { uri } = await FileSystem.downloadAsync(downloadUrl, target);
-
+      // Check before generating: the PDF token is single-use and expires in
+      // 15 min, so burning one on a device that can't share is wasteful.
       if (!(await Sharing.isAvailableAsync())) {
         notify(t('orders.detail.shareUnavailable'));
         return;
       }
+
+      const { downloadUrl, fileName } = await invoicePdfMutation.mutateAsync(id);
+      const href = resolveBackendUrl(downloadUrl);
+      if (!href) throw new Error('No download URL returned');
+
+      const target = `${FileSystem.documentDirectory}${fileName || `${order.order_number}.pdf`}`;
+      const { uri, status } = await FileSystem.downloadAsync(href, target);
+      if (status !== 200) {
+        throw new Error(`Invoice download failed with HTTP ${status}`);
+      }
+
       await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
-    } catch {
+    } catch (e) {
+      // Surface the cause — a silent catch here made the cleartext-URL failure
+      // indistinguishable from a server error.
+      console.warn('[invoice share]', e);
       notify(t('orders.detail.shareError'));
     }
   };

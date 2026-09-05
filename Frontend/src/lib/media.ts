@@ -55,3 +55,30 @@ export function resolveFirstMediaUrl(
 export function joinMediaUrls(urls: string[]): string {
   return urls.filter(Boolean).join(',');
 }
+
+/**
+ * Re-pin an absolute URL the backend built for itself onto OUR API origin.
+ *
+ * The invoice endpoint composes `downloadUrl` from `req.protocol`/`req.hostname`,
+ * but the backend never enables Express `trust proxy`. Behind Nginx that makes
+ * `req.protocol` report `http`, so it hands back
+ * `http://api.avchousehold.com/v1/invoices/download/<token>`. The host 308s that
+ * to https — but Android blocks the cleartext request outright (no
+ * `usesCleartextTraffic`), so the redirect is never followed and the download
+ * fails before it starts.
+ *
+ * Keeping only the path and re-basing it on `API_BASE_URL` fixes the protocol
+ * and also survives the backend reporting an internal/localhost hostname.
+ */
+export function resolveBackendUrl(
+  url: string | null | undefined,
+): string | undefined {
+  if (!url) return undefined;
+  if (!/^https?:\/\//i.test(url)) return resolveMediaUrl(url);
+  try {
+    const { pathname, search } = new URL(url);
+    return `${ORIGIN}${pathname}${search}`;
+  } catch {
+    return url;
+  }
+}
