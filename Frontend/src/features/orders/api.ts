@@ -65,6 +65,14 @@ export const ordersApi = {
   /** PATCH /v1/orders/:id/cancel — salesman (own) or distributor cancels. */
   cancel: (id: string, body: { cancellationReason: string }) =>
     apiClient.patch<Order>(`/orders/${id}/cancel`, body).then((r) => r.data),
+
+  /** GET /v1/orders/:id/invoice/pdf — signed URL for the invoice PDF. */
+  getInvoicePdf: (id: string) =>
+    apiClient
+      .get<{ data: { downloadUrl: string; fileName: string } }>(
+        `/orders/${id}/invoice/pdf`,
+      )
+      .then((r) => r.data.data),
 };
 
 /**

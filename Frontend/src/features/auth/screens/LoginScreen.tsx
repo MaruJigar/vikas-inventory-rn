@@ -18,9 +18,6 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
   const { control, handleSubmit } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email_or_phone: '', password: '' },
-    // distributor@vikassales.local
-    // admin@vikassales.local
-    // salesman@vikassales.local
   });
 
   const onSubmit = (values: LoginForm) => login.mutate(values);

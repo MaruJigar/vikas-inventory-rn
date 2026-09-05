@@ -194,3 +194,10 @@ export function useOrderFulfillmentLogs(id: string) {
     select: (res) => res.data,
   });
 }
+
+/** Fetch a signed invoice-PDF URL for an order (used by the share action). */
+export function useInvoicePdfMutation() {
+  return useMutation({
+    mutationFn: (id: string) => ordersApi.getInvoicePdf(id),
+  });
+}

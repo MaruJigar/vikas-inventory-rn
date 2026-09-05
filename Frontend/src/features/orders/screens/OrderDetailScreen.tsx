@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+// v19 moved to a File/Paths API; downloadAsync + documentDirectory live here now.
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -20,6 +23,7 @@ import {
   useStatusIndex,
   useUpdateOrderStatus,
   useCancelOrder,
+  useInvoicePdfMutation,
 } from '@/features/orders/hooks';
 import {
   advanceActionLabel,
@@ -36,29 +40,6 @@ import {
 } from '@/features/orders/constants';
 import type { Order } from '@/types/order';
 import type { OrdersScreenProps } from '@/navigation/types';
-
-function buildShareText(
-  order: Order,
-  t: TFunction,
-  statusIndex: Map<string, StatusMeta>,
-): string {
-  const lines = [
-    `${t('orders.detail.order')} ${order.order_number}`,
-    `${t('orders.detail.status')}: ${statusLabel(t, statusIndex, order.status_id)}`,
-    order.shop ? `${t('orders.detail.shop')}: ${order.shop.name}` : '',
-    formatDateTime(order.created_at),
-    '',
-    ...(order.items ?? []).map(
-      (it) =>
-        `${it.product_name_snapshot} x ${toNum(it.quantity)}  ${formatINR(
-          toNum(it.net_line_amount),
-        )}`,
-    ),
-    '',
-    `${t('orders.detail.total')}: ${formatINR(toNum(order.final_order_amount))}`,
-  ];
-  return lines.filter((l) => l !== '').join('\n');
-}
 
 /**
  * Line-item thumbnail. `GET /orders/:id` joins `items.product`, so the live
@@ -117,6 +98,7 @@ export function OrderDetailScreen({
   const advance = useUpdateOrderStatus(id);
   const cancelOrder = useCancelOrder(id);
   const mfrNames = useManufacturerNames();
+  const invoicePdfMutation = useInvoicePdfMutation();
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
 
@@ -134,8 +116,19 @@ export function OrderDetailScreen({
   }
 
   const onShare = async () => {
+    if (invoicePdfMutation.isPending) return;
     try {
-      await Share.share({ message: buildShareText(order, t, statusIndex) });
+      const { downloadUrl, fileName } = await invoicePdfMutation.mutateAsync(id);
+      if (!downloadUrl) throw new Error('No download URL returned');
+
+      const target = `${FileSystem.documentDirectory}${fileName || `${order.order_number}.pdf`}`;
+      const { uri } = await FileSystem.downloadAsync(downloadUrl, target);
+
+      if (!(await Sharing.isAvailableAsync())) {
+        notify(t('orders.detail.shareUnavailable'));
+        return;
+      }
+      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch {
       notify(t('orders.detail.shareError'));
     }
@@ -260,7 +253,11 @@ export function OrderDetailScreen({
           accessibilityRole="button"
           accessibilityLabel={t('orders.detail.share')}
         >
-          <Ionicons name="share-outline" size={24} color={colors.primary} />
+          {invoicePdfMutation.isPending ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Ionicons name="share-outline" size={24} color={colors.primary} />
+          )}
         </Pressable>
       </View>
 

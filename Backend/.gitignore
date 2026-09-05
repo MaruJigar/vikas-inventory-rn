@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+coverage/
+
+# Backups
+backups/
+*.dump
+*.dump.gz
