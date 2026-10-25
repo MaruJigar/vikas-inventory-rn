@@ -24,6 +24,7 @@ import {
   Layers,
   ListOrdered,
   Footprints,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hasRole } from '@/lib/auth/guards';
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { title: 'Dashboard', href: ROUTES.DASHBOARD, icon: LayoutDashboard, roles: PERMISSIONS.DASHBOARD_VIEW },
   { title: 'Approvals', href: ROUTES.APPROVALS, icon: CheckSquare, roles: PERMISSIONS.APPROVALS_VIEW },
   { title: 'Manufacturers', href: ROUTES.MANUFACTURERS, icon: Factory, roles: PERMISSIONS.MANUFACTURERS_VIEW },
+  { title: 'Catalogues', href: ROUTES.CATALOGUES, icon: BookOpen, roles: PERMISSIONS.CATALOGUES_VIEW },
   { title: 'Distributors', href: ROUTES.DISTRIBUTORS, icon: Truck, roles: PERMISSIONS.DISTRIBUTORS_VIEW },
   { title: 'Salesmen', href: ROUTES.SALESMEN, icon: Users, roles: PERMISSIONS.SALESMEN_VIEW },
   { title: 'Products', href: ROUTES.PRODUCTS, icon: Package, roles: PERMISSIONS.PRODUCTS_VIEW },

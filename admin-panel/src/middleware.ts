@@ -37,6 +37,7 @@ export function middleware(request: NextRequest) {
     '/dashboard',
     '/approvals',
     '/manufacturers',
+    '/catalogues',
     '/distributors',
     '/products',
     '/shops',

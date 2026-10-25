@@ -43,6 +43,7 @@ import { EmailModule } from './email/email.module';
 import { RegionModule } from './region/region.module';
 import { OrderStatusModule } from './order-status/order-status.module';
 import { InvoiceModule } from './invoice/invoice.module';
+import { CatalogueModule } from './catalogue/catalogue.module';
 
 import { appConfig } from './config/app.config';
 import { databaseConfig } from './config/database.config';
@@ -146,6 +147,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     RegionModule,
     OrderStatusModule,
     InvoiceModule,
+    CatalogueModule,
   ],
   controllers: [AppController],
   providers: [

@@ -2,6 +2,7 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   APPROVALS: '/approvals',
   MANUFACTURERS: '/manufacturers',
+  CATALOGUES: '/catalogues',
   DISTRIBUTORS: '/distributors',
   SALESMEN: '/salesmen',
   PRODUCTS: '/products',
