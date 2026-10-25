@@ -50,15 +50,20 @@ async function bootstrap() {
         'http://localhost:8081',
         'http://127.0.0.1:3000',
         'http://127.0.0.1:3001',
+        'http://localhost:19006',
+        'http://localhost:8082',
 
         appConfig.adminPanelUrl,
         appConfig.reactNativeWebUrl,
         appConfig.frontendUrl,
       ].filter(Boolean);
 
+      const isAvcDomain =
+        /^https?:\/\/([a-zA-Z0-9-]+\.)*avchousehold\.com(:\d+)?$/.test(origin);
+
       if (
         allowedOrigins.includes(origin) ||
-        origin.endsWith('.avchousehold.com')
+        isAvcDomain
       ) {
         return callback(null, true);
       }

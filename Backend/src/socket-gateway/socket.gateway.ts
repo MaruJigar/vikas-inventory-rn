@@ -13,17 +13,28 @@ import { ConfigService } from '@nestjs/config';
 @WebSocketGateway({
   cors: {
     origin: (requestOrigin: string, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!requestOrigin) {
+        return callback(null, true);
+      }
+
       // Dynamic origin resolution matching REST API
       const allowedOrigins = [
         'http://localhost:3000',
         'http://localhost:3001',
         'http://localhost:8081',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
+        'http://localhost:19006',
+        'http://localhost:8082',
         process.env.ADMIN_PANEL_URL,
         process.env.REACT_NATIVE_WEB_URL,
         process.env.FRONTEND_URL,
       ].filter(Boolean);
+
+      const isAvcDomain =
+        /^https?:\/\/([a-zA-Z0-9-]+\.)*avchousehold\.com(:\d+)?$/.test(requestOrigin);
       
-      if (!requestOrigin || allowedOrigins.includes(requestOrigin)) {
+      if (allowedOrigins.includes(requestOrigin) || isAvcDomain) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
