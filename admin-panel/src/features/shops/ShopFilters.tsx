@@ -55,7 +55,7 @@ export function ShopFilters({
           type="text"
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder={hideStatusFilters ? "Search by shop name, city, state..." : "Search by name, owner, phone..."}
+          placeholder={hideStatusFilters ? "Search by name, owner, phone, city..." : "Search by name, owner, phone..."}
           className="pl-10 h-9"
         />
       </div>

@@ -30,8 +30,8 @@ describe('ShopService - Manufacturer Access Restrictions', () => {
     limit: jest.fn().mockReturnThis(),
     getCount: jest.fn().mockResolvedValue(2),
     getRawMany: jest.fn().mockResolvedValue([
-      { id: 'shop-1', name: 'Alpha Stores', city: 'Mumbai', state: 'Maharashtra' },
-      { id: 'shop-2', name: 'Beta Mart', city: 'Pune', state: 'Maharashtra' },
+      { id: 'shop-1', name: 'Alpha Stores', owner_name: 'Rajesh', phone: '9876543210', city: 'Mumbai', state: 'Maharashtra' },
+      { id: 'shop-2', name: 'Beta Mart', owner_name: 'Suresh', phone: '9876543211', city: 'Pune', state: 'Maharashtra' },
     ]),
     getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
     getOne: jest.fn().mockResolvedValue(null),
@@ -71,7 +71,7 @@ describe('ShopService - Manufacturer Access Restrictions', () => {
   });
 
   describe('getManufacturerShops', () => {
-    it('should query manufacturer linked shops and return only id, name, city, state', async () => {
+    it('should query manufacturer linked shops and return id, name, owner_name, phone, city, state', async () => {
       mockDataSource.query.mockResolvedValueOnce([{ id: 'mfr-123' }]);
 
       const result = await service.getManufacturerShops('user-mfr-1', { page: 1, limit: 10 } as any);
@@ -87,8 +87,8 @@ describe('ShopService - Manufacturer Access Restrictions', () => {
         { mfrId: 'mfr-123' },
       );
       expect(result.data).toEqual([
-        { id: 'shop-1', name: 'Alpha Stores', city: 'Mumbai', state: 'Maharashtra' },
-        { id: 'shop-2', name: 'Beta Mart', city: 'Pune', state: 'Maharashtra' },
+        { id: 'shop-1', name: 'Alpha Stores', owner_name: 'Rajesh', phone: '9876543210', city: 'Mumbai', state: 'Maharashtra' },
+        { id: 'shop-2', name: 'Beta Mart', owner_name: 'Suresh', phone: '9876543211', city: 'Pune', state: 'Maharashtra' },
       ]);
       expect(result.meta.total).toBe(2);
     });

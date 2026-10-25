@@ -267,19 +267,23 @@ export class ShopService {
       .select([
         'shop.id AS id',
         'shop.name AS name',
+        'shop.owner_name AS owner_name',
+        'shop.phone AS phone',
         'COALESCE(city.name, shop.city_name, \'\') AS city',
         'COALESCE(state.name, shop.state_name, \'\') AS state',
       ]);
 
     if (search) {
       qb.andWhere(
-        '(shop.name ILIKE :search OR city.name ILIKE :search OR shop.city_name ILIKE :search OR state.name ILIKE :search OR shop.state_name ILIKE :search)',
+        '(shop.name ILIKE :search OR shop.phone ILIKE :search OR shop.owner_name ILIKE :search OR city.name ILIKE :search OR shop.city_name ILIKE :search OR state.name ILIKE :search OR shop.state_name ILIKE :search)',
         { search: `%${search}%` },
       );
     }
 
     const allowedSortFields: Record<string, string> = {
       name: 'shop.name',
+      owner_name: 'shop.owner_name',
+      phone: 'shop.phone',
       created_at: 'shop.created_at',
       city: 'city.name',
       state: 'state.name',
@@ -296,6 +300,8 @@ export class ShopService {
     const data: ManufacturerShopDto[] = rawData.map((r) => ({
       id: r.id,
       name: r.name,
+      owner_name: r.owner_name || '',
+      phone: r.phone || '',
       city: r.city || '',
       state: r.state || '',
     }));

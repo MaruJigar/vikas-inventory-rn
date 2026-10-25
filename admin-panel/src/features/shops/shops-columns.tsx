@@ -175,6 +175,20 @@ export const getManufacturerShopsColumns = (): ColumnDef<ManufacturerShopDto>[] 
     ),
   },
   {
+    accessorKey: 'owner_name',
+    header: 'Owner Name',
+    cell: ({ row }) => (
+      <div className="text-slate-600">{row.original.owner_name || '-'}</div>
+    ),
+  },
+  {
+    accessorKey: 'phone',
+    header: 'Mobile',
+    cell: ({ row }) => (
+      <div className="text-slate-600">{row.original.phone || '-'}</div>
+    ),
+  },
+  {
     accessorKey: 'city',
     header: 'City',
     cell: ({ row }) => (

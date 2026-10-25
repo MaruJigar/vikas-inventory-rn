@@ -57,6 +57,8 @@ export interface ShopDto {
 export interface ManufacturerShopDto {
   id: string;
   name: string;
+  owner_name?: string;
+  phone: string;
   city: string;
   state: string;
 }
