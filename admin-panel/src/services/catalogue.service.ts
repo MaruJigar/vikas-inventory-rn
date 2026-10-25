@@ -41,13 +41,7 @@ export const catalogueService = {
       ? `/catalogues/${manufacturerId}`
       : '/manufacturer/catalogue';
 
-    return api
-      .post<CatalogueDto>(url, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
-      .then((res) => res.data);
+    return api.post<CatalogueDto>(url, formData).then((res) => res.data);
   },
 
   /**
@@ -59,20 +53,12 @@ export const catalogueService = {
 
     if (manufacturerId) {
       return api
-        .post<CatalogueDto>(`/catalogues/${manufacturerId}`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        })
+        .post<CatalogueDto>(`/catalogues/${manufacturerId}`, formData)
         .then((res) => res.data);
     }
 
     return api
-      .put<CatalogueDto>('/manufacturer/catalogue', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
+      .put<CatalogueDto>('/manufacturer/catalogue', formData)
       .then((res) => res.data);
   },
 

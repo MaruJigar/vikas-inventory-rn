@@ -14,6 +14,7 @@ import {
   HttpCode,
   HttpStatus,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
@@ -248,14 +249,14 @@ export class CatalogueController {
   }
 
   @Post('catalogues/:manufacturerId')
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB
     }),
   )
   @ApiOperation({
-    summary: 'Admin Upload or Replace Catalogue for a Manufacturer',
+    summary: 'Upload or Replace Catalogue for a Manufacturer',
   })
   @ApiConsumes('multipart/form-data')
   @ApiParam({ name: 'manufacturerId', description: 'UUID of the manufacturer' })
@@ -276,6 +277,17 @@ export class CatalogueController {
     @Param('manufacturerId') manufacturerId: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
+    if (req.user.role === 'MANUFACTURER_ADMIN') {
+      const ownMfr = await this.catalogueService.getManufacturerByUserId(
+        req.user.userId,
+      );
+      if (ownMfr.id !== manufacturerId) {
+        throw new ForbiddenException(
+          'Access denied: You can only upload a catalogue for your own manufacturer',
+        );
+      }
+    }
+
     return this.catalogueService.saveOrReplaceCatalogue(
       manufacturerId,
       req.user.userId,
@@ -284,15 +296,27 @@ export class CatalogueController {
   }
 
   @Delete('catalogues/:manufacturerId')
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Admin Delete Catalogue for a Manufacturer',
+    summary: 'Delete Catalogue for a Manufacturer',
   })
   @ApiParam({ name: 'manufacturerId', description: 'UUID of the manufacturer' })
   async adminDeleteCatalogue(
+    @Request() req,
     @Param('manufacturerId') manufacturerId: string,
   ) {
+    if (req.user.role === 'MANUFACTURER_ADMIN') {
+      const ownMfr = await this.catalogueService.getManufacturerByUserId(
+        req.user.userId,
+      );
+      if (ownMfr.id !== manufacturerId) {
+        throw new ForbiddenException(
+          'Access denied: You can only delete a catalogue for your own manufacturer',
+        );
+      }
+    }
+
     return this.catalogueService.deleteCatalogueByManufacturerId(manufacturerId);
   }
 }
