@@ -314,7 +314,6 @@ export class CatalogueService {
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `${dispositionType}; filename="${sanitizedName}"`,
-      'Content-Security-Policy': "default-src 'none'",
       'X-Content-Type-Options': 'nosniff',
       'Cache-Control': 'private, max-age=3600',
     });

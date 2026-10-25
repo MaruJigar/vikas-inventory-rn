@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Download, Loader2, AlertCircle } from 'lucide-react';
+import { Download, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 import { catalogueService } from '@/services/catalogue.service';
 
 interface CataloguePreviewDialogProps {
@@ -29,13 +29,15 @@ export function CataloguePreviewDialog({
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const activeUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isOpen || !manufacturerId) {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-        setBlobUrl(null);
+      if (activeUrlRef.current) {
+        URL.revokeObjectURL(activeUrlRef.current);
+        activeUrlRef.current = null;
       }
+      setBlobUrl(null);
       setError(null);
       return;
     }
@@ -48,7 +50,11 @@ export function CataloguePreviewDialog({
       .fetchPdfBlob(manufacturerId)
       .then((blob) => {
         if (!isMounted) return;
+        if (activeUrlRef.current) {
+          URL.revokeObjectURL(activeUrlRef.current);
+        }
         const url = URL.createObjectURL(blob);
+        activeUrlRef.current = url;
         setBlobUrl(url);
       })
       .catch((err) => {
@@ -61,15 +67,27 @@ export function CataloguePreviewDialog({
 
     return () => {
       isMounted = false;
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
     };
   }, [isOpen, manufacturerId]);
+
+  // Clean up object URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (activeUrlRef.current) {
+        URL.revokeObjectURL(activeUrlRef.current);
+        activeUrlRef.current = null;
+      }
+    };
+  }, []);
 
   const handleDownload = () => {
     if (!manufacturerId) return;
     catalogueService.downloadPdf(manufacturerId, filename);
+  };
+
+  const handleOpenInNewTab = () => {
+    if (!blobUrl) return;
+    window.open(blobUrl, '_blank');
   };
 
   return (
@@ -87,6 +105,16 @@ export function CataloguePreviewDialog({
           <div className="flex items-center gap-2 mr-6">
             <Button
               variant="outline"
+              size="sm"
+              onClick={handleOpenInNewTab}
+              disabled={isLoading || !blobUrl || !!error}
+              className="gap-2"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Open in Tab
+            </Button>
+            <Button
+              variant="default"
               size="sm"
               onClick={handleDownload}
               disabled={isLoading || !!error}
@@ -117,11 +145,31 @@ export function CataloguePreviewDialog({
           )}
 
           {!isLoading && !error && blobUrl && (
-            <iframe
-              src={blobUrl}
-              className="w-full h-full border-none rounded-md"
-              title="PDF Preview"
-            />
+            <object
+              data={blobUrl}
+              type="application/pdf"
+              className="w-full h-full rounded-md"
+            >
+              <iframe
+                src={blobUrl}
+                className="w-full h-full border-none rounded-md"
+                title="PDF Preview"
+              >
+                <div className="flex flex-col items-center justify-center h-full gap-3 p-6 text-center bg-slate-50">
+                  <p className="text-sm text-slate-600">
+                    Inline PDF preview is not supported directly in this browser frame.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleOpenInNewTab}>
+                      Open in New Tab
+                    </Button>
+                    <Button variant="default" size="sm" onClick={handleDownload}>
+                      Download PDF
+                    </Button>
+                  </div>
+                </div>
+              </iframe>
+            </object>
           )}
         </div>
       </DialogContent>

@@ -79,7 +79,7 @@ export const catalogueService = {
     const response = await api.get(`/catalogues/${manufacturerId}/file`, {
       responseType: 'blob',
     });
-    return response.data;
+    return new Blob([response.data], { type: 'application/pdf' });
   },
 
   /**
