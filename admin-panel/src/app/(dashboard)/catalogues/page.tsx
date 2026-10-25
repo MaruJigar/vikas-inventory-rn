@@ -9,7 +9,6 @@ import { useCataloguesQuery } from '@/hooks/catalogues/useCataloguesQuery';
 import { useDeleteCatalogueMutation } from '@/hooks/catalogues/useDeleteCatalogueMutation';
 import { getCataloguesColumns } from '@/features/catalogues/catalogues-columns';
 import { CatalogueFilters } from '@/features/catalogues/CatalogueFilters';
-import { CataloguePreviewDialog } from '@/features/catalogues/components/CataloguePreviewDialog';
 import { UploadCatalogueDialog } from '@/features/catalogues/components/UploadCatalogueDialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { ManufacturerCatalogueItemDto } from '@/types/api/catalogue.types';
@@ -25,7 +24,6 @@ function CataloguesPageContent() {
   const { queryState, setPage, setLimit, setSearch } = useDataTable();
 
   const [status, setStatus] = useState<string>('all');
-  const [previewItem, setPreviewItem] = useState<ManufacturerCatalogueItemDto | null>(null);
   const [uploadItem, setUploadItem] = useState<{
     item: ManufacturerCatalogueItemDto;
     isReplace: boolean;
@@ -65,7 +63,6 @@ function CataloguesPageContent() {
   const columns = useMemo(
     () =>
       getCataloguesColumns({
-        onPreview: (item) => setPreviewItem(item),
         onDownload: handleDownload,
         onUpload: (item) => setUploadItem({ item, isReplace: false }),
         onReplace: (item) => setUploadItem({ item, isReplace: true }),
@@ -90,7 +87,7 @@ function CataloguesPageContent() {
               Manufacturer Catalogues
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Manage, upload, preview, and download PDF product catalogues for manufacturers.
+              Manage, upload, and download PDF product catalogues for manufacturers.
             </p>
           </div>
           {showTopUploadButton && (
@@ -123,15 +120,6 @@ function CataloguesPageContent() {
           error={error as Error | null}
           onPageChange={setPage}
           onLimitChange={setLimit}
-        />
-
-        {/* PDF Preview Dialog */}
-        <CataloguePreviewDialog
-          isOpen={!!previewItem}
-          onClose={() => setPreviewItem(null)}
-          manufacturerId={previewItem?.manufacturer_id}
-          companyName={previewItem?.company_name}
-          filename={previewItem?.catalogue?.original_filename}
         />
 
         {/* Upload / Replace Dialog */}

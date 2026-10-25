@@ -3,7 +3,6 @@ import { ManufacturerCatalogueItemDto } from '@/types/api/catalogue.types';
 import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
-  Eye,
   Download,
   Upload,
   RefreshCw,
@@ -12,7 +11,6 @@ import {
 } from 'lucide-react';
 
 interface CataloguesColumnsProps {
-  onPreview: (item: ManufacturerCatalogueItemDto) => void;
   onDownload: (item: ManufacturerCatalogueItemDto) => void;
   onUpload: (item: ManufacturerCatalogueItemDto) => void;
   onReplace: (item: ManufacturerCatalogueItemDto) => void;
@@ -21,7 +19,6 @@ interface CataloguesColumnsProps {
 }
 
 export const getCataloguesColumns = ({
-  onPreview,
   onDownload,
   onUpload,
   onReplace,
@@ -121,17 +118,6 @@ export const getCataloguesColumns = ({
         <div className="flex justify-end gap-1.5 items-center">
           {hasCat ? (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onPreview(item)}
-                title="Preview Catalogue"
-                className="h-8 px-2 text-slate-600 hover:text-slate-900"
-              >
-                <Eye className="w-4 h-4 mr-1" />
-                Preview
-              </Button>
-
               <Button
                 variant="ghost"
                 size="sm"
