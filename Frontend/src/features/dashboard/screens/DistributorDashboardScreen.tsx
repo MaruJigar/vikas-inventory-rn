@@ -238,6 +238,31 @@ export function DistributorDashboardScreen() {
         />
       </Section>
 
+      <Section title={t('catalogue.title')}>
+        <Pressable onPress={() => navigation.navigate('Catalogues')}>
+          <Card style={styles.catalogueCard}>
+            <View style={styles.catalogueCardLeft}>
+              <View style={styles.catalogueIconWrap}>
+                <Ionicons name="book-outline" size={22} color={colors.primary} />
+              </View>
+              <View>
+                <Text style={typography.title}>
+                  {t('catalogue.browseManufacturer')}
+                </Text>
+                <Text style={styles.catalogueCardSub}>
+                  {t('catalogue.browseManufacturerDesc')}
+                </Text>
+              </View>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textMuted}
+            />
+          </Card>
+        </Pressable>
+      </Section>
+
       <Section title={t('dashboard.distributor.recentOrders')}>
         <RecentOrders onOpenOrder={goToOrder} />
       </Section>
@@ -246,6 +271,33 @@ export function DistributorDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  catalogueCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+  },
+  catalogueCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  catalogueIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  catalogueCardSub: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
   topBar: {
     flexDirection: 'row',
     alignItems: 'flex-start',

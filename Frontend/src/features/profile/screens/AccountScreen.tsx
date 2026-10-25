@@ -62,6 +62,22 @@ export function AccountScreen({
         </View>
       </Card>
 
+      <Section title={t('account.catalogues')}>
+        <Pressable onPress={() => navigation.navigate('Catalogues')}>
+          <Card style={styles.menuRow}>
+            <View style={styles.menuLeft}>
+              <Ionicons name="book-outline" size={22} color={colors.text} />
+              <Text style={typography.body}>{t('catalogue.title')}</Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textMuted}
+            />
+          </Card>
+        </Pressable>
+      </Section>
+
       {isDistributor ? (
         <Section title={t('account.management')}>
           <Pressable onPress={() => navigation.navigate('Salesmen')}>

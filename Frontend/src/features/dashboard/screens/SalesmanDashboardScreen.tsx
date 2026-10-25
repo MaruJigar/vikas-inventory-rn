@@ -203,6 +203,25 @@ export function SalesmanDashboardScreen() {
         </Card>
       </Pressable>
 
+      <Pressable onPress={() => navigation.navigate('Catalogues')}>
+        <Card style={styles.browseCard}>
+          <View style={styles.browseLeft}>
+            <View style={styles.browseIcon}>
+              <Ionicons name="book-outline" size={22} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={typography.title}>
+                {t('catalogue.browseManufacturer')}
+              </Text>
+              <Text style={styles.browseCardSub}>
+                {t('catalogue.browseManufacturerDesc')}
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Card>
+      </Pressable>
+
       <Section title={t('dashboard.salesman.recentOrders')}>
         <RecentOrders onOpenOrder={goToOrder} />
       </Section>
@@ -243,6 +262,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  browseCardSub: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: 2,
   },
   muted: { ...typography.body, color: colors.textMuted },
 });

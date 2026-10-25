@@ -8,6 +8,7 @@ import { AccountScreen } from '@/features/profile/screens/AccountScreen';
 import { SalesmenListScreen } from '@/features/salesman/screens/SalesmenListScreen';
 import { AddSalesmanScreen } from '@/features/salesman/screens/AddSalesmanScreen';
 import { SalesmanDetailScreen } from '@/features/salesman/screens/SalesmanDetailScreen';
+import { CataloguesScreen } from '@/features/catalog/screens/CataloguesScreen';
 
 const Stack = createNativeStackNavigator<AccountStackParamList>();
 
@@ -42,6 +43,11 @@ export function AccountNavigator() {
         name="SalesmanDetail"
         component={SalesmanDetailScreen}
         options={{ title: t('salesmen.detail.title') }}
+      />
+      <Stack.Screen
+        name="Catalogues"
+        component={CataloguesScreen}
+        options={{ title: t('catalogue.title') }}
       />
     </Stack.Navigator>
   );

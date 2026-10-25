@@ -12,6 +12,7 @@ import type { OrderStatus } from '@/types/order';
 export type AuthStackParamList = {
   Login: undefined;
   ForgotPassword: undefined;
+  Catalogues: undefined;
 };
 
 export type AuthScreenProps<T extends keyof AuthStackParamList> =
@@ -41,6 +42,7 @@ export type HomeStackParamList = {
   AddProduct: { product?: Product } | undefined;
   Cart: undefined;
   OrderSuccess: { orderNumber: string };
+  Catalogues: undefined;
 };
 
 export type HomeScreenProps<T extends keyof HomeStackParamList> =
@@ -72,6 +74,7 @@ export type AccountStackParamList = {
   Salesmen: undefined;
   AddSalesman: undefined;
   SalesmanDetail: { id: string };
+  Catalogues: undefined;
 };
 
 export type AccountScreenProps<T extends keyof AccountStackParamList> =

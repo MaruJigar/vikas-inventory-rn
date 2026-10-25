@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 
 import { Screen, Button, ControlledInput, LanguageToggle } from '@/components';
-import { colors, spacing, typography } from '@/theme';
+import { colors, radius, spacing, typography } from '@/theme';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { loginSchema, type LoginForm } from '@/features/auth/schemas';
 import { useLogin } from '@/features/auth/hooks';
@@ -62,6 +62,20 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
         onPress={handleSubmit(onSubmit)}
         loading={login.isPending}
       />
+
+      <View style={styles.catalogueSection}>
+        <View style={styles.catalogueDivider} />
+        <Pressable
+          style={styles.catalogueBtn}
+          onPress={() => navigation.navigate('Catalogues')}
+          accessibilityRole="button"
+          accessibilityLabel={t('catalogue.browsePublic')}
+        >
+          <Text style={styles.catalogueBtnText}>
+            {t('catalogue.browsePublic')}
+          </Text>
+        </Pressable>
+      </View>
     </Screen>
   );
 }
@@ -82,5 +96,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: spacing.xl,
+  },
+  catalogueSection: {
+    marginTop: spacing.xl,
+    alignItems: 'center',
+  },
+  catalogueDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    width: '100%',
+    marginBottom: spacing.lg,
+  },
+  catalogueBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    width: '100%',
+  },
+  catalogueBtnText: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.text,
   },
 });

@@ -13,6 +13,7 @@ import { AddProductScreen } from '@/features/products/screens/AddProductScreen';
 import { CartScreen } from '@/features/cart/screens/CartScreen';
 import { SelectShopScreen } from '@/features/visit/screens/SelectShopScreen';
 import { OrderSuccessScreen } from '@/features/orders/screens/OrderSuccessScreen';
+import { CataloguesScreen } from '@/features/catalog/screens/CataloguesScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -70,6 +71,11 @@ export function HomeNavigator() {
         name="OrderSuccess"
         component={OrderSuccessScreen}
         options={{ headerShown: false, gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="Catalogues"
+        component={CataloguesScreen}
+        options={{ title: t('catalogue.title'), headerBackTitle: t('common.back') }}
       />
     </Stack.Navigator>
   );
