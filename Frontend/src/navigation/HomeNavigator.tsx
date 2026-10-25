@@ -17,6 +17,7 @@ import { OrderSuccessScreen } from '@/features/orders/screens/OrderSuccessScreen
 import { POProductsScreen } from '@/features/purchaseOrders/screens/POProductsScreen';
 import { POCartScreen } from '@/features/purchaseOrders/screens/POCartScreen';
 import { POSuccessScreen } from '@/features/purchaseOrders/screens/POSuccessScreen';
+import { CataloguesScreen } from '@/features/catalog/screens/CataloguesScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -103,6 +104,11 @@ export function HomeNavigator() {
         name="PurchaseOrderSuccess"
         component={POSuccessScreen}
         options={{ headerShown: false, gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="Catalogues"
+        component={CataloguesScreen}
+        options={{ title: t('catalogue.title'), headerBackTitle: t('common.back') }}
       />
     </Stack.Navigator>
   );

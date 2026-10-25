@@ -13,6 +13,7 @@ export type AuthStackParamList = {
   Login: undefined;
   RegisterDistributor: undefined;
   ForgotPassword: undefined;
+  Catalogues: undefined;
 };
 
 export type AuthScreenProps<T extends keyof AuthStackParamList> =
@@ -55,6 +56,7 @@ export type HomeStackParamList = {
   PurchaseOrderProducts: undefined;
   PurchaseOrderCart: undefined;
   PurchaseOrderSuccess: { count: number };
+  Catalogues: undefined;
 };
 
 export type HomeScreenProps<T extends keyof HomeStackParamList> =
@@ -124,6 +126,7 @@ export type AccountStackParamList = {
   /** Without params the screen picks a product first (opening stock). */
   AdjustStock: { productId?: string; productName?: string } | undefined;
   InventoryValuation: undefined;
+  Catalogues: undefined;
 };
 
 export type AccountScreenProps<T extends keyof AccountStackParamList> =

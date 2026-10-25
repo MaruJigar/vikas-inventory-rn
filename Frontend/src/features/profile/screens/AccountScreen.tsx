@@ -24,6 +24,7 @@ const DEVELOPERS: { name: string; phone: string }[] = [
 const ROLE_LABELS: Record<Role, string> = {
   SALESMAN: 'Salesman',
   DISTRIBUTOR_ADMIN: 'Distributor',
+  DISTRIBUTOR: 'Distributor',
   MANUFACTURER_ADMIN: 'Manufacturer',
   SUPER_ADMIN: 'Admin',
 };
@@ -209,6 +210,17 @@ export function AccountScreen({
           label={t('account.security.resetPassword')}
           divider={false}
           onPress={onResetPassword}
+        />
+      </Group>
+
+      {/* Catalogues */}
+      <GroupLabel>{t('account.catalogues')}</GroupLabel>
+      <Group>
+        <Row
+          icon="book-outline"
+          label={t('catalogue.title')}
+          divider={false}
+          onPress={() => navigation.navigate('Catalogues')}
         />
       </Group>
 

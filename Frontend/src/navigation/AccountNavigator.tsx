@@ -16,6 +16,7 @@ import { InventoryListScreen } from '@/features/inventory/screens/InventoryListS
 import { InventoryDetailScreen } from '@/features/inventory/screens/InventoryDetailScreen';
 import { AdjustStockScreen } from '@/features/inventory/screens/AdjustStockScreen';
 import { InventoryValuationScreen } from '@/features/inventory/screens/InventoryValuationScreen';
+import { CataloguesScreen } from '@/features/catalog/screens/CataloguesScreen';
 
 const Stack = createNativeStackNavigator<AccountStackParamList>();
 
@@ -90,6 +91,11 @@ export function AccountNavigator() {
         name="InventoryValuation"
         component={InventoryValuationScreen}
         options={{ title: t('inventory.valuation.title') }}
+      />
+      <Stack.Screen
+        name="Catalogues"
+        component={CataloguesScreen}
+        options={{ title: t('catalogue.title') }}
       />
     </Stack.Navigator>
   );
