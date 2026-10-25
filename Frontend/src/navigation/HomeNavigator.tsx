@@ -19,10 +19,10 @@ const Stack = createNativeStackNavigator<HomeStackParamList>();
 export function HomeNavigator() {
   const { t } = useTranslation();
   const role = useAuthStore((s) => s.user?.role);
-  const Dashboard =
-    role === 'DISTRIBUTOR_ADMIN'
-      ? DistributorDashboardScreen
-      : SalesmanDashboardScreen;
+  const isDistributor = role === 'DISTRIBUTOR_ADMIN' || role === 'DISTRIBUTOR';
+  const Dashboard = isDistributor
+    ? DistributorDashboardScreen
+    : SalesmanDashboardScreen;
 
   return (
     <Stack.Navigator

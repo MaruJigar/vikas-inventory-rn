@@ -15,10 +15,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
+    let role = payload.role;
+    if (role === 'DISTRIBUTOR') role = 'DISTRIBUTOR_ADMIN';
+    if (role === 'MANUFACTURER') role = 'MANUFACTURER_ADMIN';
+
     return {
       userId: payload.sub,
       email: payload.email,
-      role: payload.role,
+      role,
       approvalStatus: payload.approvalStatus,
     };
   }

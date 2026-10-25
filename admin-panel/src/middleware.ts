@@ -17,7 +17,10 @@ function getRoleFromToken(token: string, hasRefreshToken: boolean): string | nul
       return null;
     }
     
-    return payload.role || null;
+    let role = payload.role || null;
+    if (role === 'DISTRIBUTOR') role = 'DISTRIBUTOR_ADMIN';
+    if (role === 'MANUFACTURER') role = 'MANUFACTURER_ADMIN';
+    return role;
   } catch {
     return null;
   }

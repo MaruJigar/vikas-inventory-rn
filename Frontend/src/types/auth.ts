@@ -5,7 +5,9 @@ export type Role =
   | 'SUPER_ADMIN'
   | 'MANUFACTURER_ADMIN'
   | 'DISTRIBUTOR_ADMIN'
-  | 'SALESMAN';
+  | 'SALESMAN'
+  | 'DISTRIBUTOR'
+  | 'MANUFACTURER';
 
 export type ApprovalStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
 

@@ -8,7 +8,11 @@ export const ADMIN_ROLES: readonly UserRole[] = [
 
 export const isAdminRole = (role?: UserRole | string | null): boolean => {
   if (!role) return false;
-  return ADMIN_ROLES.includes(role as UserRole);
+  return (
+    ADMIN_ROLES.includes(role as UserRole) ||
+    role === 'DISTRIBUTOR' ||
+    role === 'MANUFACTURER'
+  );
 };
 
 export const getRoleLabel = (role?: UserRole | string | null): string => {
@@ -17,8 +21,10 @@ export const getRoleLabel = (role?: UserRole | string | null): string => {
     case 'SUPER_ADMIN':
       return 'Super Admin';
     case 'MANUFACTURER_ADMIN':
+    case 'MANUFACTURER':
       return 'Manufacturer Admin';
     case 'DISTRIBUTOR_ADMIN':
+    case 'DISTRIBUTOR':
       return 'Distributor Admin';
     case 'SALESMAN':
       return 'Salesman';

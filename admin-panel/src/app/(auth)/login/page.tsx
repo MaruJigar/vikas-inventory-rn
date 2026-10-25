@@ -47,12 +47,16 @@ export default function LoginPage() {
         }).join(''));
         const payload = JSON.parse(jsonPayload);
 
+        let role = payload.role;
+        if (role === 'DISTRIBUTOR') role = 'DISTRIBUTOR_ADMIN';
+        if (role === 'MANUFACTURER') role = 'MANUFACTURER_ADMIN';
+
         const user = {
           id: payload.sub,
           userId: payload.sub,
           email: payload.email,
-          role: payload.role,
-          name: payload.email.split('@')[0], // Fallback name
+          role,
+          name: payload.email ? payload.email.split('@')[0] : 'Admin',
         };
 
         // Set cookies for Next.js middleware
@@ -62,10 +66,11 @@ export default function LoginPage() {
         login(user as import('@/store/useAuthStore').User, token);
         
         if (payload.role === 'SALESMAN') {
-          router.push('/');
-        } else {
-          router.push('/dashboard');
+          setError('Salesman accounts must sign in using the mobile application (app.avchousehold.com).');
+          return;
         }
+
+        window.location.href = '/dashboard';
       }
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {

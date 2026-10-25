@@ -14,6 +14,8 @@ const ROLE_LABELS: Record<Role, string> = {
   DISTRIBUTOR_ADMIN: 'Distributor',
   MANUFACTURER_ADMIN: 'Manufacturer',
   SUPER_ADMIN: 'Admin',
+  DISTRIBUTOR: 'Distributor',
+  MANUFACTURER: 'Manufacturer',
 };
 
 /**
@@ -26,7 +28,8 @@ export function AccountScreen({
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const isDistributor = user?.role === 'DISTRIBUTOR_ADMIN';
+  const isDistributor =
+    user?.role === 'DISTRIBUTOR_ADMIN' || user?.role === 'DISTRIBUTOR';
 
   const name = user?.full_name ?? '';
   const initial = name.trim().charAt(0).toUpperCase() || '?';

@@ -49,10 +49,14 @@ export class AuthService {
   }
 
   async login(user: User) {
+    let role = user.role;
+    if (role === 'DISTRIBUTOR') role = 'DISTRIBUTOR_ADMIN';
+    if (role === 'MANUFACTURER') role = 'MANUFACTURER_ADMIN';
+
     const payload = {
       email: user.email,
       sub: user.id,
-      role: user.role,
+      role,
       approvalStatus: user.approval_status,
     };
     const accessToken = this.jwtService.sign(payload);
