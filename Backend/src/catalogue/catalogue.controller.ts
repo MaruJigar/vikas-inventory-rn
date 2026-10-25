@@ -277,9 +277,10 @@ export class CatalogueController {
     @Param('manufacturerId') manufacturerId: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    if (req.user.role === 'MANUFACTURER_ADMIN') {
+    const userId = req.user?.userId || req.user?.sub || req.user?.id;
+    if (req.user?.role === 'MANUFACTURER_ADMIN') {
       const ownMfr = await this.catalogueService.getManufacturerByUserId(
-        req.user.userId,
+        userId,
       );
       if (ownMfr.id !== manufacturerId) {
         throw new ForbiddenException(
@@ -290,7 +291,7 @@ export class CatalogueController {
 
     return this.catalogueService.saveOrReplaceCatalogue(
       manufacturerId,
-      req.user.userId,
+      userId,
       file,
     );
   }
@@ -306,9 +307,10 @@ export class CatalogueController {
     @Request() req,
     @Param('manufacturerId') manufacturerId: string,
   ) {
-    if (req.user.role === 'MANUFACTURER_ADMIN') {
+    const userId = req.user?.userId || req.user?.sub || req.user?.id;
+    if (req.user?.role === 'MANUFACTURER_ADMIN') {
       const ownMfr = await this.catalogueService.getManufacturerByUserId(
-        req.user.userId,
+        userId,
       );
       if (ownMfr.id !== manufacturerId) {
         throw new ForbiddenException(

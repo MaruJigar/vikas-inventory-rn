@@ -20,7 +20,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (role === 'MANUFACTURER') role = 'MANUFACTURER_ADMIN';
 
     return {
-      userId: payload.sub,
+      userId: payload.sub || payload.userId || payload.id,
       email: payload.email,
       role,
       approvalStatus: payload.approvalStatus,

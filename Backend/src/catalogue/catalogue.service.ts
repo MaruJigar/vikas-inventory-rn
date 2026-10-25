@@ -95,6 +95,11 @@ export class CatalogueService {
    * Resolves the Manufacturer profile for an authenticated user.
    */
   public async getManufacturerByUserId(userId: string): Promise<Manufacturer> {
+    if (!userId) {
+      throw new ForbiddenException(
+        'Access denied: Authenticated user is not linked to a manufacturer profile',
+      );
+    }
     const manufacturer = await this.manufacturerRepo.findOne({
       where: { user_id: userId },
     });
