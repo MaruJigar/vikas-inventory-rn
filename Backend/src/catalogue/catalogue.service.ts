@@ -14,8 +14,12 @@ import * as fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import { ManufacturerCatalogue } from './entities/manufacturer-catalogue.entity';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
+import { Distributor } from '../distributor/distributor.entity';
+import { Salesman } from '../salesman/salesman.entity';
+import { ManufacturerDistributor } from '../distributor/manufacturer-distributor.entity';
 import { CatalogueResponseDto } from './dto/catalogue-response.dto';
 import { ManufacturerCatalogueItemDto } from './dto/manufacturer-catalogue-item.dto';
+import { PublicCatalogueItemDto } from './dto/public-catalogue-item.dto';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
 import { getUploadRoot } from '../common/utils/upload-path.util';
@@ -31,6 +35,12 @@ export class CatalogueService {
     private readonly catalogueRepo: Repository<ManufacturerCatalogue>,
     @InjectRepository(Manufacturer)
     private readonly manufacturerRepo: Repository<Manufacturer>,
+    @InjectRepository(Distributor)
+    private readonly distributorRepo: Repository<Distributor>,
+    @InjectRepository(Salesman)
+    private readonly salesmanRepo: Repository<Salesman>,
+    @InjectRepository(ManufacturerDistributor)
+    private readonly manufacturerDistributorRepo: Repository<ManufacturerDistributor>,
   ) {}
 
   /**
@@ -437,17 +447,8 @@ export class CatalogueService {
 
   async getCatalogueByManufacturerId(
     manufacturerId: string,
-    currentUser: { userId: string; role: string },
+    currentUser?: { userId: string; role: string },
   ): Promise<CatalogueResponseDto | null> {
-    if (currentUser.role === 'MANUFACTURER_ADMIN') {
-      const ownMfr = await this.getManufacturerByUserId(currentUser.userId);
-      if (ownMfr.id !== manufacturerId) {
-        throw new ForbiddenException(
-          'Access denied: You cannot access another manufacturer catalogue',
-        );
-      }
-    }
-
     const catalogue = await this.catalogueRepo.findOne({
       where: { manufacturer_id: manufacturerId },
     });
@@ -456,5 +457,179 @@ export class CatalogueService {
       return null;
     }
     return this.mapToResponseDto(catalogue);
+  }
+
+  // ─── Public Catalogue Discovery ──────────────────────────────────────────
+
+  async getPublicCatalogues(
+    queryDto: ListQueryDto,
+  ): Promise<PaginatedResponse<PublicCatalogueItemDto>> {
+    const { page = 1, limit = 20, search } = queryDto as any;
+    const skip = (page - 1) * limit;
+
+    const qb = this.catalogueRepo
+      .createQueryBuilder('cat')
+      .innerJoin(Manufacturer, 'm', 'm.id = cat.manufacturer_id')
+      .where('m.is_active = :isActive', { isActive: true })
+      .select([
+        'm.id AS manufacturer_id',
+        'm.company_name AS company_name',
+        'm.city AS city',
+        'm.state AS state',
+        'cat.id AS catalogue_id',
+        'cat.original_filename AS original_filename',
+        'cat.file_size_bytes AS file_size_bytes',
+        'cat.updated_at AS updated_at',
+      ]);
+
+    if (search) {
+      qb.andWhere(
+        '(m.company_name ILIKE :search OR cat.original_filename ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    qb.orderBy('m.company_name', 'ASC');
+
+    const total = await qb.getCount();
+    const rawRows = await qb.offset(skip).limit(limit).getRawMany();
+
+    const data: PublicCatalogueItemDto[] = rawRows.map((r) => ({
+      manufacturerId: r.manufacturer_id,
+      manufacturerName: r.company_name,
+      fileName: r.original_filename,
+      fileSizeBytes: Number(r.file_size_bytes),
+      updatedAt: r.updated_at,
+      city: r.city || null,
+      state: r.state || null,
+      pdfUrl: `/v1/catalogues/${r.manufacturer_id}/file`,
+      downloadUrl: `/v1/catalogues/${r.manufacturer_id}/file?download=true`,
+    }));
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+
+  // ─── Relationship-Scoped Catalogue Discovery ─────────────────────────────
+
+  async getAccessibleCatalogues(
+    currentUser: { userId: string; role: string },
+    queryDto: ListQueryDto,
+  ): Promise<PaginatedResponse<PublicCatalogueItemDto>> {
+    const { page = 1, limit = 20, search } = queryDto as any;
+    const skip = (page - 1) * limit;
+
+    let targetDistributorId: string | null = null;
+    let allowedManufacturerIds: string[] | null = null;
+
+    if (
+      currentUser.role === 'DISTRIBUTOR_ADMIN' ||
+      currentUser.role === 'DISTRIBUTOR'
+    ) {
+      const distributor = await this.distributorRepo.findOne({
+        where: { user_id: currentUser.userId },
+      });
+      if (!distributor) {
+        throw new ForbiddenException('Distributor profile not found');
+      }
+      targetDistributorId = distributor.id;
+    } else if (currentUser.role === 'SALESMAN') {
+      const salesman = await this.salesmanRepo.findOne({
+        where: { user_id: currentUser.userId },
+      });
+      if (!salesman) {
+        throw new ForbiddenException('Salesman profile not found');
+      }
+      if (!salesman.distributor_id) {
+        throw new ForbiddenException('Salesman is not assigned to a distributor');
+      }
+      targetDistributorId = salesman.distributor_id;
+    } else if (currentUser.role === 'SUPER_ADMIN') {
+      // Super admin can access all catalogues
+      return this.getPublicCatalogues(queryDto);
+    } else if (
+      currentUser.role === 'MANUFACTURER_ADMIN' ||
+      currentUser.role === 'MANUFACTURER'
+    ) {
+      const ownMfr = await this.getManufacturerByUserId(currentUser.userId);
+      allowedManufacturerIds = [ownMfr.id];
+    } else {
+      throw new ForbiddenException('Unauthorized to access personalized catalogues');
+    }
+
+    const qb = this.catalogueRepo
+      .createQueryBuilder('cat')
+      .innerJoin(Manufacturer, 'm', 'm.id = cat.manufacturer_id')
+      .where('m.is_active = :isActive', { isActive: true })
+      .select([
+        'm.id AS manufacturer_id',
+        'm.company_name AS company_name',
+        'm.city AS city',
+        'm.state AS state',
+        'cat.id AS catalogue_id',
+        'cat.original_filename AS original_filename',
+        'cat.file_size_bytes AS file_size_bytes',
+        'cat.updated_at AS updated_at',
+      ]);
+
+    if (targetDistributorId) {
+      qb.innerJoin(
+        ManufacturerDistributor,
+        'md',
+        'md.manufacturer_id = m.id AND md.distributor_id = :distributorId AND md.status = :status',
+        { distributorId: targetDistributorId, status: 'APPROVED' },
+      );
+    } else if (allowedManufacturerIds && allowedManufacturerIds.length > 0) {
+      qb.andWhere('m.id IN (:...mfrIds)', { mfrIds: allowedManufacturerIds });
+    }
+
+    if (search) {
+      qb.andWhere(
+        '(m.company_name ILIKE :search OR cat.original_filename ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    qb.orderBy('m.company_name', 'ASC');
+
+    const total = await qb.getCount();
+    const rawRows = await qb.offset(skip).limit(limit).getRawMany();
+
+    const data: PublicCatalogueItemDto[] = rawRows.map((r) => ({
+      manufacturerId: r.manufacturer_id,
+      manufacturerName: r.company_name,
+      fileName: r.original_filename,
+      fileSizeBytes: Number(r.file_size_bytes),
+      updatedAt: r.updated_at,
+      city: r.city || null,
+      state: r.state || null,
+      pdfUrl: `/v1/catalogues/${r.manufacturer_id}/file`,
+      downloadUrl: `/v1/catalogues/${r.manufacturer_id}/file?download=true`,
+    }));
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 }

@@ -32,8 +32,10 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
 import { Roles } from '../role-permission/roles.decorator';
+import { Public } from '../auth/public.decorator';
 import { CatalogueService } from './catalogue.service';
 import { CatalogueResponseDto } from './dto/catalogue-response.dto';
+import { PublicCatalogueItemDto } from './dto/public-catalogue-item.dto';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 
 @ApiTags('Manufacturer Catalogue')
@@ -168,6 +170,39 @@ export class CatalogueController {
     );
   }
 
+  // ─── Public & Relationship-Scoped Catalogue Discovery ──────────────────
+
+  @Public()
+  @Get('catalogues/public')
+  @ApiOperation({
+    summary: 'Public Catalogue Discovery (No Authentication Required)',
+    description:
+      'Returns a paginated list of available manufacturer catalogues with non-sensitive public metadata.',
+  })
+  async getPublicCatalogues(@Query() query: ListQueryDto) {
+    return this.catalogueService.getPublicCatalogues(query);
+  }
+
+  @Get('catalogues/accessible-to-me')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN', 'DISTRIBUTOR', 'SALESMAN', 'MANUFACTURER_ADMIN')
+  @ApiOperation({
+    summary: 'Relationship-Scoped Catalogue Discovery',
+    description:
+      'Returns available catalogues strictly scoped to the approved manufacturer-distributor relationships of the authenticated distributor or salesman.',
+  })
+  async getAccessibleCatalogues(
+    @Request() req,
+    @Query() query: ListQueryDto,
+  ) {
+    return this.catalogueService.getAccessibleCatalogues(
+      {
+        userId: req.user.userId,
+        role: req.user.role,
+      },
+      query,
+    );
+  }
+
   // ─── Admin Overview & Management Endpoints ──────────────────────────────
 
   @Get('catalogues')
@@ -187,10 +222,11 @@ export class CatalogueController {
     });
   }
 
+  @Public()
   @Get('catalogues/:manufacturerId')
-  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN')
   @ApiOperation({
-    summary: 'Get Catalogue Metadata by Manufacturer ID',
+    summary: 'Get Catalogue Metadata by Manufacturer ID (Public Access)',
+    description: 'Retrieves public catalogue metadata for a specific manufacturer without requiring login.',
   })
   @ApiParam({ name: 'manufacturerId', description: 'UUID of the manufacturer' })
   async getCatalogueByManufacturerId(
@@ -199,10 +235,7 @@ export class CatalogueController {
   ) {
     const result = await this.catalogueService.getCatalogueByManufacturerId(
       manufacturerId,
-      {
-        userId: req.user.userId,
-        role: req.user.role,
-      },
+      req.user ? { userId: req.user.userId, role: req.user.role } : undefined,
     );
     if (!result) {
       throw new NotFoundException('Catalogue not found for this manufacturer');
@@ -210,12 +243,12 @@ export class CatalogueController {
     return result;
   }
 
+  @Public()
   @Get('catalogues/:manufacturerId/file')
-  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
   @ApiOperation({
-    summary: 'View or Download Catalogue PDF by Manufacturer ID',
+    summary: 'View or Download Catalogue PDF by Manufacturer ID (Public Access)',
     description:
-      'Streams the catalogue PDF for a specific manufacturer. Supports inline viewing and attachment download.',
+      'Streams the catalogue PDF for a specific manufacturer. Publicly accessible without authentication. Supports inline viewing and attachment download.',
   })
   @ApiParam({ name: 'manufacturerId', description: 'UUID of the manufacturer' })
   @ApiQuery({
@@ -225,21 +258,10 @@ export class CatalogueController {
     description: 'If true, sends Content-Disposition: attachment',
   })
   async serveCatalogueFile(
-    @Request() req,
     @Param('manufacturerId') manufacturerId: string,
     @Res() res: Response,
     @Query('download') download?: string,
   ) {
-    // If user is MANUFACTURER_ADMIN, ensure they only access their own
-    if (req.user.role === 'MANUFACTURER_ADMIN') {
-      const ownMfr = await this.catalogueService.getManufacturerByUserId(
-        req.user.userId,
-      );
-      if (ownMfr.id !== manufacturerId) {
-        throw new NotFoundException('Catalogue not found');
-      }
-    }
-
     const isDownload = download === 'true' || download === '1';
     await this.catalogueService.streamCatalogueFile(
       manufacturerId,

@@ -4,6 +4,9 @@ import { BadRequestException, ForbiddenException, NotFoundException } from '@nes
 import { CatalogueService } from './catalogue.service';
 import { ManufacturerCatalogue } from './entities/manufacturer-catalogue.entity';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
+import { Distributor } from '../distributor/distributor.entity';
+import { Salesman } from '../salesman/salesman.entity';
+import { ManufacturerDistributor } from '../distributor/manufacturer-distributor.entity';
 import * as fs from 'fs';
 
 // Mock fs and fsPromises
@@ -25,6 +28,9 @@ describe('CatalogueService', () => {
   let service: CatalogueService;
   let catalogueRepo: any;
   let manufacturerRepo: any;
+  let distributorRepo: any;
+  let salesmanRepo: any;
+  let manufacturerDistributorRepo: any;
 
   const validPdfBuffer = Buffer.from('%PDF-1.4 Mock PDF content here');
   const invalidBuffer = Buffer.from('NOT A PDF FILE');
@@ -58,11 +64,25 @@ describe('CatalogueService', () => {
       create: jest.fn((dto) => ({ id: 'new-cat-uuid', ...dto, created_at: new Date(), updated_at: new Date() })),
       save: jest.fn(async (entity) => ({ id: entity.id || 'saved-cat-uuid', ...entity })),
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
+      createQueryBuilder: jest.fn(),
     };
 
     manufacturerRepo = {
       findOne: jest.fn(),
       createQueryBuilder: jest.fn(),
+    };
+
+    distributorRepo = {
+      findOne: jest.fn(),
+    };
+
+    salesmanRepo = {
+      findOne: jest.fn(),
+    };
+
+    manufacturerDistributorRepo = {
+      findOne: jest.fn(),
+      find: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -75,6 +95,18 @@ describe('CatalogueService', () => {
         {
           provide: getRepositoryToken(Manufacturer),
           useValue: manufacturerRepo,
+        },
+        {
+          provide: getRepositoryToken(Distributor),
+          useValue: distributorRepo,
+        },
+        {
+          provide: getRepositoryToken(Salesman),
+          useValue: salesmanRepo,
+        },
+        {
+          provide: getRepositoryToken(ManufacturerDistributor),
+          useValue: manufacturerDistributorRepo,
         },
       ],
     }).compile();
@@ -214,38 +246,172 @@ describe('CatalogueService', () => {
     });
   });
 
-  describe('getCatalogueByManufacturerId ownership checks', () => {
-    it('should allow manufacturer admin to access their own catalogue', async () => {
-      manufacturerRepo.findOne.mockResolvedValue(mockManufacturer);
+  describe('getCatalogueByManufacturerId public access', () => {
+    it('should return catalogue metadata for any manufacturer without user authentication', async () => {
       catalogueRepo.findOne.mockResolvedValue(mockCatalogue);
 
-      const result = await service.getCatalogueByManufacturerId('mfr-uuid-1', {
-        userId: 'user-uuid-1',
-        role: 'MANUFACTURER_ADMIN',
-      });
+      const result = await service.getCatalogueByManufacturerId('mfr-uuid-1');
       expect(result).not.toBeNull();
       expect(result?.id).toBe(mockCatalogue.id);
+      expect(result?.manufacturer_id).toBe('mfr-uuid-1');
     });
 
-    it('should forbid manufacturer admin from accessing another manufacturer catalogue', async () => {
-      manufacturerRepo.findOne.mockResolvedValue(mockManufacturer);
+    it('should return null when catalogue is not found', async () => {
+      catalogueRepo.findOne.mockResolvedValue(null);
+
+      const result = await service.getCatalogueByManufacturerId('non-existent');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('getPublicCatalogues', () => {
+    it('should return paginated public catalogue metadata', async () => {
+      const mockQueryBuilder: any = {
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        offset: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([
+          {
+            manufacturer_id: 'mfr-uuid-1',
+            company_name: 'Alpha Appliances',
+            city: 'Mumbai',
+            state: 'Maharashtra',
+            catalogue_id: 'cat-uuid-1',
+            original_filename: 'alpha_catalog_2026.pdf',
+            file_size_bytes: '1024',
+            updated_at: new Date('2026-01-01T00:00:00Z'),
+          },
+        ]),
+      };
+
+      catalogueRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getPublicCatalogues({ page: 1, limit: 10 } as any);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].manufacturerId).toBe('mfr-uuid-1');
+      expect(result.data[0].manufacturerName).toBe('Alpha Appliances');
+      expect(result.data[0].pdfUrl).toBe('/v1/catalogues/mfr-uuid-1/file');
+      expect(result.data[0].downloadUrl).toBe('/v1/catalogues/mfr-uuid-1/file?download=true');
+      expect(result.meta.total).toBe(1);
+    });
+  });
+
+  describe('getAccessibleCatalogues', () => {
+    it('should query approved manufacturer relationships for an authenticated DISTRIBUTOR', async () => {
+      distributorRepo.findOne.mockResolvedValue({ id: 'dist-uuid-1', user_id: 'user-dist-1' });
+
+      const mockQueryBuilder: any = {
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        offset: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([
+          {
+            manufacturer_id: 'mfr-uuid-1',
+            company_name: 'Alpha Appliances',
+            city: 'Mumbai',
+            state: 'Maharashtra',
+            catalogue_id: 'cat-uuid-1',
+            original_filename: 'alpha_catalog_2026.pdf',
+            file_size_bytes: '1024',
+            updated_at: new Date('2026-01-01T00:00:00Z'),
+          },
+        ]),
+      };
+
+      catalogueRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getAccessibleCatalogues(
+        { userId: 'user-dist-1', role: 'DISTRIBUTOR_ADMIN' },
+        { page: 1, limit: 10 } as any,
+      );
+
+      expect(distributorRepo.findOne).toHaveBeenCalledWith({ where: { user_id: 'user-dist-1' } });
+      expect(mockQueryBuilder.innerJoin).toHaveBeenCalledWith(
+        ManufacturerDistributor,
+        'md',
+        'md.manufacturer_id = m.id AND md.distributor_id = :distributorId AND md.status = :status',
+        { distributorId: 'dist-uuid-1', status: 'APPROVED' },
+      );
+      expect(result.data).toHaveLength(1);
+    });
+
+    it('should query assigned distributor relationships for an authenticated SALESMAN', async () => {
+      salesmanRepo.findOne.mockResolvedValue({
+        id: 'sales-uuid-1',
+        user_id: 'user-sales-1',
+        distributor_id: 'dist-uuid-99',
+      });
+
+      const mockQueryBuilder: any = {
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+        offset: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([
+          {
+            manufacturer_id: 'mfr-uuid-1',
+            company_name: 'Alpha Appliances',
+            city: 'Mumbai',
+            state: 'Maharashtra',
+            catalogue_id: 'cat-uuid-1',
+            original_filename: 'alpha_catalog_2026.pdf',
+            file_size_bytes: '1024',
+            updated_at: new Date('2026-01-01T00:00:00Z'),
+          },
+        ]),
+      };
+
+      catalogueRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getAccessibleCatalogues(
+        { userId: 'user-sales-1', role: 'SALESMAN' },
+        { page: 1, limit: 10 } as any,
+      );
+
+      expect(salesmanRepo.findOne).toHaveBeenCalledWith({ where: { user_id: 'user-sales-1' } });
+      expect(mockQueryBuilder.innerJoin).toHaveBeenCalledWith(
+        ManufacturerDistributor,
+        'md',
+        'md.manufacturer_id = m.id AND md.distributor_id = :distributorId AND md.status = :status',
+        { distributorId: 'dist-uuid-99', status: 'APPROVED' },
+      );
+      expect(result.data).toHaveLength(1);
+    });
+
+    it('should throw ForbiddenException if distributor profile not found', async () => {
+      distributorRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        service.getCatalogueByManufacturerId('mfr-uuid-other', {
-          userId: 'user-uuid-1',
-          role: 'MANUFACTURER_ADMIN',
-        }),
+        service.getAccessibleCatalogues(
+          { userId: 'unknown-dist', role: 'DISTRIBUTOR_ADMIN' },
+          {} as any,
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should allow SUPER_ADMIN to access any manufacturer catalogue', async () => {
-      catalogueRepo.findOne.mockResolvedValue(mockCatalogue);
+    it('should throw ForbiddenException if salesman is not assigned to a distributor', async () => {
+      salesmanRepo.findOne.mockResolvedValue({ id: 's-1', user_id: 'u-1', distributor_id: null });
 
-      const result = await service.getCatalogueByManufacturerId('mfr-uuid-1', {
-        userId: 'super-admin-uuid',
-        role: 'SUPER_ADMIN',
-      });
-      expect(result).not.toBeNull();
+      await expect(
+        service.getAccessibleCatalogues(
+          { userId: 'u-1', role: 'SALESMAN' },
+          {} as any,
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });
