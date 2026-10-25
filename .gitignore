@@ -54,3 +54,4 @@ generated/prisma
 /ssh-tool
 
 backend_log.txt
+Server env local/

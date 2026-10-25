@@ -137,10 +137,11 @@ jobs:
             # ── 5. Build Admin Panel ──────────────────────────────────────
             cd "$REPO/admin-panel"
             npm ci
-            npm run build
+            NODE_OPTIONS='--no-network-family-autoselection' npm run build
 
             # ── 6. Reload Admin Panel ─────────────────────────────────────
-            pm2 restart vikas-admin
+            pm2 reload ecosystem.config.js --update-env || pm2 restart vikas-admin
+            pm2 save
 
             # ── 7. Verify services are online ────────────────────────────
             sleep 5
