@@ -1,0 +1,254 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/products/[id]",
+      "regex": "^/products/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/products/(?<nxtPid>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/analytics",
+      "regex": "^/analytics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/analytics(?:/)?$"
+    },
+    {
+      "page": "/analytics/background-jobs",
+      "regex": "^/analytics/background\\-jobs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/analytics/background\\-jobs(?:/)?$"
+    },
+    {
+      "page": "/analytics/global-sales",
+      "regex": "^/analytics/global\\-sales(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/analytics/global\\-sales(?:/)?$"
+    },
+    {
+      "page": "/analytics/inventory",
+      "regex": "^/analytics/inventory(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/analytics/inventory(?:/)?$"
+    },
+    {
+      "page": "/analytics/inventory/inventory-valuation",
+      "regex": "^/analytics/inventory/inventory\\-valuation(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/analytics/inventory/inventory\\-valuation(?:/)?$"
+    },
+    {
+      "page": "/analytics/platform-growth",
+      "regex": "^/analytics/platform\\-growth(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/analytics/platform\\-growth(?:/)?$"
+    },
+    {
+      "page": "/analytics/sales",
+      "regex": "^/analytics/sales(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/analytics/sales(?:/)?$"
+    },
+    {
+      "page": "/analytics/sales/sales-summary",
+      "regex": "^/analytics/sales/sales\\-summary(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/analytics/sales/sales\\-summary(?:/)?$"
+    },
+    {
+      "page": "/analytics/shop-audits",
+      "regex": "^/analytics/shop\\-audits(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/analytics/shop\\-audits(?:/)?$"
+    },
+    {
+      "page": "/apple-icon.png",
+      "regex": "^/apple\\-icon\\.png(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/apple\\-icon\\.png(?:/)?$"
+    },
+    {
+      "page": "/approvals",
+      "regex": "^/approvals(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/approvals(?:/)?$"
+    },
+    {
+      "page": "/audit-logs",
+      "regex": "^/audit\\-logs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/audit\\-logs(?:/)?$"
+    },
+    {
+      "page": "/catalogues",
+      "regex": "^/catalogues(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/catalogues(?:/)?$"
+    },
+    {
+      "page": "/dashboard",
+      "regex": "^/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard(?:/)?$"
+    },
+    {
+      "page": "/distributors",
+      "regex": "^/distributors(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/distributors(?:/)?$"
+    },
+    {
+      "page": "/favicon.ico",
+      "regex": "^/favicon\\.ico(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/favicon\\.ico(?:/)?$"
+    },
+    {
+      "page": "/forgot-password",
+      "regex": "^/forgot\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forgot\\-password(?:/)?$"
+    },
+    {
+      "page": "/icon.png",
+      "regex": "^/icon\\.png(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/icon\\.png(?:/)?$"
+    },
+    {
+      "page": "/inventory",
+      "regex": "^/inventory(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/inventory(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/manufacturers",
+      "regex": "^/manufacturers(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/manufacturers(?:/)?$"
+    },
+    {
+      "page": "/order-statuses",
+      "regex": "^/order\\-statuses(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/order\\-statuses(?:/)?$"
+    },
+    {
+      "page": "/orders",
+      "regex": "^/orders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/orders(?:/)?$"
+    },
+    {
+      "page": "/orders/analytics",
+      "regex": "^/orders/analytics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/orders/analytics(?:/)?$"
+    },
+    {
+      "page": "/orders/backorders",
+      "regex": "^/orders/backorders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/orders/backorders(?:/)?$"
+    },
+    {
+      "page": "/product-categories",
+      "regex": "^/product\\-categories(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/product\\-categories(?:/)?$"
+    },
+    {
+      "page": "/products",
+      "regex": "^/products(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/products(?:/)?$"
+    },
+    {
+      "page": "/reset-password",
+      "regex": "^/reset\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reset\\-password(?:/)?$"
+    },
+    {
+      "page": "/salesmen",
+      "regex": "^/salesmen(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/salesmen(?:/)?$"
+    },
+    {
+      "page": "/shops",
+      "regex": "^/shops(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/shops(?:/)?$"
+    },
+    {
+      "page": "/visits",
+      "regex": "^/visits(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/visits(?:/)?$"
+    },
+    {
+      "page": "/working-days",
+      "regex": "^/working\\-days(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/working\\-days(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}
