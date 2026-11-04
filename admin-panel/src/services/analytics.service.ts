@@ -89,7 +89,7 @@ export const analyticsService = {
     api.get<unknown>('/analytics/orders', { params }).then((res) => ({
       success: true,
       data: (res as any).data,
-    }) as ApiResponse<AnalyticsSnapshot[]>),
+    }) as ApiResponse<OrdersAnalyticsDto>),
 
   // Attendance & Field Activity
   getAttendanceSummary: (params?: AttendanceQueryParams) =>
@@ -111,4 +111,18 @@ export const analyticsService = {
   getBackorders: () => api.get<ApiResponse<OrdersResponse>>('/analytics/backorders').then(res => res.data),
   getFulfillment: () => api.get<ApiResponse<FulfillmentResponse>>('/analytics/fulfillment').then(res => res.data),
   getApprovals: () => api.get<ApiResponse<ApprovalsResponse>>('/analytics/approvals').then(res => res.data),
+
+  // Retained Reporting APIs
+  getAuditLogs: (params?: any) =>
+    api.get<any>('/audit-logs', { params }).then((res) => res.data),
+  getPlatformGrowth: (params?: any) =>
+    api.get<any>('/analytics/platform-growth', { params }).then((res) => res.data),
+  getDuplicateAudit: (params?: any) =>
+    api.get<any>('/shops/duplicate-audit', { params }).then((res) => res.data),
+  getVerificationAudit: (params?: any) =>
+    api.get<any>('/shops/verification-audit', { params }).then((res) => res.data),
+  getJobPerformance: (params?: any) =>
+    api.get<any>('/background-jobs/performance', { params }).then((res) => res.data),
+  getBackordersReport: (params?: any) =>
+    api.get<any>('/backorders/report', { params }).then((res) => res.data),
 };

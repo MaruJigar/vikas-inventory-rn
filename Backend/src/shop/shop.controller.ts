@@ -14,6 +14,7 @@ import { ShopService } from './shop.service';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { CheckDuplicateDto } from './dto/check-duplicate.dto';
+import { VerificationAuditQueryDto } from './dto/verification-audit-query.dto';
 import { ShopDuplicateDetectionService } from '../shop-duplicate-detection/shop-duplicate-detection.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../role-permission/roles.guard';
@@ -86,6 +87,14 @@ export class ShopController {
   }
 
   @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
+  @Roles('SUPER_ADMIN', 'DISTRIBUTOR_ADMIN', 'SALESMAN')
+  @Get(':id/order-history-card')
+  @ApiOperation({ summary: 'Get Retailer Outstanding & Order History Card' })
+  @ApiBearerAuth('bearer')
+  getShopOrderHistoryCard(@Param('id') id: string, @Request() req) {
+    return this.shopService.getShopOrderHistoryCard(id, req.user.userId, req.user.role);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get Shop By Id' })
   @ApiBearerAuth('bearer')

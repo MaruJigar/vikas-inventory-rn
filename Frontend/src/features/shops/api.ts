@@ -31,6 +31,11 @@ export const shopsApi = {
       .post<DuplicateMatch[]>('/shops/check-duplicate', payload)
       .then((r) => r.data),
 
+  getOrderHistoryCard: (shopId: string) =>
+    apiClient
+      .get<any>(`/shops/${shopId}/order-history-card`)
+      .then((r) => r.data),
+
   /** Upload the visiting-card photo for a freshly-created shop (multipart). */
   uploadImage: async (shopId: string, image: PickedImage) => {
     const form = new FormData();

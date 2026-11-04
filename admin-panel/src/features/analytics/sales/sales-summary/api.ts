@@ -8,5 +8,5 @@ export const salesSummaryApi = {
     api.get<unknown>('/analytics/sales/reports/sales-summary', { params }).then((res) => ({
       success: true,
       data: res.data,
-    }) as ApiResponse<SalesReportItem[]>),
+    }) as ApiResponse<any>),
 };

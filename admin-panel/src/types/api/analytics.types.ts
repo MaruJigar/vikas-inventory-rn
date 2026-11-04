@@ -79,6 +79,8 @@ export interface ApprovalsResponse {
 export interface AnalyticsQueryParams {
   startDate?: string;
   endDate?: string;
+  period?: string;
+  limit?: number;
 }
 
 export interface OrdersAnalyticsTotals {

@@ -18,6 +18,8 @@ import { UploadedFile } from '../shop-image/uploaded-file.entity';
 import { ApprovalRequest } from '../approval/approval-request.entity';
 import { ListQueryDto } from '../common/dto/list-query.dto';
 import { PaginatedResponse } from '../common/interfaces/paginated-response.interface';
+import { Order } from '../order/order.entity';
+import { OrderItem } from '../order/order-item.entity';
 import * as fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import { join } from 'path';
@@ -437,5 +439,174 @@ export class ShopService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async getVerificationAudit(queryDto: any = {}) {
+    const { page = 1, limit = 20, search, verification_status, startDate, endDate } = queryDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.shopRepo
+      .createQueryBuilder('shop')
+      .leftJoinAndSelect('shop.distributor', 'distributor')
+      .leftJoinAndSelect('shop.created_by_salesman', 'created_by_salesman')
+      .leftJoinAndSelect('shop.created_by_user', 'created_by_user')
+      .leftJoinAndSelect('shop.city', 'city')
+      .leftJoinAndSelect('shop.state', 'state');
+
+    if (verification_status) {
+      qb.andWhere('shop.verification_status = :vStatus', { vStatus: verification_status });
+    }
+
+    if (startDate) qb.andWhere('shop.created_at >= :startDate', { startDate });
+    if (endDate) qb.andWhere('shop.created_at <= :endDate', { endDate });
+    if (search) {
+      qb.andWhere(
+        '(shop.name ILIKE :search OR shop.phone ILIKE :search OR shop.owner_name ILIKE :search OR shop.gst_number ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    qb.orderBy('shop.created_at', 'DESC');
+
+    const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    const shopIds = data.map((s) => s.id);
+    let approvalMap = {};
+    if (shopIds.length > 0) {
+      const approvals = await this.dataSource.getRepository(ApprovalRequest).find({
+        where: shopIds.map((id) => ({ shop_id: id, request_type: 'SHOP_APPROVAL' })),
+        order: { created_at: 'DESC' },
+      });
+      for (const a of approvals) {
+        if (!approvalMap[a.shop_id]) approvalMap[a.shop_id] = a;
+      }
+    }
+
+    const enhancedData = data.map((shop) => ({
+      ...shop,
+      approval_details: approvalMap[shop.id] || null,
+    }));
+
+    return {
+      data: enhancedData,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  async getShopOrderHistoryCard(shopId: string, userId: string, userRole: string) {
+    // 1. Validate shop and tenant access
+    const shop = await this.getShopById(shopId, userId, userRole);
+
+    // 2. Fetch all orders for this shop within the authorized scope
+    const orderRepo = this.dataSource.getRepository(Order);
+    const orderQb = orderRepo
+      .createQueryBuilder('order')
+      .where('order.shop_id = :shopId', { shopId })
+      .orderBy('order.created_at', 'DESC');
+
+    // Tenant isolation: if salesman or distributor, verify distributor match
+    if (userRole === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.distRepo.findOne({ where: { user_id: userId } });
+      if (dist) orderQb.andWhere('order.distributor_id = :distId', { distId: dist.id });
+    } else if (userRole === 'SALESMAN') {
+      const salesman = await this.salesmanRepo.findOne({ where: { user_id: userId } });
+      if (salesman) orderQb.andWhere('order.distributor_id = :distId', { distId: salesman.distributor_id });
+    }
+
+    const totalOrdersCount = await orderQb.getCount();
+
+    // Financial aggregates (excluding cancelled orders)
+    const financialRaw = await orderQb
+      .clone()
+      .select('SUM(order.final_order_amount)', 'lifetime_value')
+      .addSelect('AVG(order.final_order_amount)', 'avg_order_value')
+      .addSelect("SUM(CASE WHEN order.cancelled_at IS NOT NULL THEN 1 ELSE 0 END)", 'cancelled_count')
+      .where('order.shop_id = :shopId', { shopId })
+      .andWhere('order.cancelled_at IS NULL')
+      .getRawOne();
+
+    // Last 5 orders
+    const lastOrders = await orderQb
+      .clone()
+      .leftJoinAndSelect('order.status', 'status')
+      .leftJoinAndSelect('order.salesman', 'salesman')
+      .limit(5)
+      .getMany();
+
+    const lastOrder = lastOrders.length > 0 ? lastOrders[0] : null;
+
+    // Top 5 purchased products for this shop
+    const topProductsRaw = await this.dataSource
+      .getRepository(OrderItem)
+      .createQueryBuilder('item')
+      .innerJoin('item.order', 'order')
+      .innerJoin('item.product', 'product')
+      .where('order.shop_id = :shopId', { shopId })
+      .andWhere('order.cancelled_at IS NULL')
+      .select('product.id', 'product_id')
+      .addSelect('product.name', 'product_name')
+      .addSelect('product.sku', 'sku')
+      .addSelect('SUM(item.quantity)', 'total_quantity')
+      .addSelect('MAX(order.created_at)', 'last_purchased_at')
+      .groupBy('product.id')
+      .addGroupBy('product.name')
+      .addGroupBy('product.sku')
+      .orderBy('total_quantity', 'DESC')
+      .limit(5)
+      .getRawMany();
+
+    return {
+      shop: {
+        id: shop.id,
+        name: shop.name,
+        ownerName: shop.owner_name,
+        phone: shop.phone,
+        address: shop.address,
+        gstNumber: shop.gst_number,
+        cityName: (shop as any).city?.name || (shop as any).city_name || null,
+        stateName: (shop as any).state?.name || (shop as any).state_name || null,
+        verificationStatus: shop.verification_status,
+      },
+      purchaseSummary: {
+        totalOrders: totalOrdersCount,
+        lifetimePurchases: Number(financialRaw?.lifetime_value || 0),
+        averageOrderValue: Number(financialRaw?.avg_order_value || 0).toFixed(2),
+        cancelledOrders: Number(financialRaw?.cancelled_count || 0),
+        lastPurchaseDate: lastOrder ? lastOrder.created_at : null,
+        lastOrderAmount: lastOrder ? Number(lastOrder.final_order_amount) : 0,
+      },
+      outstanding: {
+        totalOutstanding: 0,
+        paidAmount: Number(financialRaw?.lifetime_value || 0),
+        pendingAmount: 0,
+        financialStatus: 'CASH_OR_DELIVERY_SETTLED',
+        note: 'Direct credit/overdue balances require external accounting ledger integration.',
+      },
+      recentOrders: lastOrders.map((o) => ({
+        id: o.id,
+        orderNumber: o.order_number,
+        orderDate: o.created_at,
+        amount: Number(o.final_order_amount),
+        status: o.status ? (o.status as any).name : 'UNKNOWN',
+        salesmanName: o.salesman ? (o.salesman as any).full_name : null,
+      })),
+      frequentlyPurchasedProducts: topProductsRaw.map((p) => ({
+        productId: p.product_id,
+        productName: p.product_name,
+        sku: p.sku,
+        totalQuantity: Number(p.total_quantity),
+        lastPurchasedDate: p.last_purchased_at,
+      })),
+      generatedAt: new Date().toISOString(),
+    };
   }
 }

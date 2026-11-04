@@ -47,6 +47,20 @@ export class BackordersController {
     );
   }
 
+  @Get('report')
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @ApiOperation({ summary: 'Get Backorders Demand & Ageing Report' })
+  @ApiBearerAuth('bearer')
+  async getBackordersReport(@Request() req, @Query() query: any) {
+    return this.backordersService.getBackordersReport(
+      req.user.role,
+      req.user.userId,
+      query.period,
+      query.startDate,
+      query.endDate,
+    );
+  }
+
   @Get(':id')
   @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
   @ApiOperation({ summary: 'Get Backorder' })

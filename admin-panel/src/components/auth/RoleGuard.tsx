@@ -10,9 +10,11 @@ import { hasRole } from '@/lib/auth/guards';
 interface RoleGuardProps {
   children: React.ReactNode;
   allowedRoles?: readonly Role[];
+  roles?: readonly Role[];
 }
 
-export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
+export function RoleGuard({ children, allowedRoles, roles }: RoleGuardProps) {
+  const effectiveRoles = allowedRoles || roles;
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
   const [isMounted, setIsMounted] = useState(false);
@@ -27,18 +29,18 @@ export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
         router.replace('/login');
       } else if (!isAdminRole(user?.role)) {
         router.replace('/login');
-      } else if (allowedRoles && !hasRole(user?.role, allowedRoles)) {
+      } else if (effectiveRoles && !hasRole(user?.role, effectiveRoles)) {
         router.replace('/dashboard');
       }
     }
-  }, [isMounted, isAuthenticated, user, router, allowedRoles]);
+  }, [isMounted, isAuthenticated, user, router, effectiveRoles]);
 
   // Prevent rendering anything during SSR/hydration or if unauthorized
   if (!isMounted || !isAuthenticated || !isAdminRole(user?.role)) {
     return null;
   }
 
-  if (allowedRoles && !hasRole(user?.role, allowedRoles)) {
+  if (effectiveRoles && !hasRole(user?.role, effectiveRoles)) {
     return null;
   }
 

@@ -15,10 +15,7 @@ import {
   ShoppingCart,
   Boxes,
   RotateCcw,
-  PackageCheck,
   CalendarDays,
-  Bell,
-  Settings,
   ShieldAlert,
   BarChart,
   Layers,
@@ -51,7 +48,9 @@ const navItems: NavItem[] = [
   { title: 'Order Statuses', href: ROUTES.ORDER_STATUSES, icon: ListOrdered, roles: PERMISSIONS.ORDER_STATUSES_VIEW },
   { title: 'Attendance', href: ROUTES.WORKING_DAYS, icon: CalendarDays, roles: PERMISSIONS.WORKING_DAYS_VIEW },
   { title: 'Inventory', href: ROUTES.INVENTORY, icon: Boxes, roles: PERMISSIONS.INVENTORY_VIEW },
-  { title: 'Analytics', href: ROUTES.ANALYTICS, icon: BarChart, roles: PERMISSIONS.ANALYTICS_VIEW },
+  { title: 'Backorders', href: ROUTES.BACKORDERS, icon: RotateCcw, roles: PERMISSIONS.BACKORDERS_VIEW },
+  { title: 'Reports & Analytics', href: ROUTES.ANALYTICS, icon: BarChart, roles: PERMISSIONS.ANALYTICS_VIEW },
+  { title: 'Audit Logs', href: ROUTES.AUDIT_LOGS, icon: ShieldAlert, roles: PERMISSIONS.AUDIT_LOGS_VIEW },
 ];
 
 export function Sidebar() {

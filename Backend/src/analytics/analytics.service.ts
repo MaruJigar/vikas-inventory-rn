@@ -11,8 +11,10 @@ import { Notification } from '../notification/notification.entity';
 import { InventoryMovement } from '../inventory/inventory-movement.entity';
 import { Distributor } from '../distributor/distributor.entity';
 import { Manufacturer } from '../manufacturer/manufacturer.entity';
+import { Salesman } from '../salesman/salesman.entity';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import { applyOwnership } from './shared/utils/report-builder.util';
+import { resolvePeriodDateRange } from './shared/utils/period-helper.util';
 
 @Injectable()
 export class AnalyticsService {
@@ -30,6 +32,7 @@ export class AnalyticsService {
     private movementRepo: Repository<InventoryMovement>,
     @InjectRepository(Distributor) private distRepo: Repository<Distributor>,
     @InjectRepository(Manufacturer) private mfrRepo: Repository<Manufacturer>,
+    @InjectRepository(Salesman) private salesmanRepo: Repository<Salesman>,
   ) {}
 
   async getDashboard(userRole: string, userId: string) {
@@ -143,11 +146,14 @@ export class AnalyticsService {
     };
   }
 
-  async getOrdersAnalytics(
+    async getOrdersAnalytics(
     userRole: string,
     userId: string,
     query: AnalyticsQueryDto = {},
   ) {
+    const { startDate, endDate } = resolvePeriodDateRange(query.period, query.startDate, query.endDate);
+    const limit = query.limit && query.limit > 0 ? query.limit : 50;
+
     const qb = this.orderRepo.createQueryBuilder('order');
 
     applyOwnership(
@@ -158,18 +164,19 @@ export class AnalyticsService {
       userRole === 'SALESMAN' ? 'salesman_id' : 'distributor_id',
     );
 
-    if (query.startDate) {
-      qb.andWhere('order.created_at >= :startDate', { startDate: query.startDate });
+    if (startDate) {
+      qb.andWhere('order.created_at >= :startDate', { startDate });
     }
-    if (query.endDate) {
-      qb.andWhere('order.created_at <= :endDate', { endDate: query.endDate });
+    if (endDate) {
+      qb.andWhere('order.created_at <= :endDate', { endDate });
     }
 
     const totalsQb = qb.clone();
     totalsQb
       .select('COUNT(order.id)', 'total_orders')
-      .addSelect('SUM(order.final_order_amount)', 'total_revenue')
-      .addSelect('AVG(order.final_order_amount)', 'average_order_value');
+      .addSelect("SUM(CASE WHEN order.cancelled_at IS NULL THEN order.final_order_amount ELSE 0 END)", 'total_revenue')
+      .addSelect("AVG(CASE WHEN order.cancelled_at IS NULL THEN order.final_order_amount ELSE 0 END)", 'average_order_value')
+      .addSelect("SUM(CASE WHEN order.cancelled_at IS NOT NULL THEN 1 ELSE 0 END)", 'cancelled_orders');
     const totalsResult = await totalsQb.getRawOne();
 
     // 2. Status Distribution
@@ -181,47 +188,54 @@ export class AnalyticsService {
       .groupBy('status.name');
     const statusDistribution = await statusQb.getRawMany();
 
-    // 3. Revenue Trends (Daily)
+    // 3. Revenue Trends (Grouped by Date)
     const trendsQb = qb.clone();
     trendsQb
       .select('DATE(order.created_at)', 'date')
       .addSelect('COUNT(order.id)', 'order_count')
-      .addSelect('SUM(order.final_order_amount)', 'revenue')
+      .addSelect("SUM(CASE WHEN order.cancelled_at IS NULL THEN order.final_order_amount ELSE 0 END)", 'revenue')
       .groupBy('DATE(order.created_at)')
       .orderBy('date', 'ASC');
     const trends = await trendsQb.getRawMany();
 
-    // 4. Salesman Performance (Top 5)
+    // 4. Salesman Performance (Configurable limit)
     const salesmanQb = qb.clone();
     salesmanQb
       .leftJoin('order.salesman', 'salesman')
-      .select('salesman.full_name', 'salesman_name')
+      .select('salesman.id', 'salesman_id')
+      .addSelect('salesman.full_name', 'salesman_name')
       .addSelect('COUNT(order.id)', 'order_count')
-      .addSelect('SUM(order.final_order_amount)', 'revenue')
+      .addSelect("SUM(CASE WHEN order.cancelled_at IS NULL THEN order.final_order_amount ELSE 0 END)", 'revenue')
       .groupBy('salesman.id')
       .addGroupBy('salesman.full_name')
       .orderBy('revenue', 'DESC')
-      .limit(5);
+      .limit(limit);
     const topSalesmen = await salesmanQb.getRawMany();
 
-    // 5. Distributor Performance (Top 5)
+    // 5. Distributor Performance (Configurable limit - Report 2.3)
     const distQb = qb.clone();
     distQb
       .leftJoin('order.distributor', 'distributor')
-      .select('distributor.business_name', 'distributor_name')
+      .select('distributor.id', 'distributor_id')
+      .addSelect('distributor.business_name', 'distributor_name')
       .addSelect('COUNT(order.id)', 'order_count')
-      .addSelect('SUM(order.final_order_amount)', 'revenue')
+      .addSelect("SUM(CASE WHEN order.cancelled_at IS NULL THEN order.final_order_amount ELSE 0 END)", 'revenue')
+      .addSelect("AVG(CASE WHEN order.cancelled_at IS NULL THEN order.final_order_amount ELSE 0 END)", 'average_order_value')
+      .addSelect("SUM(CASE WHEN order.cancelled_at IS NOT NULL THEN 1 ELSE 0 END)", 'cancelled_orders')
       .groupBy('distributor.id')
       .addGroupBy('distributor.business_name')
       .orderBy('revenue', 'DESC')
-      .limit(5);
+      .limit(limit);
     const topDistributors = await distQb.getRawMany();
 
     return {
+      period: query.period || 'custom',
+      dateRange: { startDate, endDate },
       totals: {
         totalOrders: Number(totalsResult?.total_orders || 0),
         totalRevenue: Number(totalsResult?.total_revenue || 0),
         averageOrderValue: Number(totalsResult?.average_order_value || 0).toFixed(2),
+        cancelledOrders: Number(totalsResult?.cancelled_orders || 0),
       },
       statusDistribution: statusDistribution.map((s) => ({
         status: s.status,
@@ -233,14 +247,18 @@ export class AnalyticsService {
         revenue: Number(t.revenue),
       })),
       topSalesmen: topSalesmen.map((s) => ({
+        id: s.salesman_id,
         name: s.salesman_name,
         orderCount: Number(s.order_count),
         revenue: Number(s.revenue),
       })),
       topDistributors: topDistributors.map((d) => ({
+        id: d.distributor_id,
         name: d.distributor_name,
         orderCount: Number(d.order_count),
         revenue: Number(d.revenue),
+        averageOrderValue: Number(d.average_order_value || 0).toFixed(2),
+        cancelledOrders: Number(d.cancelled_orders || 0),
       })),
     };
   }
@@ -400,4 +418,125 @@ export class AnalyticsService {
 
 
 
+
+  async getPlatformGrowth(query: AnalyticsQueryDto = {}) {
+    const { startDate, endDate } = resolvePeriodDateRange(query.period, query.startDate, query.endDate);
+
+    const mfrQb = this.mfrRepo.createQueryBuilder('m');
+    const distQb = this.distRepo.createQueryBuilder('d');
+    const salesQb = this.salesmanRepo.createQueryBuilder('s');
+    const appQb = this.approvalRepo.createQueryBuilder('a');
+
+    if (startDate) {
+      mfrQb.andWhere('m.created_at >= :startDate', { startDate });
+      distQb.andWhere('d.created_at >= :startDate', { startDate });
+      salesQb.andWhere('s.created_at >= :startDate', { startDate });
+      appQb.andWhere('a.created_at >= :startDate', { startDate });
+    }
+    if (endDate) {
+      mfrQb.andWhere('m.created_at <= :endDate', { endDate });
+      distQb.andWhere('d.created_at <= :endDate', { endDate });
+      salesQb.andWhere('s.created_at <= :endDate', { endDate });
+      appQb.andWhere('a.created_at <= :endDate', { endDate });
+    }
+
+    const [
+      totalManufacturers,
+      activeManufacturers,
+      totalDistributors,
+      activeDistributors,
+      internalDistributors,
+      totalSalesmen,
+      activeSalesmen,
+    ] = await Promise.all([
+      mfrQb.getCount(),
+      mfrQb.clone().andWhere('m.is_active = true').getCount(),
+      distQb.getCount(),
+      distQb.clone().andWhere('d.is_active = true').getCount(),
+      distQb.clone().andWhere('d.is_internal_distributor = true').getCount(),
+      salesQb.getCount(),
+      salesQb.clone().andWhere('s.is_active = true').getCount(),
+    ]);
+
+    // Approval turnaround and status counts
+    const approvalSummaryRaw = await appQb
+      .select('a.status', 'status')
+      .addSelect('COUNT(a.id)', 'count')
+      .addSelect('AVG(EXTRACT(EPOCH FROM (a.updated_at - a.created_at)))', 'avg_turnaround_seconds')
+      .groupBy('a.status')
+      .getRawMany();
+
+    const approvalBreakdown = {
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      avgTurnaroundHours: 0,
+    };
+
+    for (const r of approvalSummaryRaw) {
+      const count = Number(r.count) || 0;
+      if (r.status === 'PENDING_APPROVAL') approvalBreakdown.pending = count;
+      if (r.status === 'APPROVED') {
+        approvalBreakdown.approved = count;
+        approvalBreakdown.avgTurnaroundHours = Number(((Number(r.avg_turnaround_seconds) || 0) / 3600).toFixed(1));
+      }
+      if (r.status === 'REJECTED') approvalBreakdown.rejected = count;
+    }
+
+    // Monthly registration trends
+    const mfrTrends = await this.mfrRepo
+      .createQueryBuilder('m')
+      .select('DATE_TRUNC(\'month\', m.created_at)', 'month')
+      .addSelect('COUNT(m.id)', 'count')
+      .groupBy('month')
+      .orderBy('month', 'ASC')
+      .getRawMany();
+
+    const distTrends = await this.distRepo
+      .createQueryBuilder('d')
+      .select('DATE_TRUNC(\'month\', d.created_at)', 'month')
+      .addSelect('COUNT(d.id)', 'count')
+      .groupBy('month')
+      .orderBy('month', 'ASC')
+      .getRawMany();
+
+    const salesTrends = await this.salesmanRepo
+      .createQueryBuilder('s')
+      .select('DATE_TRUNC(\'month\', s.created_at)', 'month')
+      .addSelect('COUNT(s.id)', 'count')
+      .groupBy('month')
+      .orderBy('month', 'ASC')
+      .getRawMany();
+
+    return {
+      period: query.period || 'custom',
+      dateRange: { startDate, endDate },
+      summary: {
+        manufacturers: {
+          total: totalManufacturers,
+          active: activeManufacturers,
+          inactive: totalManufacturers - activeManufacturers,
+        },
+        distributors: {
+          total: totalDistributors,
+          active: activeDistributors,
+          inactive: totalDistributors - activeDistributors,
+          internal: internalDistributors,
+          external: totalDistributors - internalDistributors,
+        },
+        salesmen: {
+          total: totalSalesmen,
+          active: activeSalesmen,
+          inactive: totalSalesmen - activeSalesmen,
+        },
+        approvals: approvalBreakdown,
+      },
+      trends: {
+        manufacturers: mfrTrends.map((t) => ({ month: t.month, count: Number(t.count) })),
+        distributors: distTrends.map((t) => ({ month: t.month, count: Number(t.count) })),
+        salesmen: salesTrends.map((t) => ({ month: t.month, count: Number(t.count) })),
+      },
+      generatedAt: new Date().toISOString(),
+    };
+  }
 }

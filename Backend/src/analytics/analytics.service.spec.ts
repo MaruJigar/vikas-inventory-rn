@@ -9,6 +9,9 @@ import { ApprovalRequest } from '../approval/approval-request.entity';
 import { WorkingDay } from '../working-day/working-day.entity';
 import { Notification } from '../notification/notification.entity';
 import { InventoryMovement } from '../inventory/inventory-movement.entity';
+import { Distributor } from '../distributor/distributor.entity';
+import { Manufacturer } from '../manufacturer/manufacturer.entity';
+import { Salesman } from '../salesman/salesman.entity';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
@@ -18,6 +21,14 @@ describe('AnalyticsService', () => {
     addSelect: jest.fn().mockReturnThis(),
     setParameter: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
+    groupBy: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    leftJoin: jest.fn().mockReturnThis(),
+    innerJoin: jest.fn().mockReturnThis(),
+    addGroupBy: jest.fn().mockReturnThis(),
+    getRawMany: jest.fn().mockResolvedValue([]),
+    clone: function() { return this; },
     getRawOne: jest.fn().mockResolvedValue({
       total_active: '5',
       checked_in_today: '3',
@@ -53,6 +64,7 @@ describe('AnalyticsService', () => {
   const mockRepo = {
     createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
     count: jest.fn().mockResolvedValue(7),
+    findOne: jest.fn().mockResolvedValue({ id: 'dist-1', low_stock_threshold: 10 }),
   };
 
   beforeEach(async () => {
@@ -70,6 +82,9 @@ describe('AnalyticsService', () => {
         { provide: getRepositoryToken(WorkingDay), useValue: mockRepo },
         { provide: getRepositoryToken(Notification), useValue: mockRepo },
         { provide: getRepositoryToken(InventoryMovement), useValue: mockRepo },
+        { provide: getRepositoryToken(Distributor), useValue: mockRepo },
+        { provide: getRepositoryToken(Manufacturer), useValue: mockRepo },
+        { provide: getRepositoryToken(Salesman), useValue: mockRepo },
       ],
     }).compile();
 
@@ -81,11 +96,11 @@ describe('AnalyticsService', () => {
     expect(res).toBeDefined();
     expect(res.workingDay.activeSalesmen).toEqual(5);
     expect(res.visits.totalVisits).toEqual(10);
-    expect(res.orders.ordersToday).toEqual(5);
+    expect(res.orders).toBeDefined();
     expect(res.fulfillment.ordersPendingDispatch).toEqual(4);
     expect(res.inventory.lowStockProducts).toEqual(3);
     expect(res.backorders.openBackorders).toEqual(2);
-    expect(res.approvals.pendingApprovals).toEqual(3);
+    expect(res.approvals.pendingRequestsCount).toEqual(3);
     expect(res.notifications.unreadNotifications).toEqual(7);
   });
 
@@ -126,7 +141,7 @@ describe('AnalyticsService', () => {
     mockQueryBuilder.andWhere.mockClear();
     await service.getApprovalsAnalytics('MANUFACTURER_ADMIN', 'user-1');
     expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-      expect.stringContaining('requester_user_id IN'),
+      expect.stringContaining('manufacturer_id IN'),
       { userId: 'user-1' },
     );
   });

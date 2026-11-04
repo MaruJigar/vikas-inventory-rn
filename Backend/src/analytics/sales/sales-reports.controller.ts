@@ -13,8 +13,8 @@ export class SalesReportsController {
   constructor(private readonly salesReportsService: SalesReportsService) {}
 
   @Get('sales-summary')
-  @Roles('MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
-  @ApiOperation({ summary: 'Get Sales Summary Report' })
+  @Roles('SUPER_ADMIN', 'MANUFACTURER_ADMIN', 'DISTRIBUTOR_ADMIN')
+  @ApiOperation({ summary: 'Get Sales Summary & Primary/Secondary Sales Report' })
   @ApiBearerAuth('bearer')
   async getSalesSummary(@Request() req, @Query() query: AnalyticsQueryDto) {
     return this.salesReportsService.getSalesSummary(

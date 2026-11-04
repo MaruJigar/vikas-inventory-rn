@@ -342,4 +342,133 @@ export class BackordersService {
       await queryRunner.release();
     }
   }
+
+  async getBackordersReport(
+    userRole: string,
+    userId: string,
+    period?: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom',
+    customStart?: string,
+    customEnd?: string,
+  ) {
+    let startDate: string | undefined = customStart;
+    let endDate: string | undefined = customEnd;
+
+    if (period) {
+      const now = new Date();
+      const end = new Date(now);
+      end.setHours(23, 59, 59, 999);
+      endDate = end.toISOString();
+
+      if (period === 'daily') {
+        const start = new Date(now);
+        start.setHours(0, 0, 0, 0);
+        startDate = start.toISOString();
+      } else if (period === 'weekly') {
+        const start = new Date(now);
+        const day = start.getDay();
+        start.setDate(start.getDate() - day + (day === 0 ? -6 : 1));
+        start.setHours(0, 0, 0, 0);
+        startDate = start.toISOString();
+      } else if (period === 'monthly') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      } else if (period === 'quarterly') {
+        const m = now.getMonth();
+        const qm = m >= 3 && m <= 5 ? 3 : m >= 6 && m <= 8 ? 6 : m >= 9 && m <= 11 ? 9 : 0;
+        startDate = new Date(now.getFullYear(), qm, 1).toISOString();
+      } else if (period === 'yearly') {
+        const fy = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+        startDate = new Date(fy, 3, 1).toISOString();
+      }
+    }
+
+    const qb = this.backorderRepo
+      .createQueryBuilder('b')
+      .leftJoinAndSelect('b.product', 'product')
+      .leftJoinAndSelect('b.distributor', 'distributor');
+
+    if (userRole === 'DISTRIBUTOR_ADMIN') {
+      const dist = await this.dataSource.query(`SELECT id FROM distributors WHERE user_id = $1`, [userId]);
+      if (!dist.length) throw new ForbiddenException('Distributor not found');
+      qb.andWhere('b.distributor_id = :distId', { distId: dist[0].id });
+    } else if (userRole === 'MANUFACTURER_ADMIN') {
+      const mfrResult = await this.dataSource.query(`SELECT id FROM manufacturers WHERE user_id = $1`, [userId]);
+      if (!mfrResult.length) throw new ForbiddenException('Manufacturer profile not found');
+      qb.innerJoin(
+        'manufacturer_distributors',
+        'md',
+        'md.distributor_id = b.distributor_id AND md.manufacturer_id = :mfrId',
+        { mfrId: mfrResult[0].id },
+      );
+    }
+
+    if (startDate) qb.andWhere('b.created_at >= :startDate', { startDate: new Date(startDate) });
+    if (endDate) qb.andWhere('b.created_at <= :endDate', { endDate: new Date(endDate) });
+
+    const rawSummary = await qb
+      .select('COUNT(b.id)', 'total_backorders')
+      .addSelect("SUM(CASE WHEN b.status = 'OPEN' THEN 1 ELSE 0 END)", 'open_count')
+      .addSelect("SUM(CASE WHEN b.status = 'PARTIALLY_ALLOCATED' THEN 1 ELSE 0 END)", 'partially_allocated_count')
+      .addSelect("SUM(CASE WHEN b.status = 'RESOLVED' THEN 1 ELSE 0 END)", 'resolved_count')
+      .addSelect('SUM(b.quantity)', 'total_quantity')
+      .addSelect('SUM(b.resolved_quantity)', 'total_resolved_quantity')
+      .addSelect('SUM(b.quantity - b.resolved_quantity)', 'pending_quantity')
+      .addSelect('SUM((b.quantity - b.resolved_quantity) * COALESCE(product.mrp, 0))', 'estimated_unfulfilled_value')
+      .getRawOne();
+
+    // Distributor pending demand
+    const distDemandRaw = await qb
+      .clone()
+      .select('distributor.id', 'distributor_id')
+      .addSelect('distributor.business_name', 'distributor_name')
+      .addSelect('COUNT(b.id)', 'backorder_count')
+      .addSelect('SUM(b.quantity - b.resolved_quantity)', 'pending_quantity')
+      .addSelect('SUM((b.quantity - b.resolved_quantity) * COALESCE(product.mrp, 0))', 'unfulfilled_value')
+      .groupBy('distributor.id')
+      .addGroupBy('distributor.business_name')
+      .orderBy('pending_quantity', 'DESC')
+      .getRawMany();
+
+    // Top backordered products
+    const productDemandRaw = await qb
+      .clone()
+      .select('product.id', 'product_id')
+      .addSelect('product.name', 'product_name')
+      .addSelect('product.sku', 'sku')
+      .addSelect('SUM(b.quantity - b.resolved_quantity)', 'pending_quantity')
+      .groupBy('product.id')
+      .addGroupBy('product.name')
+      .addGroupBy('product.sku')
+      .orderBy('pending_quantity', 'DESC')
+      .limit(20)
+      .getRawMany();
+
+    return {
+      period: period || 'custom',
+      dateRange: { startDate, endDate },
+      summary: {
+        totalBackorders: Number(rawSummary?.total_backorders || 0),
+        openCount: Number(rawSummary?.open_count || 0),
+        partiallyAllocatedCount: Number(rawSummary?.partially_allocated_count || 0),
+        resolvedCount: Number(rawSummary?.resolved_count || 0),
+        totalQuantity: Number(rawSummary?.total_quantity || 0),
+        resolvedQuantity: Number(rawSummary?.total_resolved_quantity || 0),
+        pendingQuantity: Number(rawSummary?.pending_quantity || 0),
+        estimatedUnfulfilledValue: Number(rawSummary?.estimated_unfulfilled_value || 0),
+      },
+      distributorDemand: distDemandRaw.map((d) => ({
+        distributorId: d.distributor_id,
+        distributorName: d.distributor_name,
+        backorderCount: Number(d.backorder_count),
+        pendingQuantity: Number(d.pending_quantity),
+        unfulfilledValue: Number(d.unfulfilled_value),
+      })),
+      productDemand: productDemandRaw.map((p) => ({
+        productId: p.product_id,
+        productName: p.product_name,
+        sku: p.sku,
+        pendingQuantity: Number(p.pending_quantity),
+      })),
+      generatedAt: new Date().toISOString(),
+    };
+  }
 }
