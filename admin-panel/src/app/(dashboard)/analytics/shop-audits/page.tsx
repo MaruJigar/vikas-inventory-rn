@@ -8,6 +8,7 @@ import { PERMISSIONS } from '@/config/permissions';
 import { analyticsService } from '@/services/analytics.service';
 import { ArrowLeft, Store, AlertTriangle, CheckCircle, RefreshCw, MapPin, Hash, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ReportExportButton } from '@/components/reporting/ReportExportButton';
 import { formatDate } from '@/lib/utils';
 
 export default function ShopAuditsPage() {
@@ -58,9 +59,41 @@ export default function ShopAuditsPage() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={fetchData}>
-              <RefreshCw className="w-4 h-4 mr-2" /> Refresh
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={fetchData}>
+                <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+              </Button>
+              {tab === 'duplicates' ? (
+                <ReportExportButton
+                  data={dupData?.gstClusters || []}
+                  columns={[
+                    { header: 'GST Number', accessor: (r: any) => r.gstNumber },
+                    { header: 'Duplicate Count', accessor: (r: any) => r.duplicateCount },
+                    { header: 'Shops in Cluster', accessor: (r: any) => r.shops?.map((s: any) => s.name).join('; ') || '' },
+                  ]}
+                  filename={'shop-duplicate-gst-clusters-' + new Date().toISOString().split('T')[0]}
+                  disabled={loading || !dupData?.gstClusters?.length}
+                  label="Export GST Duplicates CSV"
+                />
+              ) : (
+                <ReportExportButton
+                  data={verData?.shops || []}
+                  columns={[
+                    { header: 'Shop Name', accessor: (r: any) => r.name },
+                    { header: 'Owner Name', accessor: (r: any) => r.ownerName },
+                    { header: 'Phone', accessor: (r: any) => r.phone },
+                    { header: 'Has Visiting Card Photo', accessor: (r: any) => r.hasPhoto ? 'YES' : 'NO' },
+                    { header: 'Has GPS', accessor: (r: any) => r.hasGps ? 'YES' : 'NO' },
+                    { header: 'Latitude', accessor: (r: any) => r.latitude || '' },
+                    { header: 'Longitude', accessor: (r: any) => r.longitude || '' },
+                    { header: 'Created At (IST)', accessor: (r: any) => formatDate(r.createdAt) },
+                  ]}
+                  filename={'shop-verification-audit-' + new Date().toISOString().split('T')[0]}
+                  disabled={loading || !verData?.shops?.length}
+                  label="Export KYC Audit CSV"
+                />
+              )}
+            </div>
           </div>
 
           {/* Tab Selector */}

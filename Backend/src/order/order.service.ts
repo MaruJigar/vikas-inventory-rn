@@ -1706,16 +1706,17 @@ export class OrderService {
       if (!sm) throw new ForbiddenException();
       qb.andWhere('order.salesman_id = :smId', { smId: sm.id });
     } else if (role === 'MANUFACTURER_ADMIN') {
-      const userDistributors = await this.mfrDistRepo
-        .createQueryBuilder('md')
-        .innerJoin('md.manufacturer', 'm')
-        .where('m.user_id = :userId', { userId })
-        .getMany();
-      const distIds = userDistributors.map((md) => md.distributor_id);
-      if (distIds.length === 0) {
-        qb.andWhere('1 = 0');
+      const mfr = await this.mfrRepo.findOne({ where: { user_id: userId } });
+      if (mfr) {
+        const links = await this.mfrDistRepo.find({ where: { manufacturer_id: mfr.id } });
+        const distIds = links.map((l) => l.distributor_id);
+        if (distIds.length > 0) {
+          qb.andWhere('backorder.distributor_id IN (:...distIds)', { distIds });
+        } else {
+          qb.andWhere('1 = 0');
+        }
       } else {
-        qb.andWhere('backorder.distributor_id IN (:...distIds)', { distIds });
+        qb.andWhere('1 = 0');
       }
     }
 

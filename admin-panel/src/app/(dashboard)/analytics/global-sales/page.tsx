@@ -7,7 +7,8 @@ import { RoleGuard } from '@/components/auth/RoleGuard';
 import { PERMISSIONS } from '@/config/permissions';
 import { ReportDateFilter, ReportingPeriod } from '@/features/analytics/shared/components/ReportDateFilter';
 import { salesSummaryApi } from '@/features/analytics/sales/sales-summary/api';
-import { ArrowLeft, TrendingUp, IndianRupee, ShoppingCart, Percent, FileText } from 'lucide-react';
+import { ReportExportButton } from '@/components/reporting/ReportExportButton';
+import { ArrowLeft, TrendingUp, IndianRupee, ShoppingCart, Percent, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function GlobalSalesPage() {
@@ -38,25 +39,51 @@ export default function GlobalSalesPage() {
   }, [period, startDate, endDate]);
 
   const summary = data?.summary || {};
+  const distributorList = Array.isArray(data?.distributorBreakdown) ? data.distributorBreakdown : [];
+
+  const exportColumns = [
+    { header: 'Distributor Name', accessor: (r: any) => r.distributorName },
+    { header: 'Distributor ID', accessor: (r: any) => r.distributorId },
+    { header: 'Order Count', accessor: (r: any) => r.orderCount },
+    { header: 'Total Revenue (INR)', accessor: (r: any) => r.totalRevenue },
+  ];
+
+  const exportFilename = `global-sales-distributors-${period}-${startDate || 'current'}`;
 
   return (
     <RoleGuard allowedRoles={PERMISSIONS.MANUFACTURERS_VIEW}>
       <AppLayout>
         <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Link href="/analytics" className="text-gray-500 hover:text-gray-900 transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-6 h-6 text-emerald-600" />
-                <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                  Global Sales & GMV Summary
-                </h1>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <Link href="/analytics" className="text-gray-500 hover:text-gray-900 transition-colors">
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              <div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-6 h-6 text-emerald-600" />
+                  <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                    Global Sales & GMV Summary
+                  </h1>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  Report 1.2: Platform-wide gross merchandise value, net sales, tax liability, and discounts.
+                </p>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                Report 1.2: Platform-wide gross merchandise value, net sales, tax liability, and discounts.
-              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={fetchSummary} disabled={loading}>
+                <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <ReportExportButton
+                data={distributorList}
+                columns={exportColumns}
+                filename={exportFilename}
+                disabled={loading || distributorList.length === 0}
+                label="Export Distributors CSV"
+              />
             </div>
           </div>
 
@@ -121,10 +148,10 @@ export default function GlobalSalesPage() {
           </div>
 
           {/* Distributor Breakdown Table */}
-          {data?.distributorBreakdown && data.distributorBreakdown.length > 0 && (
+          {distributorList.length > 0 && (
             <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
               <div className="p-4 border-b font-semibold text-gray-900 text-sm">
-                Distributor-Wise Performance Breakdown
+                Distributor-Wise Performance Breakdown ({distributorList.length} Distributors)
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -136,7 +163,7 @@ export default function GlobalSalesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {data.distributorBreakdown.map((d: any) => (
+                    {distributorList.map((d: any) => (
                       <tr key={d.distributorId} className="hover:bg-gray-50 transition-colors">
                         <td className="p-3 font-medium text-gray-900">{d.distributorName}</td>
                         <td className="p-3 text-gray-600">{d.orderCount}</td>

@@ -12,6 +12,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { BackorderDetailsDrawer } from '@/features/orders/components/backorder-details-drawer';
 import { ResolveBackorderDialog } from '@/features/orders/components/resolve-backorder-dialog';
 import { BackorderDto } from '@/types/api/order.types';
+import { ReportExportButton } from '@/components/reporting/ReportExportButton';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -47,6 +48,26 @@ function BackordersPageContent() {
             <p className="text-sm text-muted-foreground mt-1">
               Manage product allocation shortages and fulfillments.
             </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <ReportExportButton
+              data={data?.data || []}
+              columns={[
+                { header: 'Backorder ID', accessor: (r: BackorderDto) => r.id },
+                { header: 'Order Number', accessor: (r: BackorderDto) => r.order?.order_number || '' },
+                { header: 'Order ID', accessor: (r: BackorderDto) => r.order?.id || '' },
+                { header: 'Product Name', accessor: (r: BackorderDto) => r.product?.name || '' },
+                { header: 'SKU', accessor: (r: BackorderDto) => r.product?.sku || '' },
+                { header: 'Distributor', accessor: (r: BackorderDto) => r.distributor?.business_name || '' },
+                { header: 'Total Quantity', accessor: (r: BackorderDto) => r.quantity },
+                { header: 'Resolved Quantity', accessor: (r: BackorderDto) => r.resolved_quantity },
+                { header: 'Pending Quantity', accessor: (r: BackorderDto) => r.quantity - r.resolved_quantity },
+                { header: 'Status', accessor: (r: BackorderDto) => r.status },
+              ]}
+              filename={'backorders-list-' + new Date().toISOString().split('T')[0]}
+              disabled={isLoading || !data?.data?.length}
+              label="Export Backorders CSV"
+            />
           </div>
         </div>
 

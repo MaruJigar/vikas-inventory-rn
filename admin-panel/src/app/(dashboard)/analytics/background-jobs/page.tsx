@@ -8,6 +8,7 @@ import { PERMISSIONS } from '@/config/permissions';
 import { analyticsService } from '@/services/analytics.service';
 import { ArrowLeft, Server, RefreshCw, CheckCircle2, AlertOctagon, Clock, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ReportExportButton } from '@/components/reporting/ReportExportButton';
 import { formatDate } from '@/lib/utils';
 
 export default function BackgroundJobsPage() {
@@ -53,9 +54,24 @@ export default function BackgroundJobsPage() {
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={fetchJobs}>
-              <RefreshCw className="w-4 h-4 mr-2" /> Refresh Metrics
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={fetchJobs} disabled={loading}>
+                <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+              </Button>
+              <ReportExportButton
+                data={data?.typeBreakdown || []}
+                columns={[
+                  { header: 'Job Type', accessor: (r: any) => r.jobType },
+                  { header: 'Total Enqueued', accessor: (r: any) => r.totalCount },
+                  { header: 'Completed Count', accessor: (r: any) => r.completedCount },
+                  { header: 'Failed Count', accessor: (r: any) => r.failedCount },
+                  { header: 'Avg Latency (Seconds)', accessor: (r: any) => r.avgDurationSeconds },
+                ]}
+                filename={'background-jobs-performance-' + new Date().toISOString().split('T')[0]}
+                disabled={loading || !data?.typeBreakdown?.length}
+                label="Export Metrics CSV"
+              />
+            </div>
           </div>
 
           {/* Metric Overview Cards */}

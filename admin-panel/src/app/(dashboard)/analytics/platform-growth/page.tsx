@@ -7,7 +7,9 @@ import { RoleGuard } from '@/components/auth/RoleGuard';
 import { PERMISSIONS } from '@/config/permissions';
 import { ReportDateFilter, ReportingPeriod } from '@/features/analytics/shared/components/ReportDateFilter';
 import { analyticsService } from '@/services/analytics.service';
-import { ArrowLeft, UserCheck, Factory, Truck, Users, Clock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, UserCheck, Factory, Truck, Users, Clock, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ReportExportButton } from '@/components/reporting/ReportExportButton';
 
 export default function PlatformGrowthPage() {
   const [period, setPeriod] = useState<ReportingPeriod>('yearly');
@@ -16,23 +18,23 @@ export default function PlatformGrowthPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchGrowth = async () => {
-      setLoading(true);
-      try {
-        const res = await analyticsService.getPlatformGrowth({
-          period,
-          ...(startDate ? { startDate } : {}),
-          ...(endDate ? { endDate } : {}),
-        });
-        setData(res?.data || res);
-      } catch (err) {
-        console.error('Failed to fetch platform growth:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchGrowth = async () => {
+    setLoading(true);
+    try {
+      const res = await analyticsService.getPlatformGrowth({
+        period,
+        ...(startDate ? { startDate } : {}),
+        ...(endDate ? { endDate } : {}),
+      });
+      setData(res?.data || res);
+    } catch (err) {
+      console.error('Failed to fetch platform growth:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchGrowth();
   }, [period, startDate, endDate]);
 
@@ -42,20 +44,44 @@ export default function PlatformGrowthPage() {
     <RoleGuard allowedRoles={PERMISSIONS.MANUFACTURERS_VIEW}>
       <AppLayout>
         <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Link href="/analytics" className="text-gray-500 hover:text-gray-900 transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-6 h-6 text-blue-600" />
-                <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                  Platform Growth & Onboarding Report
-                </h1>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <Link href="/analytics" className="text-gray-500 hover:text-gray-900 transition-colors">
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              <div>
+                <div className="flex items-center gap-2">
+                  <UserCheck className="w-6 h-6 text-blue-600" />
+                  <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                    Platform Growth & Onboarding Report
+                  </h1>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  Report 1.3: Partner onboarding velocity, active entities, internal depots, and approval turnaround.
+                </p>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                Report 1.3: Partner onboarding velocity, active entities, internal depots, and approval turnaround.
-              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={fetchGrowth} disabled={loading}>
+                <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+              </Button>
+              <ReportExportButton
+                data={[
+                  { category: 'Manufacturers', total: summary.manufacturers?.total || 0, active: summary.manufacturers?.active || 0, inactive: summary.manufacturers?.inactive || 0 },
+                  { category: 'Distributors', total: summary.distributors?.total || 0, active: summary.distributors?.active || 0, inactive: summary.distributors?.inactive || 0 },
+                  { category: 'Salesmen', total: summary.salesmen?.total || 0, active: summary.salesmen?.active || 0, inactive: summary.salesmen?.inactive || 0 },
+                ]}
+                columns={[
+                  { header: 'Entity Category', accessor: (r) => r.category },
+                  { header: 'Total Registered', accessor: (r) => r.total },
+                  { header: 'Active Count', accessor: (r) => r.active },
+                  { header: 'Inactive Count', accessor: (r) => r.inactive },
+                ]}
+                filename={'platform-growth-summary-' + new Date().toISOString().split('T')[0]}
+                disabled={loading || !data}
+                label="Export Growth CSV"
+              />
             </div>
           </div>
 
