@@ -1,6 +1,6 @@
 {
   "name": "vikas-inventory-rn",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Vikas Marketing - B2B Inventory & Sales Management App (React Native)",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {

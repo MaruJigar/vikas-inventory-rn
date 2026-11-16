@@ -2,7 +2,7 @@
   "expo": {
     "name": "AVC VIPRA",
     "slug": "vikas-inventory",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "runtimeVersion": "1.0.0",
@@ -32,7 +32,8 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "versionCode": 2
     },
     "web": {
       "bundler": "metro",

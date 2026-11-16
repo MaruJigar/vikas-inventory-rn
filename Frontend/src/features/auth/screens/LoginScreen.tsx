@@ -107,6 +107,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   catalogueSection: {
+    marginBottom: spacing.xxl,
     marginTop: spacing.xl,
     alignItems: 'center',
   },

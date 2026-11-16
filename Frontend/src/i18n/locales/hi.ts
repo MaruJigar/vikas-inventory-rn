@@ -446,6 +446,7 @@ export const hi: TranslationResources = {
     management: 'प्रबंधन',
     activity: 'गतिविधि',
     catalogues: 'कैटलॉग',
+    profileHint: 'प्रोफ़ाइल प्रबंधन जल्द आ रहा है।',
     logout: 'लॉग आउट',
     logoutConfirmTitle: 'अपने खाते से लॉग आउट करें?',
     poweredBy: 'द्वारा संचालित',
