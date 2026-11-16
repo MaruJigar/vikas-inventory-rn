@@ -213,7 +213,7 @@ export function AccountScreen({
         />
       </Group>
 
-      {/* Catalogues */}
+  {/* Catalogues */ }
       <GroupLabel>{t('account.catalogues')}</GroupLabel>
       <Group>
         <Row
@@ -224,47 +224,51 @@ export function AccountScreen({
         />
       </Group>
 
-      {/* Distributor management */}
-      {isDistributor ? (
-        <>
-          <GroupLabel>{t('account.management')}</GroupLabel>
-          <Group>
-            <Row
-              icon="people-outline"
-              label={t('salesmen.title')}
-              onPress={() => navigation.navigate('Salesmen')}
-            />
-            <Row
-              icon="cube-outline"
-              label={t('inventory.title')}
-              onPress={() => navigation.navigate('Inventory')}
-            />
-            <Row
-              icon="checkmark-done-outline"
-              label={t('approvals.title')}
-              divider={false}
-              onPress={() => navigation.navigate('Approvals')}
-            />
-          </Group>
-        </>
-      ) : null}
+  {/* Distributor management */ }
+  {
+    isDistributor ? (
+      <>
+        <GroupLabel>{t('account.management')}</GroupLabel>
+        <Group>
+          <Row
+            icon="people-outline"
+            label={t('salesmen.title')}
+            onPress={() => navigation.navigate('Salesmen')}
+          />
+          <Row
+            icon="cube-outline"
+            label={t('inventory.title')}
+            onPress={() => navigation.navigate('Inventory')}
+          />
+          <Row
+            icon="checkmark-done-outline"
+            label={t('approvals.title')}
+            divider={false}
+            onPress={() => navigation.navigate('Approvals')}
+          />
+        </Group>
+      </>
+    ) : null
+  }
 
-      {/* Activity — attendance history (both roles; backend scopes it) */}
-      {isDistributor || isSalesman ? (
-        <>
-          <GroupLabel>{t('account.activity')}</GroupLabel>
-          <Group>
-            <Row
-              icon="time-outline"
-              label={t('attendance.title')}
-              divider={false}
-              onPress={() => navigation.navigate('Attendance')}
-            />
-          </Group>
-        </>
-      ) : null}
+  {/* Activity — attendance history (both roles; backend scopes it) */ }
+  {
+    isDistributor || isSalesman ? (
+      <>
+        <GroupLabel>{t('account.activity')}</GroupLabel>
+        <Group>
+          <Row
+            icon="time-outline"
+            label={t('attendance.title')}
+            divider={false}
+            onPress={() => navigation.navigate('Attendance')}
+          />
+        </Group>
+      </>
+    ) : null
+  }
 
-      {/* Preferences */}
+  {/* Preferences */ }
       <GroupLabel>{t('common.language')}</GroupLabel>
       <Group>
         <Row
@@ -276,7 +280,7 @@ export function AccountScreen({
         />
       </Group>
 
-      {/* Session */}
+  {/* Session */ }
       <View style={styles.logoutWrap}>
         <Group>
           <Row
@@ -291,7 +295,7 @@ export function AccountScreen({
       </View>
 
       <Credits />
-    </Screen>
+    </Screen >
   );
 }
 

@@ -16,37 +16,37 @@ export function AuthNavigator() {
 
   return (
     <Stack.Navigator
-      screenOptions={{
-        headerTintColor: colors.primary,
-        headerStyle: { backgroundColor: colors.background },
-        headerShadowVisible: false,
-        headerTitleAlign: 'left',
-      }}
-    >
-      <Stack.Screen
-        name="Login"
-        component={LoginScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="RegisterDistributor"
-        component={RegisterDistributorScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="ForgotPassword"
-        component={ForgotPasswordScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Catalogues"
-        component={CataloguesScreen}
-        options={{
-          headerShown: true,
-          title: t('catalogue.title'),
-          headerBackTitle: t('common.back'),
+        screenOptions={{
+          headerTintColor: colors.primary,
+          headerStyle: { backgroundColor: colors.background },
+          headerShadowVisible: false,
+          headerTitleAlign: 'left',
         }}
-      />
-    </Stack.Navigator>
-  );
+      >
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="RegisterDistributor"
+          component={RegisterDistributorScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ForgotPassword"
+          component={ForgotPasswordScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Catalogues"
+          component={CataloguesScreen}
+          options={{
+            headerShown: true,
+            title: t('catalogue.title'),
+            headerBackTitle: t('common.back'),
+          }}
+        />
+      </Stack.Navigator>
+      );
 }

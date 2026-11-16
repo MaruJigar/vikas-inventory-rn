@@ -452,6 +452,7 @@ export const en = {
     management: 'Management',
     activity: 'Activity',
     catalogues: 'Catalogues',
+    profileHint: 'Profile management is coming soon.',
     logout: 'Log out',
     logoutConfirmTitle: 'Log out of your account?',
     poweredBy: 'Powered by',

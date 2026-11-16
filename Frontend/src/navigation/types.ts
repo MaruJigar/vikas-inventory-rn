@@ -48,8 +48,8 @@ export type HomeStackParamList = {
    * new product belongs to the category being browsed, so the form locks to it.
    */
   AddProduct:
-    | { product?: Product; categoryId?: string; categoryName?: string }
-    | undefined;
+  | { product?: Product; categoryId?: string; categoryName?: string }
+  | undefined;
   Cart: undefined;
   OrderSuccess: { orderNumber: string };
   /** Distributor→Manufacturer purchase-order flow. */
@@ -90,14 +90,14 @@ export type OrdersStackParamList = {
    * filter; see `OrdersListScreen`.
    */
   OrdersList:
-    | {
-        initialStatus?: string;
-        salesmanId?: string;
-        shopId?: string;
-        orderType?: OrderTypeFilter;
-        filterLabel?: string;
-      }
-    | undefined;
+  | {
+    initialStatus?: string;
+    salesmanId?: string;
+    shopId?: string;
+    orderType?: OrderTypeFilter;
+    filterLabel?: string;
+  }
+  | undefined;
   OrderDetail: { id: string };
   EditOrder: { id: string };
   Backorders: undefined;

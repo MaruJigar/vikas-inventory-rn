@@ -69,23 +69,23 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
           <Text style={[styles.link, styles.linkStrong]}>
             {t('auth.login.register')}
           </Text>
-        </Pressable>
-      </View>
+    </Pressable>
+  </View>
 
-      <View style={styles.catalogueSection}>
-        <View style={styles.catalogueDivider} />
-        <Pressable
-          style={styles.catalogueBtn}
-          onPress={() => navigation.navigate('Catalogues')}
-          accessibilityRole="button"
-          accessibilityLabel={t('catalogue.browsePublic')}
-        >
-          <Text style={styles.catalogueBtnText}>
-            {t('catalogue.browsePublic')}
-          </Text>
-        </Pressable>
-      </View>
-    </Screen>
+    <View style={styles.catalogueSection}>
+      <View style={styles.catalogueDivider} />
+      <Pressable
+        style={styles.catalogueBtn}
+        onPress={() => navigation.navigate('Catalogues')}
+        accessibilityRole="button"
+        accessibilityLabel={t('catalogue.browsePublic')}
+      >
+        <Text style={styles.catalogueBtnText}>
+          {t('catalogue.browsePublic')}
+        </Text>
+      </Pressable>
+    </View>
+    </Screen >
   );
 }
 
